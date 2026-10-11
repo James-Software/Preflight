@@ -1,10 +1,27 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
+import { Space_Grotesk, Inter } from "next/font/google";
 import "./globals.css";
 
+const display = Space_Grotesk({
+  subsets: ["latin"],
+  weight: ["500", "600", "700"],
+  variable: "--font-display",
+});
+
+const sans = Inter({
+  subsets: ["latin"],
+  weight: ["400", "500", "600"],
+  variable: "--font-sans",
+});
+
 export const metadata: Metadata = {
-  title: "Preflight",
+  title: "Preflight — Cleared for takeoff",
   description:
-    "Preflight allows an agent swarm to automatically review your application to confirm it is ready for takeoff.",
+    "Preflight sends a swarm of AI agents to test your app like real users. Every bug they find comes back as a pull request with the fix.",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#6366F1",
 };
 
 export default function RootLayout({
@@ -14,7 +31,11 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body
+        className={`${display.variable} ${sans.variable} font-sans bg-white text-ink antialiased`}
+      >
+        {children}
+      </body>
     </html>
   );
 }

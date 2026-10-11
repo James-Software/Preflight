@@ -1,1 +1,70 @@
 @import "tailwindcss";
+
+@theme {
+  --color-ink: #1e1b4b;
+  --color-primary: #6366f1;
+  --color-deep: #4338ca;
+  --color-mist: #e0e7ff;
+  --color-lavender: #f6f6ff;
+  --color-cloud: #e4e8ff;
+  --color-cloudshade: #c7d2fe;
+
+  --font-display: "Space Grotesk", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+::selection {
+  background: #e0e7ff;
+  color: #1e1b4b;
+}
+
+:focus-visible {
+  outline: 2px solid #6366f1;
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* Motion house rules: press to 0.97, 100-300ms, transform + opacity only */
+.pressable {
+  transition:
+    transform 160ms cubic-bezier(0.16, 1, 0.3, 1),
+    background-color 160ms cubic-bezier(0.16, 1, 0.3, 1),
+    border-color 160ms cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 160ms cubic-bezier(0.16, 1, 0.3, 1);
+  will-change: transform;
+}
+
+.pressable:active {
+  transform: scale(0.97);
+}
+
+/* Slow ambient drift for the pixel clouds (inner wrapper only) */
+@keyframes cloud-drift {
+  from {
+    transform: translateX(-26px);
+  }
+  to {
+    transform: translateX(26px);
+  }
+}
+
+.cloud-drift {
+  animation: cloud-drift 40s ease-in-out infinite alternate;
+  will-change: transform;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .cloud-drift {
+    animation: none;
+  }
+  .pressable {
+    transition: none;
+  }
+}
