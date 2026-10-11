@@ -36,7 +36,7 @@ export default function Hero() {
         <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
           <a
             href="#early-access"
-            className="pressable btn-gradient w-full rounded-xl px-7 py-3.5 text-sm font-semibold text-white sm:w-auto"
+            className="pressable btn-gradient w-full rounded-full px-7 py-3.5 text-sm font-medium text-white sm:w-auto"
           >
             Get early access
           </a>
