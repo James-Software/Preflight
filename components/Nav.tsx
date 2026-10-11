@@ -21,7 +21,7 @@ export default function Nav() {
         </div>
         <a
           href="#early-access"
-          className="pressable rounded-xl bg-primary px-4 py-2.5 text-sm font-semibold text-white hover:bg-deep"
+          className="pressable btn-gradient rounded-xl px-4 py-2.5 text-sm font-semibold text-white"
         >
           Get early access
         </a>

@@ -1,14 +1,8 @@
 "use client";
 
-import { useEffect, useRef } from "react";
-import {
-  PixelSprite,
-  PLANE_MAP,
-  PLANE_PALETTE,
-  CLOUD_A,
-  CLOUD_B,
-  CLOUD_PALETTE,
-} from "./pixel-art";
+import { useCallback, useEffect, useRef } from "react";
+import DitherClouds from "./DitherClouds";
+import { PixelSprite, PLANE_MAP, PLANE_PALETTE } from "./pixel-art";
 
 const TRAIL_DOTS = 14;
 
@@ -22,23 +16,6 @@ function planePath(t: number) {
   return { x, y, rot };
 }
 
-interface CloudCfg {
-  map: string[];
-  width: number;
-  left: string;
-  top: string;
-  drift: number; // seconds per drift cycle
-  parallax: number; // px of downward drift over the takeoff
-}
-
-const CLOUDS: CloudCfg[] = [
-  { map: CLOUD_A, width: 340, left: "3%", top: "14%", drift: 52, parallax: 26 },
-  { map: CLOUD_B, width: 210, left: "64%", top: "26%", drift: 36, parallax: 52 },
-  { map: CLOUD_A, width: 250, left: "40%", top: "50%", drift: 62, parallax: 16 },
-  { map: CLOUD_B, width: 170, left: "82%", top: "60%", drift: 30, parallax: 68 },
-  { map: CLOUD_A, width: 150, left: "24%", top: "76%", drift: 44, parallax: 40 },
-];
-
 interface PixelSkyProps {
   heroRef: React.RefObject<HTMLElement | null>;
   contentRef: React.RefObject<HTMLDivElement | null>;
@@ -47,13 +24,17 @@ interface PixelSkyProps {
 /**
  * The takeoff scene. Scroll is the throttle: as the user scrolls down the
  * hero, the pixel plane climbs along an arc with a dotted pixel contrail,
- * clouds sink past with parallax, and the hero copy gently lifts away.
- * Reduced-motion users get a static plane on the runway. No motion otherwise.
+ * the dithered cloudscape sinks past with parallax, and the hero copy
+ * gently lifts away. Reduced-motion users get a static sky and a plane on
+ * the runway. The clouds add their own mouse parallax + ambient drift
+ * (handled inside DitherClouds) — atmosphere only, never the focal moment.
  */
 export default function PixelSky({ heroRef, contentRef }: PixelSkyProps) {
   const planeRef = useRef<HTMLDivElement>(null);
   const trailRef = useRef<HTMLDivElement>(null);
-  const cloudRefs = useRef<(HTMLDivElement | null)[]>([]);
+  const scrollP = useRef(0);
+
+  const getScrollP = useCallback(() => scrollP.current, []);
 
   useEffect(() => {
     const hero = heroRef.current;
@@ -63,6 +44,7 @@ export default function PixelSky({ heroRef, contentRef }: PixelSkyProps) {
     ).matches;
 
     const place = (p: number) => {
+      scrollP.current = p;
       const w = hero.offsetWidth;
       const h = hero.offsetHeight;
       const plane = planeRef.current;
@@ -85,10 +67,6 @@ export default function PixelSky({ heroRef, contentRef }: PixelSkyProps) {
           }
         }
       }
-      cloudRefs.current.forEach((c, i) => {
-        if (c)
-          c.style.transform = `translate3d(0, ${p * CLOUDS[i].parallax}px, 0)`;
-      });
       const content = contentRef.current;
       if (content) {
         content.style.transform = `translate3d(0, ${p * -48}px, 0)`;
@@ -125,27 +103,7 @@ export default function PixelSky({ heroRef, contentRef }: PixelSkyProps) {
 
   return (
     <div className="absolute inset-0 overflow-hidden" aria-hidden="true">
-      {CLOUDS.map((c, i) => (
-        <div
-          key={i}
-          ref={(el) => {
-            cloudRefs.current[i] = el;
-          }}
-          className="absolute will-change-transform"
-          style={{ left: c.left, top: c.top }}
-        >
-          <div
-            className="cloud-drift"
-            style={{ animationDuration: `${c.drift}s` }}
-          >
-            <PixelSprite
-              map={c.map}
-              palette={CLOUD_PALETTE}
-              pixel={c.width / c.map[0].length}
-            />
-          </div>
-        </div>
-      ))}
+      <DitherClouds getScrollP={getScrollP} />
 
       {/* runway dashes where the plane starts */}
       <div className="absolute" style={{ left: "5%", top: "73%" }}>
@@ -164,7 +122,7 @@ export default function PixelSky({ heroRef, contentRef }: PixelSkyProps) {
         {Array.from({ length: TRAIL_DOTS }).map((_, i) => (
           <span
             key={i}
-            className="absolute block h-[5px] w-[5px] rounded-[1px] bg-[#A5B4FC]"
+            className="absolute block h-[5px] w-[5px] rounded-[1px] bg-[#8b7cf6]"
             style={{ opacity: 0 }}
           />
         ))}

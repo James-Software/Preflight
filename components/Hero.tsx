@@ -26,7 +26,7 @@ export default function Hero() {
           AI QA SWARM
         </p>
         <h1 className="font-display mt-5 text-5xl font-bold tracking-tight text-ink md:text-7xl">
-          Cleared for takeoff.
+          Cleared for <span className="text-gradient">takeoff.</span>
         </h1>
         <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-ink/65">
           Preflight sends a swarm of AI agents to test your app like real
@@ -36,7 +36,7 @@ export default function Hero() {
         <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
           <a
             href="#early-access"
-            className="pressable w-full rounded-xl bg-primary px-7 py-3.5 text-sm font-semibold text-white hover:bg-deep sm:w-auto"
+            className="pressable btn-gradient w-full rounded-xl px-7 py-3.5 text-sm font-semibold text-white sm:w-auto"
           >
             Get early access
           </a>

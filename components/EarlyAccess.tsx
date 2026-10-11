@@ -58,7 +58,7 @@ export default function EarlyAccess() {
             />
             <button
               type="submit"
-              className="pressable rounded-xl bg-primary px-6 py-3 text-sm font-semibold text-white hover:bg-deep"
+              className="pressable btn-gradient rounded-xl px-6 py-3 text-sm font-semibold text-white"
             >
               Notify me
             </button>

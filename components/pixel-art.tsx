@@ -3,7 +3,6 @@ import React from "react";
 /**
  * Hand-drawn pixel maps. Characters:
  *  plane: "#" deep indigo body, "o" light window, "." transparent
- *  cloud: "#" light lavender, "+" lavender shade, "." transparent
  *  check: "#" deep indigo, "." transparent
  */
 
@@ -25,36 +24,6 @@ export const PLANE_MAP = [
 export const PLANE_PALETTE: Record<string, string> = {
   "#": "#4338CA",
   o: "#F5F7FF",
-};
-
-export const CLOUD_A = [
-  "............................",
-  "........########............",
-  "......############..........",
-  "....################........",
-  "..####################......",
-  ".######################.....",
-  "########################....",
-  "++++++++++++++++++++++++....",
-  ".++++++++++++++++++++++.....",
-  "............................",
-];
-
-export const CLOUD_B = [
-  "......................",
-  "......######..........",
-  "....##########........",
-  "..##############......",
-  ".################.....",
-  "##################....",
-  "++++++++++++++++++....",
-  ".++++++++++++++++....",
-  "......................",
-];
-
-export const CLOUD_PALETTE: Record<string, string> = {
-  "#": "#E4E8FF",
-  "+": "#C7D2FE",
 };
 
 export const CHECK_MAP = [
