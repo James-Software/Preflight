@@ -1,9 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { PixelSprite, CHECK_MAP } from "./pixel-art";
-
-const CHECK_PALETTE: Record<string, string> = { "#": "#4338CA" };
 
 export default function EarlyAccess() {
   const [email, setEmail] = useState("");
@@ -51,7 +48,22 @@ export default function EarlyAccess() {
 
         {done ? (
           <div className="mx-auto mt-8 flex max-w-md items-center justify-center gap-3 rounded-2xl border border-mist bg-lavender px-6 py-5">
-            <PixelSprite map={CHECK_MAP} palette={CHECK_PALETTE} pixel={4} />
+            <svg
+              width="22"
+              height="22"
+              viewBox="0 0 24 24"
+              fill="none"
+              aria-hidden="true"
+              className="shrink-0"
+            >
+              <path
+                d="M4 12.5l5 5L20 6.5"
+                stroke="#4338CA"
+                strokeWidth={2.5}
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              />
+            </svg>
             <p className="text-sm font-medium text-ink">
               You are on the manifest. We will email you at launch.
             </p>
