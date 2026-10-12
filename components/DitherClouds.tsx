@@ -177,7 +177,12 @@ interface LayerSpec {
   speed: number; // px/s of constant wind drift (leftward)
 }
 
-const MARGIN = 120; // px beyond each edge where clouds spawn/recycle
+// Margin beyond each edge where clouds spawn/recycle, proportional to the
+// viewport: a fixed 120px eats 31% of a 390px phone screen, dragging
+// "right-side" clouds left into the headline mask and leaving the right
+// flank blank on landing. Proportional margin keeps x0 semantics identical
+// on every screen size.
+const marginFor = (w: number) => Math.max(24, Math.round(w * 0.06));
 
 const LAYERS: LayerSpec[] = [
   {
@@ -290,7 +295,7 @@ export default function DitherClouds({ getScrollP }: DitherCloudsProps) {
           // Base top-left at t=0 in layer space (matches place() with
           // animate=false): the occupancy key must live in layer space,
           // not canvas space.
-          const bx = c.x0 * w - cw - MARGIN;
+          const bx = c.x0 * w - cw - marginFor(w);
           const by = c.y * h - ch / 2;
           const ctx = canvas.getContext("2d");
           if (ctx) {
@@ -331,13 +336,14 @@ export default function DitherClouds({ getScrollP }: DitherCloudsProps) {
         const clouds = cloudRefs.current[li] ?? [];
         clouds.forEach((c, ci) => {
           const spec = layer.clouds[ci];
-          const span = w + c.cw + MARGIN * 2;
+          const mg = marginFor(w);
+          const span = w + c.cw + mg * 2;
           const travel = animate ? t * layer.speed : 0;
           const raw = (((spec.x0 * w - travel) % span) + span) % span;
           // Wrap only once the whole cloud is fully past the left edge
-          // (right edge at cx + cw, MARGIN to spare) — wide clouds used to
+          // (right edge at cx + cw, margin to spare) — wide clouds used to
           // visibly snap out while still on-screen.
-          const cx = raw - c.cw - MARGIN;
+          const cx = raw - c.cw - mg;
           let cy = spec.y * h - c.ch / 2;
           if (animate) {
             const b = bobOf(c.seed);
