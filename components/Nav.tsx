@@ -63,7 +63,7 @@ export default function Nav() {
         <a
           href="#top"
           className={`flex items-center gap-2.5 ${scrolled ? "" : GLOW_SPRITE}`}
-          aria-label="Preflight home"
+          aria-label="PreFlight home"
         >
           <PixelPlaneSprite width={30} />
           <span
@@ -71,7 +71,7 @@ export default function Nav() {
               scrolled ? "" : GLOW_TEXT
             }`}
           >
-            Preflight
+            PreFlight
           </span>
         </a>
         <div className="hidden items-center gap-8 md:flex">
