@@ -206,6 +206,8 @@ const LAYERS: LayerSpec[] = [
       { x0: 0.98, y: 0.1, w: 520, seed: 1202 },
       { x0: 0.42, y: 0.1, w: 360, seed: 1203, wisp: true },
       { x0: 0.14, y: 0.05, w: 380, seed: 1204, wisp: true },
+      // Incomer: starts just off the right edge, streams into view on landing
+      { x0: 1.08, y: 0.12, w: 480, seed: 1301 },
     ],
     mouse: 10,
     scroll: 30,
@@ -226,6 +228,8 @@ const LAYERS: LayerSpec[] = [
       { x0: 1.0, y: 0.55, w: 500, seed: 4602 },
       { x0: 0.94, y: 0.66, w: 420, seed: 4603 },
       { x0: 0.34, y: 0.62, w: 340, seed: 4604, wisp: true },
+      // Incomer: starts just off the right edge, streams into view on landing
+      { x0: 1.14, y: 0.58, w: 440, seed: 4701 },
     ],
     mouse: 22,
     scroll: 60,
@@ -244,6 +248,8 @@ const LAYERS: LayerSpec[] = [
       { x0: 0.96, y: 0.8, w: 440, seed: 7902, wisp: true },
       { x0: 0.56, y: 0.94, w: 400, seed: 7903 },
       { x0: 0.18, y: 0.94, w: 360, seed: 7904, wisp: true },
+      // Incomer: starts just off the right edge, streams into view on landing
+      { x0: 1.1, y: 0.8, w: 520, seed: 8001 },
     ],
     mouse: 38,
     scroll: 95,
