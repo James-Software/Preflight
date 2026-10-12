@@ -42,7 +42,7 @@ export default function EarlyAccess() {
           Be first in line for takeoff.
         </h2>
         <p className="mt-4 text-base leading-relaxed text-ink/60">
-          Preflight is in final approach. Leave your email and we will notify
+          PreFlight is in final approach. Leave your email and we will notify
           you at launch.
         </p>
 
