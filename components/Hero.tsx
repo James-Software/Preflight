@@ -30,7 +30,7 @@ export default function Hero() {
         </h1>
         <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-ink/65">
           Preflight sends a swarm of AI agents to test your app like real
-          users. Every bug they find comes back as a fix.
+          users. Every bug they find comes back as fix.
         </p>
         <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
           <a
