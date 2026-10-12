@@ -25,5 +25,7 @@ export async function isEmailAllowed(email: string): Promise<boolean> {
   const rows = await sql`
     SELECT 1 FROM allowed_emails WHERE email = ${normalized} LIMIT 1
   `;
-  return rows.length > 0;
+  // The driver types the result as a union; narrow to the array case.
+  // A non-array result fails closed (denies).
+  return Array.isArray(rows) && rows.length > 0;
 }
