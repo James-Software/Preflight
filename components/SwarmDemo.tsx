@@ -344,7 +344,7 @@ export default function SwarmDemo() {
   }, [reduced]);
 
   return (
-    <section className="bg-lavender py-20 md:py-24">
+    <section id="how-it-works" className="bg-lavender py-20 md:py-24 scroll-mt-20">
       <div className="mx-auto max-w-6xl px-6">
         <h2 className="font-display text-center text-2xl font-bold tracking-tight text-ink md:text-3xl">
           Watch the swarm work.
