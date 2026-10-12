@@ -95,6 +95,27 @@ export default function PixelSky({ heroRef, contentRef }: PixelSkyProps) {
     <div className="absolute inset-0 z-0 overflow-hidden" aria-hidden="true">
       <DitherClouds getScrollP={getScrollP} />
 
+      {/* soft edge fades: clouds dissolve into the white sky instead of
+          hard-clipping at the viewport edges. Above the clouds (z-0),
+          below the plane (z-10). Static divs — clouds drift beneath them,
+          so exiting clouds gracefully fade out instead of snapping. */}
+      <div
+        className="pointer-events-none absolute inset-y-0 left-0 z-[1] w-[12%] bg-gradient-to-r from-white via-white/70 to-transparent"
+        aria-hidden="true"
+      />
+      <div
+        className="pointer-events-none absolute inset-y-0 right-0 z-[1] w-[12%] bg-gradient-to-l from-white via-white/70 to-transparent"
+        aria-hidden="true"
+      />
+      <div
+        className="pointer-events-none absolute inset-x-0 top-0 z-[1] h-[10%] bg-gradient-to-b from-white via-white/70 to-transparent"
+        aria-hidden="true"
+      />
+      <div
+        className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-[10%] bg-gradient-to-t from-white via-white/70 to-transparent"
+        aria-hidden="true"
+      />
+
       {/* runway dashes where the plane starts */}
       <div className="absolute" style={{ left: "5%", top: "73%" }}>
         <div className="flex gap-2">
