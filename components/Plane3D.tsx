@@ -27,10 +27,10 @@ interface Plane3DProps {
 }
 
 /**
- * Procedural low-poly airplane rendered with Three.js (dynamically
- * imported so it never touches the initial bundle or SSR). The model
- * wears the site palette — indigo fuselage, periwinkle wings — lit with
- * a purple rim light so it feels color-graded into the world.
+ * Procedural paper dart rendered with Three.js (dynamically imported so it
+ * never touches the initial bundle or SSR). Folded-paper facets in plain
+ * whites, lit with a purple rim light so it feels color-graded into the
+ * world.
  *
  * Scroll drives the pose (position comes from the DOM wrapper via
  * planeFlight; bank/pitch/idle sway happen inside the scene). Reduced
@@ -51,7 +51,7 @@ export default function Plane3D({ getScrollP }: Plane3DProps) {
     let renderer: THREE.WebGLRenderer | null = null;
     let scene: THREE.Scene | null = null;
     let camera: THREE.PerspectiveCamera | null = null;
-    let jet: THREE.Group | null = null;
+    let dart: THREE.Group | null = null;
     let visible = true;
     let observer: IntersectionObserver | null = null;
 
@@ -104,63 +104,59 @@ export default function Plane3D({ getScrollP }: Plane3DProps) {
       rim.position.set(-5, 2, -4);
       scene.add(rim);
 
-      const mat = (color: string, extra?: Record<string, number>) =>
+      // Paper whites with subtle variation — the facet variation IS the
+      // paper look. DoubleSide so the keel and wing undersides render.
+      const paper = (color: string) =>
         new THREE.MeshStandardMaterial({
           color,
           flatShading: true,
-          roughness: 0.55,
-          metalness: 0.08,
-          ...extra,
+          roughness: 0.85,
+          metalness: 0,
+          side: THREE.DoubleSide,
         });
-      const indigo = mat("#6366f1");
-      const deepIndigo = mat("#4f46e5");
-      const peri = mat("#a5b4fc");
-      const periLight = mat("#c7d2fe", { roughness: 0.35, metalness: 0.15 });
-      const mid = mat("#818cf8");
+      const outerPanel = paper("#ffffff");
+      const innerPanel = paper("#f4f2ff");
+      const keelMat = paper("#e6e3fb");
 
-      jet = new THREE.Group();
+      dart = new THREE.Group();
 
-      // Fuselage: capsule along X (flight direction).
-      const fus = new THREE.Mesh(new THREE.CapsuleGeometry(0.3, 1.7, 6, 14), indigo);
-      fus.rotation.z = Math.PI / 2;
-      jet.add(fus);
+      // Folded paper dart, nose at +X. Each wing is two flat facets joined
+      // along a mid-rib crease so the folds catch the light like real paper.
+      const tri = (
+        a: number[],
+        b: number[],
+        c: number[],
+        m: THREE.Material,
+      ) => {
+        const g = new THREE.BufferGeometry();
+        g.setAttribute(
+          "position",
+          new THREE.BufferAttribute(new Float32Array([...a, ...b, ...c]), 3),
+        );
+        g.computeVertexNormals();
+        return new THREE.Mesh(g, m);
+      };
 
-      // Nose cone.
-      const nose = new THREE.Mesh(new THREE.ConeGeometry(0.3, 0.55, 14), deepIndigo);
-      nose.rotation.z = -Math.PI / 2;
-      nose.position.x = 1.08;
-      jet.add(nose);
+      const nose: [number, number, number] = [1.15, 0, 0];
+      const tailCenter: [number, number, number] = [-1.05, 0.02, 0];
+      for (const s of [1, -1]) {
+        const rib: [number, number, number] = [0.35, 0.04, 0.55 * s];
+        const wingtip: [number, number, number] = [-0.45, 0.1, 1.05 * s];
+        dart.add(tri(nose, tailCenter, rib, innerPanel)); // inner panel
+        dart.add(tri(rib, wingtip, tailCenter, outerPanel)); // outer panel
+      }
+      // Keel: the folded-under bottom fin, in the z=0 plane.
+      dart.add(
+        tri([0.95, -0.02, 0], [-0.85, -0.4, 0], [0.1, -0.05, 0], keelMat),
+      );
 
-      // Canopy.
-      const canopy = new THREE.Mesh(new THREE.SphereGeometry(0.3, 14, 10), periLight);
-      canopy.scale.set(1.5, 0.72, 0.88);
-      canopy.position.set(0.38, 0.3, 0);
-      jet.add(canopy);
-
-      // Main wings with a whisper of dihedral.
-      const wing = new THREE.Mesh(new THREE.BoxGeometry(0.95, 0.09, 3.3), peri);
-      wing.position.set(-0.15, -0.04, 0);
-      wing.rotation.x = 0.07;
-      jet.add(wing);
-
-      // Tailplane.
-      const tail = new THREE.Mesh(new THREE.BoxGeometry(0.55, 0.07, 1.6), mid);
-      tail.position.set(-1.02, 0.1, 0);
-      jet.add(tail);
-
-      // Vertical fin, swept back.
-      const fin = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.78, 0.08), indigo);
-      fin.position.set(-1.0, 0.44, 0);
-      fin.rotation.z = -0.22;
-      jet.add(fin);
-
-      scene.add(jet);
+      scene.add(dart);
 
       const placeStatic = (t: number) => {
-        if (!jet || !renderer || !scene || !camera) return;
+        if (!dart || !renderer || !scene || !camera) return;
         const f = planeFlight(t);
-        jet.rotation.set(f.bank * D2R, -0.12, f.pitch * D2R);
-        jet.position.set(0, 0, 0);
+        dart.rotation.set(f.bank * D2R, -0.12, f.pitch * D2R);
+        dart.position.set(0, 0, 0);
         renderer.render(scene, camera);
       };
 
@@ -182,7 +178,7 @@ export default function Plane3D({ getScrollP }: Plane3DProps) {
       const start = performance.now();
       const tick = (now: number) => {
         raf = requestAnimationFrame(tick);
-        if (document.hidden || !visible || !jet || !renderer || !scene || !camera)
+        if (document.hidden || !visible || !dart || !renderer || !scene || !camera)
           return;
         const target = Math.min(1, Math.max(0, getScrollP()));
         st += (target - st) * 0.22;
@@ -193,12 +189,12 @@ export default function Plane3D({ getScrollP }: Plane3DProps) {
         const idleRoll = 2.4 * Math.sin(el * 0.9);
         const idlePitch = 1.6 * Math.sin(el * 0.7 + 1.3);
         const bob = 0.05 * Math.sin(el * 1.1);
-        jet.rotation.set(
+        dart.rotation.set(
           (f.bank + idleRoll) * D2R,
           -0.12,
           (f.pitch + idlePitch) * D2R,
         );
-        jet.position.set(0, bob, 0);
+        dart.position.set(0, bob, 0);
         renderer.render(scene, camera);
       };
       raf = requestAnimationFrame(tick);
