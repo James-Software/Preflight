@@ -20,7 +20,7 @@ export default function Hero() {
 
       <div
         ref={contentRef}
-        className="relative z-10 mx-auto max-w-3xl px-6 pt-36 text-center will-change-transform md:pt-44"
+        className="relative z-20 mx-auto max-w-3xl px-6 pt-36 text-center will-change-transform md:pt-44"
       >
         <p className="text-xs font-semibold tracking-[0.22em] text-primary">
           AI QA SWARM

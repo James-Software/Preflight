@@ -92,7 +92,7 @@ export default function PixelSky({ heroRef, contentRef }: PixelSkyProps) {
   }, [heroRef, contentRef]);
 
   return (
-    <div className="absolute inset-0 overflow-hidden" aria-hidden="true">
+    <div className="absolute inset-0 z-0 overflow-hidden" aria-hidden="true">
       <DitherClouds getScrollP={getScrollP} />
 
       {/* runway dashes where the plane starts */}
@@ -121,7 +121,7 @@ export default function PixelSky({ heroRef, contentRef }: PixelSkyProps) {
       {/* the plane: real-time 3D model, scroll-driven takeoff */}
       <div
         ref={planeRef}
-        className="absolute left-0 top-0 will-change-transform"
+        className="absolute left-0 top-0 z-10 will-change-transform"
         style={{ transform: "translate(8vw, 74vh) translate(-50%, -50%)" }}
       >
         <Plane3D getScrollP={getScrollP} />

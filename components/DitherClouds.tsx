@@ -358,7 +358,7 @@ export default function DitherClouds({ getScrollP }: DitherCloudsProps) {
   return (
     <div
       ref={wrapRef}
-      className="pointer-events-none absolute inset-0"
+      className="pointer-events-none absolute inset-0 z-0"
       aria-hidden="true"
     >
       {LAYERS.map((_, i) => (
