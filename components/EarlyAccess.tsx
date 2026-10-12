@@ -92,6 +92,25 @@ export default function EarlyAccess() {
             </button>
           </form>
         )}
+        {!done && (
+          <p className="mx-auto mt-4 max-w-md text-xs leading-relaxed text-ink/40">
+            By joining the waitlist, you agree to our{" "}
+            <a
+              href="/terms"
+              className="underline underline-offset-2 transition-colors duration-150 hover:text-ink"
+            >
+              Terms of Service
+            </a>{" "}
+            and{" "}
+            <a
+              href="/privacy"
+              className="underline underline-offset-2 transition-colors duration-150 hover:text-ink"
+            >
+              Privacy Policy
+            </a>
+            .
+          </p>
+        )}
         {error && !done && (
           <p className="mt-3 text-sm font-medium text-red-600">{error}</p>
         )}
