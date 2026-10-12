@@ -1,6 +1,6 @@
-# Preflight
+# PreFlight
 
-Preflight allows an agent swarm to automatically review your application to confirm it is ready for takeoff.
+PreFlight allows an agent swarm to automatically review your application to confirm it is ready for takeoff.
 
 A swarm of AI agents acts as real users against your app — clicking through the UI,
 exercising functionality, and catching UX, frontend, and backend bugs. When a bug is
