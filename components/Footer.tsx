@@ -3,7 +3,7 @@ export default function Footer() {
     <footer className="border-t border-mist bg-white">
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-6 py-8 sm:flex-row">
         <p className="font-display text-sm font-bold tracking-tight text-ink">
-          Preflight
+          PreFlight
         </p>
         <div className="flex items-center gap-5">
           <a
