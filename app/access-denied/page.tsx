@@ -15,10 +15,10 @@ export default function AccessDenied() {
           </a>{" "}
           or email{" "}
           <a
-            href="mailto:hello@preflight.dev"
+            href="mailto:james@preflight.dev"
             className="font-medium text-ink underline underline-offset-2 transition-colors duration-150 hover:text-ink/70"
           >
-            hello@preflight.dev
+            james@preflight.dev
           </a>
           .
         </p>
