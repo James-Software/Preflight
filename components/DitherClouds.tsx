@@ -292,6 +292,11 @@ export default function DitherClouds({ getScrollP }: DitherCloudsProps) {
           canvas.style.width = `${cw}px`;
           canvas.style.height = `${ch}px`;
           canvas.style.display = "block";
+          // Crisp pixels on high-dpi screens: the backing store is capped at
+          // 1.5x, so without this the browser bilinear-upscales each dot and
+          // every pixel grows a soft fringe ("outline"). Nearest-neighbor
+          // keeps each dot a clean flat square at any dpr.
+          canvas.style.imageRendering = "pixelated";
           // Base top-left at t=0 in layer space (matches place() with
           // animate=false): the occupancy key must live in layer space,
           // not canvas space.
