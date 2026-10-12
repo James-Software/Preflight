@@ -6,8 +6,21 @@ export default function AccessDenied() {
           You&apos;re not on the list
         </h1>
         <p className="mt-3 text-sm leading-relaxed text-ink/60">
-          PreFlight is invite-only right now. If you were expecting access,
-          ask the person who invited you to add your GitHub email.
+          PreFlight is invite-only right now. If you were expecting access,{" "}
+          <a
+            href="/#early-access"
+            className="font-medium text-ink underline underline-offset-2 transition-colors duration-150 hover:text-ink/70"
+          >
+            join the waitlist
+          </a>{" "}
+          or email{" "}
+          <a
+            href="mailto:hello@preflight.dev"
+            className="font-medium text-ink underline underline-offset-2 transition-colors duration-150 hover:text-ink/70"
+          >
+            hello@preflight.dev
+          </a>
+          .
         </p>
         <a
           href="/"
