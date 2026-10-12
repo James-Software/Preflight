@@ -112,7 +112,7 @@ export default function PixelSky({ heroRef, contentRef }: PixelSkyProps) {
         aria-hidden="true"
       />
       <div
-        className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-[10%] bg-gradient-to-t from-white via-white/70 to-transparent"
+        className="pointer-events-none absolute inset-x-0 bottom-0 z-[1] h-[18%] bg-gradient-to-t from-white via-white/60 to-transparent"
         aria-hidden="true"
       />
 
