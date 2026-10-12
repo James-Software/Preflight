@@ -95,6 +95,7 @@ function stampCloud(
   W: number,
   H: number,
   seed: number,
+  wisp = false,
 ) {
   const rand = mulberry32(seed);
   const noise = makeNoise(seed ^ 0x9e3779b9);
@@ -133,9 +134,10 @@ function stampCloud(
       // organic breakup: noise thins the mass, more at the edges
       const n = noise(px / 52, py / 52);
       d = d * (0.68 + 0.62 * n);
+      if (wisp) d *= 0.6; // wisps never form solid cores
       if (d < 0.12) continue;
       if (rand() > Math.min(1, d * 1.02)) continue;
-      ctx.fillStyle = ramp(d, rand);
+      ctx.fillStyle = wisp ? ramp(Math.min(d, 0.33), rand) : ramp(d, rand);
       ctx.fillRect(gx * DOT, gy * DOT, DOT, DOT);
     }
   }
@@ -152,6 +154,9 @@ interface CloudSpec {
   w: number; // width px at 1440px reference
   y: number; // base center, fraction of hero height
   x0: number; // base x phase, fraction of hero width
+  /** pale sparse dots only — no solid core. Used where a dense core would
+   *  sit against the parked plane or the first stretch of climb corridor. */
+  wisp?: boolean;
 }
 
 interface LayerSpec {
@@ -181,12 +186,12 @@ const LAYERS: LayerSpec[] = [
   {
     clouds: [
       { x0: 0.02, y: 0.42, w: 560, seed: 4417 },
-      { x0: 0.25, y: 0.55, w: 380, seed: 4418 },
+      { x0: 0.25, y: 0.55, w: 380, seed: 4418, wisp: true },
       { x0: 0.45, y: 0.38, w: 640, seed: 5523 },
-      { x0: 0.68, y: 0.52, w: 420, seed: 4419 },
+      { x0: 0.68, y: 0.52, w: 420, seed: 4419, wisp: true },
       { x0: 0.88, y: 0.44, w: 600, seed: 5524 },
-      { x0: 0.12, y: 0.62, w: 300, seed: 4420 },
-      { x0: 0.58, y: 0.66, w: 360, seed: 4421 },
+      { x0: 0.12, y: 0.62, w: 300, seed: 4420, wisp: true },
+      { x0: 0.58, y: 0.66, w: 360, seed: 4421, wisp: true },
     ],
     mouse: 22,
     scroll: 60,
@@ -196,10 +201,10 @@ const LAYERS: LayerSpec[] = [
     clouds: [
       { x0: 0.1, y: 0.88, w: 680, seed: 7731 },
       { x0: 0.38, y: 0.95, w: 420, seed: 7732 },
-      { x0: 0.62, y: 0.84, w: 600, seed: 8837 },
+      { x0: 0.62, y: 0.84, w: 600, seed: 8837, wisp: true },
       { x0: 0.85, y: 0.92, w: 480, seed: 7733 },
-      { x0: 0.25, y: 0.78, w: 320, seed: 7734 },
-      { x0: 0.5, y: 0.74, w: 280, seed: 7735 },
+      { x0: 0.25, y: 0.78, w: 320, seed: 7734, wisp: true },
+      { x0: 0.5, y: 0.74, w: 280, seed: 7735, wisp: true },
     ],
     mouse: 38,
     scroll: 95,
@@ -255,7 +260,7 @@ export default function DitherClouds({ getScrollP }: DitherCloudsProps) {
           const ctx = canvas.getContext("2d");
           if (ctx) {
             ctx.scale(dpr, dpr);
-            stampCloud(ctx, cw, ch, c.seed);
+            stampCloud(ctx, cw, ch, c.seed, !!c.wisp);
           }
           el.appendChild(canvas);
           host.appendChild(el);
