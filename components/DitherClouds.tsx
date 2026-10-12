@@ -142,60 +142,68 @@ function stampCloud(
 }
 
 /* ------------------------------------------------------------------ */
-/* Cloudscape: 3 depth layers, mouse parallax + ambient drift          */
+/* Cloudscape: 3 depth layers, mouse parallax + visible wind drift    */
+/* Each cloud is its own canvas so it can travel across the sky and   */
+/* wrap around the edges. Layers sink with scroll (depth on takeoff).  */
 /* ------------------------------------------------------------------ */
 
 interface CloudSpec {
-  x: number; // center, fraction of hero width
-  y: number; // center, fraction of hero height
-  w: number; // width px at 1440px reference
   seed: number;
+  w: number; // width px at 1440px reference
+  y: number; // base center, fraction of hero height
+  x0: number; // base x phase, fraction of hero width
 }
 
 interface LayerSpec {
   clouds: CloudSpec[];
   mouse: number; // max px of mouse parallax
   scroll: number; // px of downward drift over the takeoff
-  period: number; // seconds per ambient drift cycle
-  amp: number; // px of ambient drift
-  phase: number;
+  speed: number; // px/s of constant wind drift (leftward)
 }
+
+const MARGIN = 120; // px beyond each edge where clouds spawn/recycle
 
 const LAYERS: LayerSpec[] = [
   {
     clouds: [
-      { x: 0.1, y: 0.15, w: 640, seed: 1103 },
-      { x: 0.82, y: 0.11, w: 720, seed: 2207 },
-      { x: 0.52, y: 0.05, w: 470, seed: 3311 },
+      { x0: 0.05, y: 0.12, w: 640, seed: 1103 },
+      { x0: 0.3, y: 0.06, w: 420, seed: 1104 },
+      { x0: 0.52, y: 0.16, w: 720, seed: 2207 },
+      { x0: 0.72, y: 0.08, w: 380, seed: 1105 },
+      { x0: 0.9, y: 0.14, w: 560, seed: 1106 },
+      { x0: 0.2, y: 0.23, w: 300, seed: 1107 },
+      { x0: 0.62, y: 0.25, w: 340, seed: 1108 },
     ],
     mouse: 10,
     scroll: 30,
-    period: 105,
-    amp: 26,
-    phase: 0.4,
+    speed: 7,
   },
   {
     clouds: [
-      { x: 0.04, y: 0.44, w: 560, seed: 4417 },
-      { x: 0.92, y: 0.46, w: 620, seed: 5523 },
-      { x: 0.66, y: 0.68, w: 430, seed: 6629 },
+      { x0: 0.02, y: 0.42, w: 560, seed: 4417 },
+      { x0: 0.25, y: 0.55, w: 380, seed: 4418 },
+      { x0: 0.45, y: 0.38, w: 640, seed: 5523 },
+      { x0: 0.68, y: 0.52, w: 420, seed: 4419 },
+      { x0: 0.88, y: 0.44, w: 600, seed: 5524 },
+      { x0: 0.12, y: 0.62, w: 300, seed: 4420 },
+      { x0: 0.58, y: 0.66, w: 360, seed: 4421 },
     ],
     mouse: 22,
     scroll: 60,
-    period: 82,
-    amp: 20,
-    phase: 2.1,
+    speed: 12,
   },
   {
     clouds: [
-      { x: 0.12, y: 0.9, w: 680, seed: 7731 },
-      { x: 0.86, y: 0.86, w: 600, seed: 8837 },
+      { x0: 0.1, y: 0.88, w: 680, seed: 7731 },
+      { x0: 0.38, y: 0.95, w: 420, seed: 7732 },
+      { x0: 0.62, y: 0.84, w: 600, seed: 8837 },
+      { x0: 0.85, y: 0.92, w: 480, seed: 7733 },
+      { x0: 0.25, y: 0.78, w: 320, seed: 7734 },
+      { x0: 0.5, y: 0.74, w: 280, seed: 7735 },
     ],
     mouse: 38,
     scroll: 95,
-    period: 64,
-    amp: 15,
-    phase: 4.4,
+    speed: 20,
   },
 ];
 
@@ -207,6 +215,10 @@ interface DitherCloudsProps {
 export default function DitherClouds({ getScrollP }: DitherCloudsProps) {
   const wrapRef = useRef<HTMLDivElement>(null);
   const layerRefs = useRef<(HTMLDivElement | null)[]>([]);
+  // cloudRefs[li][ci] = { el, cw, ch, seed }
+  const cloudRefs = useRef<
+    { el: HTMLDivElement; cw: number; ch: number; seed: number }[][]
+  >([]);
 
   useEffect(() => {
     const wrap = wrapRef.current;
@@ -222,35 +234,41 @@ export default function DitherClouds({ getScrollP }: DitherCloudsProps) {
       const dpr = Math.min(1.5, window.devicePixelRatio || 1);
       const s = Math.max(0.72, Math.min(1.15, w / 1440));
 
-      LAYERS.forEach((layer, li) => {
+      cloudRefs.current = LAYERS.map((layer, li) => {
         const host = layerRefs.current[li];
-        if (!host) return;
+        if (!host) return [];
         host.innerHTML = "";
-        const canvas = document.createElement("canvas");
-        canvas.width = Math.round(w * dpr);
-        canvas.height = Math.round(h * dpr);
-        canvas.style.width = "100%";
-        canvas.style.height = "100%";
-        canvas.style.display = "block";
-        const ctx = canvas.getContext("2d");
-        if (!ctx) return;
-        ctx.scale(dpr, dpr);
-
-        for (const c of layer.clouds) {
+        return layer.clouds.map((c) => {
           const cw = Math.ceil(c.w * s);
           const ch = Math.ceil(cw * 0.42);
-          const cc = document.createElement("canvas");
-          cc.width = Math.ceil(cw * dpr);
-          cc.height = Math.ceil(ch * dpr);
-          const cctx = cc.getContext("2d");
-          if (!cctx) continue;
-          cctx.scale(dpr, dpr);
-          stampCloud(cctx, cw, ch, c.seed);
-          ctx.drawImage(cc, c.x * w - cw / 2, c.y * h - ch / 2, cw, ch);
-        }
-        host.appendChild(canvas);
+          const el = document.createElement("div");
+          el.style.position = "absolute";
+          el.style.left = "0";
+          el.style.top = "0";
+          el.style.willChange = "transform";
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.ceil(cw * dpr);
+          canvas.height = Math.ceil(ch * dpr);
+          canvas.style.width = `${cw}px`;
+          canvas.style.height = `${ch}px`;
+          canvas.style.display = "block";
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            ctx.scale(dpr, dpr);
+            stampCloud(ctx, cw, ch, c.seed);
+          }
+          el.appendChild(canvas);
+          host.appendChild(el);
+          return { el, cw, ch, seed: c.seed };
+        });
       });
     };
+
+    const bobOf = (seed: number) => ({
+      amp: 8 + (seed % 7),
+      period: 9 + (seed % 8),
+      phase: ((seed % 628) / 100) * Math.PI,
+    });
 
     const place = (
       mx: number,
@@ -259,24 +277,31 @@ export default function DitherClouds({ getScrollP }: DitherCloudsProps) {
       animate: boolean,
     ) => {
       const p = getScrollP();
+      const w = wrap.clientWidth;
+      const h = wrap.clientHeight;
       LAYERS.forEach((layer, li) => {
         const el = layerRefs.current[li];
         if (!el) return;
-        const dx = animate
-          ? mx * layer.mouse +
-            Math.sin((t * 2 * Math.PI) / layer.period + layer.phase) *
-              layer.amp
-          : 0;
-        const dy = animate
-          ? my * layer.mouse * 0.45 +
-            Math.sin(
-              (t * 2 * Math.PI) / (layer.period * 1.7) + layer.phase * 2,
-            ) *
-              layer.amp *
-              0.45 +
-            p * layer.scroll
-          : p * layer.scroll;
+        // Layer: mouse parallax + scroll-linked sinking (the depth effect).
+        const dx = animate ? mx * layer.mouse : 0;
+        const dy = animate ? my * layer.mouse * 0.45 + p * layer.scroll : p * layer.scroll;
         el.style.transform = `translate3d(${dx.toFixed(2)}px, ${dy.toFixed(2)}px, 0)`;
+
+        // Clouds: constant wind drift with edge wrap + gentle individual bob.
+        const clouds = cloudRefs.current[li] ?? [];
+        clouds.forEach((c, ci) => {
+          const spec = layer.clouds[ci];
+          const span = w + c.cw + MARGIN * 2;
+          const travel = animate ? t * layer.speed : 0;
+          const raw = (((spec.x0 * w - travel) % span) + span) % span;
+          const cx = raw - MARGIN - c.cw / 2;
+          let cy = spec.y * h - c.ch / 2;
+          if (animate) {
+            const b = bobOf(c.seed);
+            cy += Math.sin((t * 2 * Math.PI) / b.period + b.phase) * b.amp;
+          }
+          c.el.style.transform = `translate3d(${cx.toFixed(1)}px, ${cy.toFixed(1)}px, 0)`;
+        });
       });
     };
 
@@ -297,11 +322,20 @@ export default function DitherClouds({ getScrollP }: DitherCloudsProps) {
 
     const start = performance.now();
     let raf = 0;
+    let heroVisible = true;
+    const io = new IntersectionObserver(
+      (entries) => {
+        heroVisible = entries[0]?.isIntersecting ?? true;
+      },
+      { threshold: 0 },
+    );
+    io.observe(wrap);
     const tick = (now: number) => {
+      raf = requestAnimationFrame(tick);
+      if (document.hidden || !heroVisible) return;
       mx += (tmx - mx) * 0.055;
       my += (tmy - my) * 0.055;
       place(mx, my, (now - start) / 1000, true);
-      raf = requestAnimationFrame(tick);
     };
     raf = requestAnimationFrame(tick);
 
@@ -314,6 +348,7 @@ export default function DitherClouds({ getScrollP }: DitherCloudsProps) {
 
     return () => {
       cancelAnimationFrame(raf);
+      io.disconnect();
       window.removeEventListener("mousemove", onMouse);
       window.removeEventListener("resize", onResize);
       clearTimeout(rT);
