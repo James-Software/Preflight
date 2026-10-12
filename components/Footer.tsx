@@ -5,9 +5,12 @@ export default function Footer() {
         <p className="font-display text-sm font-bold tracking-tight text-ink">
           Preflight
         </p>
-        <p className="text-sm text-ink/45">
-          An agent swarm that makes sure your app is ready for takeoff.
-        </p>
+        <a
+          href="/privacy"
+          className="text-sm text-ink/45 transition-colors duration-150 hover:text-ink"
+        >
+          Privacy Policy
+        </a>
         <p className="text-sm text-ink/45">&copy; 2026</p>
       </div>
     </footer>
