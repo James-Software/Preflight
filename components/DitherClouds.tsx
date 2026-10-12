@@ -189,6 +189,11 @@ const LAYERS: LayerSpec[] = [
       { x0: 0.9, y: 0.14, w: 560, seed: 1106 },
       { x0: 0.2, y: 0.23, w: 300, seed: 1107 },
       { x0: 0.62, y: 0.25, w: 340, seed: 1108 },
+      // Fillers: keep the top band covered as clouds drift left (ultrawide voids)
+      { x0: 0.82, y: 0.2, w: 440, seed: 1201 },
+      { x0: 0.98, y: 0.1, w: 520, seed: 1202 },
+      { x0: 0.42, y: 0.1, w: 360, seed: 1203, wisp: true },
+      { x0: 0.14, y: 0.05, w: 380, seed: 1204, wisp: true },
     ],
     mouse: 10,
     scroll: 30,
@@ -203,6 +208,11 @@ const LAYERS: LayerSpec[] = [
       { x0: 0.88, y: 0.44, w: 600, seed: 5524 },
       { x0: 0.12, y: 0.62, w: 300, seed: 4420, wisp: true },
       { x0: 0.58, y: 0.66, w: 360, seed: 4421, wisp: true },
+      // Fillers: mid-right coverage, all wisps so the headline zone stays airy
+      { x0: 0.78, y: 0.42, w: 380, seed: 4601, wisp: true },
+      { x0: 0.97, y: 0.54, w: 440, seed: 4602, wisp: true },
+      { x0: 0.86, y: 0.64, w: 360, seed: 4603, wisp: true },
+      { x0: 0.34, y: 0.62, w: 340, seed: 4604, wisp: true },
     ],
     mouse: 22,
     scroll: 60,
@@ -216,6 +226,11 @@ const LAYERS: LayerSpec[] = [
       { x0: 0.85, y: 0.92, w: 480, seed: 7733 },
       { x0: 0.25, y: 0.78, w: 320, seed: 7734, wisp: true },
       { x0: 0.5, y: 0.74, w: 280, seed: 7735, wisp: true },
+      // Fillers: bottom band coverage as clouds drift left (ultrawide voids)
+      { x0: 0.72, y: 0.9, w: 520, seed: 7901 },
+      { x0: 0.96, y: 0.8, w: 440, seed: 7902, wisp: true },
+      { x0: 0.56, y: 0.94, w: 400, seed: 7903 },
+      { x0: 0.18, y: 0.94, w: 360, seed: 7904, wisp: true },
     ],
     mouse: 38,
     scroll: 95,
@@ -248,7 +263,7 @@ export default function DitherClouds({ getScrollP }: DitherCloudsProps) {
       const h = wrap.clientHeight;
       if (!w || !h) return;
       const dpr = Math.min(1.5, window.devicePixelRatio || 1);
-      const s = Math.max(0.72, Math.min(1.15, w / 1440));
+      const s = Math.max(0.72, Math.min(1.3, w / 1440));
 
       cloudRefs.current = LAYERS.map((layer, li) => {
         const host = layerRefs.current[li];
