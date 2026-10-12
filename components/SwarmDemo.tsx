@@ -147,6 +147,41 @@ const PARK = [
   { x: 690, y: 420 },
 ];
 
+/* Waypoint: glide here, hold, optionally click a button (by index). */
+interface Waypoint {
+  x: number;
+  y: number;
+  hold: number;
+  click?: number;
+}
+
+/* One looping path per cursor. First waypoint = PARK spot (seamless start). */
+const PATHS: Waypoint[][] = [
+  [
+    { x: 610, y: 190, hold: 700 },
+    { x: 265, y: 294, hold: 350, click: 0 },
+    { x: 340, y: 218, hold: 900 },
+    { x: 610, y: 294, hold: 350, click: 2 },
+    { x: 700, y: 420, hold: 800 },
+  ],
+  [
+    { x: 235, y: 415, hold: 800 },
+    { x: 435, y: 294, hold: 350, click: 1 },
+    { x: 265, y: 294, hold: 350, click: 0 },
+    { x: 680, y: 200, hold: 700 },
+  ],
+  [
+    { x: 690, y: 420, hold: 600 },
+    { x: 700, y: 150, hold: 500 },
+    { x: 500, y: 210, hold: 500 },
+    { x: 435, y: 294, hold: 1400, click: 1 },
+    { x: 300, y: 450, hold: 700 },
+  ],
+];
+
+const easeInOutCubic = (p: number) =>
+  p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+
 const POINTS = [
   {
     title: "Real browsers",
@@ -170,6 +205,115 @@ export default function SwarmDemo() {
   );
   const cursorRefs = useRef<(SVGGElement | null)[]>([]);
   const buttonRefs = useRef<(SVGGElement | null)[]>([]);
+  const sceneRef = useRef<HTMLDivElement | null>(null);
+  const [pressed, setPressed] = useState<number | null>(null);
+
+  /* Cursor waypoint engine: one rAF loop drives all three cursors.
+     Glide (eased) -> hold -> click -> next waypoint, looping forever.
+     Writes translate3d straight to the <g> refs; React never re-renders
+     per frame. Clicks are low-frequency, so the button press goes
+     through state. Pauses off-screen and in hidden tabs. */
+  useEffect(() => {
+    if (reduced) return; // static parked frame
+    const els = cursorRefs.current;
+    const scene = sceneRef.current;
+    if (!scene || els.some((e) => !e)) return;
+
+    let pressTimer = 0;
+    const doClick = (bi: number) => {
+      setPressed(bi);
+      window.clearTimeout(pressTimer);
+      pressTimer = window.setTimeout(() => setPressed(null), 220);
+    };
+
+    interface CS {
+      i: number;
+      fx: number;
+      fy: number;
+      x: number;
+      y: number;
+      t: number;
+      dur: number;
+      phase: "hold" | "glide";
+      holdT: number;
+      fired: boolean;
+    }
+    const states: CS[] = PATHS.map((path) => ({
+      i: 0,
+      fx: path[0].x,
+      fy: path[0].y,
+      x: path[0].x,
+      y: path[0].y,
+      t: 0,
+      dur: 0,
+      phase: "hold",
+      holdT: 0,
+      fired: false,
+    }));
+
+    let visible = true;
+    const io = new IntersectionObserver(
+      (entries) => {
+        visible = entries[0]?.isIntersecting ?? true;
+      },
+      { threshold: 0 },
+    );
+    io.observe(scene);
+
+    let raf = 0;
+    let last = performance.now();
+    const tick = (now: number) => {
+      raf = requestAnimationFrame(tick);
+      const dt = Math.min((now - last) / 1000, 0.1);
+      last = now;
+      if (document.hidden || !visible) return;
+      states.forEach((s, ci) => {
+        const path = PATHS[ci];
+        const wp = path[s.i];
+        if (s.phase === "hold") {
+          s.holdT += dt * 1000;
+          if (s.holdT >= wp.hold) {
+            const next = (s.i + 1) % path.length;
+            const tgt = path[next];
+            const dist = Math.hypot(tgt.x - s.x, tgt.y - s.y);
+            s.i = next;
+            s.fx = s.x;
+            s.fy = s.y;
+            s.t = 0;
+            s.dur = Math.min(1600, Math.max(450, (dist / 420) * 1000));
+            s.phase = "glide";
+            s.holdT = 0;
+            s.fired = false;
+          }
+        } else {
+          s.t += dt * 1000;
+          const p = Math.min(1, s.t / s.dur);
+          const e = easeInOutCubic(p);
+          const tgt = path[s.i];
+          s.x = s.fx + (tgt.x - s.fx) * e;
+          s.y = s.fy + (tgt.y - s.fy) * e;
+          if (p >= 1) {
+            s.phase = "hold";
+            s.holdT = 0;
+            if (tgt.click != null && !s.fired) {
+              s.fired = true;
+              doClick(tgt.click);
+            }
+          }
+        }
+        const el = els[ci];
+        if (el)
+          el.style.transform = `translate3d(${s.x.toFixed(1)}px, ${s.y.toFixed(1)}px, 0)`;
+      });
+    };
+    raf = requestAnimationFrame(tick);
+
+    return () => {
+      cancelAnimationFrame(raf);
+      io.disconnect();
+      window.clearTimeout(pressTimer);
+    };
+  }, [reduced]);
 
   return (
     <section className="bg-lavender py-20 md:py-24">
@@ -179,7 +323,11 @@ export default function SwarmDemo() {
         </h2>
 
         {/* Scene: one SVG, 880x540 design space, scales as a unit. */}
-        <div className="mx-auto mt-12 max-w-3xl" aria-hidden="true">
+        <div
+          ref={sceneRef}
+          className="mx-auto mt-12 max-w-3xl"
+          aria-hidden="true"
+        >
           <svg
             viewBox="0 0 880 540"
             className="h-auto w-full"
@@ -240,6 +388,11 @@ export default function SwarmDemo() {
                 key={b.id}
                 ref={(el) => {
                   buttonRefs.current[i] = el;
+                }}
+                style={{
+                  transform:
+                    pressed === i ? "translateY(6px)" : "translateY(0px)",
+                  transition: `transform 150ms ${EASE}`,
                 }}
               >
                 <rect
