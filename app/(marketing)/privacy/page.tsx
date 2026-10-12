@@ -1,9 +1,9 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy — Preflight",
+  title: "Privacy Policy — PreFlight",
   description:
-    "How Preflight collects, uses, and protects your data across waitlist, testing, GitHub integration, and payments.",
+    "How PreFlight collects, uses, and protects your data across waitlist, testing, GitHub integration, and payments.",
 };
 
 const SECTIONS: { heading: string; body: string[] }[] = [
@@ -32,20 +32,20 @@ const SECTIONS: { heading: string; body: string[] }[] = [
   {
     heading: "4. Information collected automatically",
     body: [
-      "We use cookies and similar technologies for sign-in sessions, security, and basic product analytics (such as which features are used) so we can improve Preflight. You can control cookies through your browser settings, though some features require them to work.",
+      "We use cookies and similar technologies for sign-in sessions, security, and basic product analytics (such as which features are used) so we can improve PreFlight. You can control cookies through your browser settings, though some features require them to work.",
     ],
   },
   {
     heading: "5. How we use information",
     body: [
-      "We use the information we collect to operate Preflight: running your tests, diagnosing failures, opening fix pull requests, managing credits and billing, communicating with you about launches, updates, and support, keeping the service secure and preventing abuse, and complying with legal obligations.",
+      "We use the information we collect to operate PreFlight: running your tests, diagnosing failures, opening fix pull requests, managing credits and billing, communicating with you about launches, updates, and support, keeping the service secure and preventing abuse, and complying with legal obligations.",
     ],
   },
   {
     heading: "6. How we share information",
     body: [
-      "Service providers. We share data with the providers that run Preflight: hosting (Vercel), database (Neon), payments (Stripe), authentication, AI diagnosis (our model providers), and GitHub (to open pull requests). Each processes data only as needed to provide its service to us.",
-      "We do not sell your personal information or your code. We will disclose information if required by law or to protect the rights, safety, and security of Preflight, our users, or others.",
+      "Service providers. We share data with the providers that run PreFlight: hosting (Vercel), database (Neon), payments (Stripe), authentication, AI diagnosis (our model providers), and GitHub (to open pull requests). Each processes data only as needed to provide its service to us.",
+      "We do not sell your personal information or your code. We will disclose information if required by law or to protect the rights, safety, and security of PreFlight, our users, or others.",
     ],
   },
   {
@@ -69,7 +69,7 @@ const SECTIONS: { heading: string; body: string[] }[] = [
   {
     heading: "10. Children's privacy",
     body: [
-      "Preflight is built for development teams and is not directed at children under 13. We do not knowingly collect personal information from children under 13; if we learn that we have, we will delete it.",
+      "PreFlight is built for development teams and is not directed at children under 13. We do not knowingly collect personal information from children under 13; if we learn that we have, we will delete it.",
     ],
   },
   {
@@ -94,7 +94,7 @@ export default function PrivacyPage() {
           href="/"
           className="text-sm font-medium text-ink/50 transition-colors duration-150 hover:text-ink"
         >
-          &larr; Back to Preflight
+          &larr; Back to PreFlight
         </a>
         <h1 className="font-display mt-8 text-4xl font-bold tracking-tight text-ink md:text-5xl">
           Privacy Policy
@@ -103,7 +103,7 @@ export default function PrivacyPage() {
           Effective October 12, 2026
         </p>
         <p className="mt-8 text-base leading-relaxed text-ink/70">
-          Preflight (&ldquo;we&rdquo;, &ldquo;us&rdquo;) sends a swarm of AI
+          PreFlight (&ldquo;we&rdquo;, &ldquo;us&rdquo;) sends a swarm of AI
           agents to test your application like real users, diagnoses what
           they find from your code, and proposes fixes as pull requests.
           This policy explains what data we collect across the whole
