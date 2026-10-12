@@ -274,7 +274,7 @@ export default function DitherClouds({ getScrollP }: DitherCloudsProps) {
           // Base top-left at t=0 in layer space (matches place() with
           // animate=false): the occupancy key must live in layer space,
           // not canvas space.
-          const bx = c.x0 * w - MARGIN - cw / 2;
+          const bx = c.x0 * w - cw - MARGIN;
           const by = c.y * h - ch / 2;
           const ctx = canvas.getContext("2d");
           if (ctx) {
@@ -318,7 +318,10 @@ export default function DitherClouds({ getScrollP }: DitherCloudsProps) {
           const span = w + c.cw + MARGIN * 2;
           const travel = animate ? t * layer.speed : 0;
           const raw = (((spec.x0 * w - travel) % span) + span) % span;
-          const cx = raw - MARGIN - c.cw / 2;
+          // Wrap only once the whole cloud is fully past the left edge
+          // (right edge at cx + cw, MARGIN to spare) — wide clouds used to
+          // visibly snap out while still on-screen.
+          const cx = raw - c.cw - MARGIN;
           let cy = spec.y * h - c.ch / 2;
           if (animate) {
             const b = bobOf(c.seed);
@@ -398,11 +401,9 @@ export default function DitherClouds({ getScrollP }: DitherCloudsProps) {
         // as they drift into the text zone and back in as they leave. The
         // mask is static in screen space (the wrap itself never transforms),
         // so the stage holds steady while layers parallax/scroll inside it.
-        // The fully-clear core covers the eyebrow, headline, subcopy, and
-        // CTAs with margin; the long feather makes the transition
-        // imperceptible — no visible ellipse edge, no snap at the boundary.
-        // Dots must never show through the transparent gradient glyphs of
-        // "takeoff.".
+        // The fully-clear core covers the headline, subcopy, and CTAs with
+        // margin; the long feather makes the transition imperceptible — no
+        // visible ellipse edge, no snap at the boundary.
         WebkitMaskImage:
           "radial-gradient(ellipse 62% 44% at 50% 34%, transparent 55%, black 90%)",
         maskImage:
