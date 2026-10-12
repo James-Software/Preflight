@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { useSession } from "next-auth/react";
 import { PixelPlaneSprite } from "./PixelPlane";
 
 /** px scrolled before the bar morphs into a floating pill */
@@ -24,6 +25,7 @@ export default function Nav() {
     () => typeof window !== "undefined" && window.scrollY > SCROLL_AFTER,
   );
   const [reduced, setReduced] = useState(false);
+  const { data: session, status } = useSession();
 
   useEffect(() => {
     setReduced(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
@@ -82,12 +84,49 @@ export default function Nav() {
             How it works
           </a>
         </div>
-        <a
-          href="#early-access"
-          className="pressable btn-gradient rounded-full px-4 py-2.5 text-sm font-medium text-white"
-        >
-          Get early access
-        </a>
+        <div className="flex items-center gap-1.5">
+          {status !== "loading" &&
+            (session?.user ? (
+              <a
+                href="/dashboard"
+                className="flex items-center gap-2 rounded-full py-1 pl-1 pr-3 transition-colors duration-150 hover:bg-ink/5"
+                aria-label="Open dashboard"
+              >
+                {session.user.image ? (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img
+                    src={session.user.image}
+                    alt=""
+                    className="h-8 w-8 rounded-full ring-1 ring-ink/10"
+                  />
+                ) : null}
+                <span
+                  className={`text-sm font-medium text-ink ${
+                    scrolled ? "" : GLOW_TEXT
+                  }`}
+                >
+                  {session.user.name?.split(" ")[0] ?? "Dashboard"}
+                </span>
+              </a>
+            ) : (
+              <>
+                <a
+                  href="/login"
+                  className={`rounded-full px-4 py-2.5 text-sm font-medium text-ink/70 transition-colors duration-150 hover:text-ink ${
+                    scrolled ? "" : GLOW_TEXT
+                  }`}
+                >
+                  Log in
+                </a>
+                <a
+                  href="#early-access"
+                  className="pressable btn-gradient rounded-full px-4 py-2.5 text-sm font-medium text-white"
+                >
+                  Get early access
+                </a>
+              </>
+            ))}
+        </div>
       </div>
     </nav>
   );
