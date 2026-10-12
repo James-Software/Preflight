@@ -1,5 +1,6 @@
 import NextAuth from "next-auth";
 import GitHub from "next-auth/providers/github";
+import { isEmailAllowed } from "@/lib/allowlist";
 
 // GitHub-only login for now. JWT sessions mean no database tables are
 // needed for auth itself — the session lives in an encrypted cookie.
@@ -9,5 +10,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   pages: {
     // Skip Auth.js's default sign-in page; /login goes straight to GitHub.
     signIn: "/login",
+    error: "/access-denied",
+  },
+  callbacks: {
+    // Invite-only: deny the sign-in unless the GitHub email is on the
+    // allowed_emails list. Fails closed if the DB is unreachable.
+    async signIn({ user }) {
+      const email = user.email?.toLowerCase().trim();
+      if (!email) return false;
+      try {
+        return await isEmailAllowed(email);
+      } catch {
+        return false;
+      }
+    },
   },
 });
