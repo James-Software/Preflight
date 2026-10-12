@@ -365,6 +365,19 @@ export default function DitherClouds({ getScrollP }: DitherCloudsProps) {
       ref={wrapRef}
       className="pointer-events-none absolute inset-0 z-0"
       aria-hidden="true"
+      style={{
+        // Clear a soft stage behind the hero headline: clouds fade out as
+        // they drift into the text zone and back in as they leave. The mask
+        // is static in screen space (the wrap itself never transforms), so
+        // the stage holds steady while layers parallax/scroll inside it.
+        // Ellipse sized so the eyebrow, headline, subcopy, and CTAs sit in
+        // clear sky; edges stay rich. Dots must never show through the
+        // transparent gradient glyphs of "takeoff.".
+        WebkitMaskImage:
+          "radial-gradient(ellipse 60% 42% at 50% 34%, transparent 46%, black 86%)",
+        maskImage:
+          "radial-gradient(ellipse 60% 42% at 50% 34%, transparent 46%, black 86%)",
+      }}
     >
       {LAYERS.map((_, i) => (
         <div
