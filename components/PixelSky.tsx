@@ -2,19 +2,9 @@
 
 import { useCallback, useEffect, useRef } from "react";
 import DitherClouds from "./DitherClouds";
-import { PixelSprite, PLANE_MAP, PLANE_PALETTE } from "./pixel-art";
+import Plane3D, { planeFlight } from "./Plane3D";
 
 const TRAIL_DOTS = 14;
-
-const lerp = (a: number, b: number, t: number) => a + (b - a) * t;
-
-/** Plane path in % of hero width/height. Gentle accelerating climb, nose-up. */
-function planePath(t: number) {
-  const x = lerp(8, 70, t);
-  const y = 66 - 54 * Math.pow(t, 1.5);
-  const rot = -12 * Math.sin((Math.PI / 2) * t);
-  return { x, y, rot };
-}
 
 interface PixelSkyProps {
   heroRef: React.RefObject<HTMLElement | null>;
@@ -49,8 +39,8 @@ export default function PixelSky({ heroRef, contentRef }: PixelSkyProps) {
       const h = hero.offsetHeight;
       const plane = planeRef.current;
       if (plane) {
-        const { x, y, rot } = planePath(p);
-        plane.style.transform = `translate(${(x / 100) * w}px, ${(y / 100) * h}px) translate(-50%, -50%) rotate(${rot}deg)`;
+        const { x, y, scale } = planeFlight(p);
+        plane.style.transform = `translate(${(x / 100) * w}px, ${(y / 100) * h}px) translate(-50%, -50%) scale(${scale.toFixed(4)})`;
       }
       const trail = trailRef.current;
       if (trail) {
@@ -59,7 +49,7 @@ export default function PixelSky({ heroRef, contentRef }: PixelSkyProps) {
           const t = p - (i + 1) * 0.045;
           const el = kids[i] as HTMLElement;
           if (t > 0.005) {
-            const pt = planePath(t);
+            const pt = planeFlight(t);
             el.style.opacity = String(0.7 * (1 - i / kids.length));
             el.style.transform = `translate(${(pt.x / 100) * w}px, ${(pt.y / 100) * h}px) translate(-50%, -50%)`;
           } else {
@@ -128,13 +118,13 @@ export default function PixelSky({ heroRef, contentRef }: PixelSkyProps) {
         ))}
       </div>
 
-      {/* the plane */}
+      {/* the plane: real-time 3D model, scroll-driven takeoff */}
       <div
         ref={planeRef}
         className="absolute left-0 top-0 will-change-transform"
         style={{ transform: "translate(8vw, 74vh) translate(-50%, -50%)" }}
       >
-        <PixelSprite map={PLANE_MAP} palette={PLANE_PALETTE} pixel={6} />
+        <Plane3D getScrollP={getScrollP} />
       </div>
     </div>
   );
