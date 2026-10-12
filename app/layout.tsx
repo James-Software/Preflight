@@ -17,7 +17,7 @@ const sans = Inter({
 export const metadata: Metadata = {
   title: "Preflight — Cleared for takeoff",
   description:
-    "Preflight sends a swarm of AI agents to test your app like real users. Every bug they find comes back as a pull request with the fix.",
+    "Preflight sends a swarm of AI agents to test your app like real users. Every bug they find comes back as fix.",
 };
 
 export const viewport: Viewport = {
