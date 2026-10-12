@@ -281,7 +281,11 @@ export default function DitherClouds({ getScrollP }: DitherCloudsProps) {
       const w = wrap.clientWidth;
       const h = wrap.clientHeight;
       if (!w || !h) return;
-      const dpr = Math.min(1.5, window.devicePixelRatio || 1);
+      // Integer DPR only: a fractional backing scale (e.g. 1.5x turns 3px
+      // dots into 4.5 device px) forces anti-aliased fringes around every
+      // dot, which read as outlines at high zoom. Integer scaling keeps each
+      // dot a whole number of device pixels — mathematically crisp.
+      const dpr = Math.max(1, Math.round(window.devicePixelRatio || 1));
       const s = Math.max(0.72, Math.min(1.3, w / 1440));
 
       cloudRefs.current = LAYERS.map((layer, li) => {
