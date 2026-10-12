@@ -153,6 +153,8 @@ interface Waypoint {
   y: number;
   hold: number;
   click?: number;
+  /** this click finds a bug: pop the red tag */
+  bug?: boolean;
 }
 
 /* One looping path per cursor. First waypoint = PARK spot (seamless start). */
@@ -174,13 +176,17 @@ const PATHS: Waypoint[][] = [
     { x: 690, y: 420, hold: 600 },
     { x: 700, y: 150, hold: 500 },
     { x: 500, y: 210, hold: 500 },
-    { x: 435, y: 294, hold: 1400, click: 1 },
+    { x: 435, y: 294, hold: 1400, click: 1, bug: true },
     { x: 300, y: 450, hold: 700 },
   ],
 ];
 
 const easeInOutCubic = (p: number) =>
   p < 0.5 ? 4 * p * p * p : 1 - Math.pow(-2 * p + 2, 3) / 2;
+
+/* Ripple particle directions: 6-way burst. */
+const PARTICLE_ANGLES = [0, 1, 2, 3, 4, 5].map((i) => (i * Math.PI) / 3);
+const PARTICLE_DIST = 46;
 
 const POINTS = [
   {
@@ -207,6 +213,10 @@ export default function SwarmDemo() {
   const buttonRefs = useRef<(SVGGElement | null)[]>([]);
   const sceneRef = useRef<HTMLDivElement | null>(null);
   const [pressed, setPressed] = useState<number | null>(null);
+  const [ripples, setRipples] = useState<{ id: number; x: number; y: number }[]>(
+    [],
+  );
+  const [showBug, setShowBug] = useState(false);
 
   /* Cursor waypoint engine: one rAF loop drives all three cursors.
      Glide (eased) -> hold -> click -> next waypoint, looping forever.
@@ -220,10 +230,26 @@ export default function SwarmDemo() {
     if (!scene || els.some((e) => !e)) return;
 
     let pressTimer = 0;
-    const doClick = (bi: number) => {
+    let bugTimer = 0;
+    let rippleSeq = 0;
+    const rippleTimers: number[] = [];
+    const doClick = (bi: number, x: number, y: number, bug: boolean) => {
       setPressed(bi);
       window.clearTimeout(pressTimer);
       pressTimer = window.setTimeout(() => setPressed(null), 220);
+      // pixel burst at the click point
+      const id = ++rippleSeq;
+      setRipples((rs) => [...rs.slice(-5), { id, x, y }]);
+      rippleTimers.push(
+        window.setTimeout(() => {
+          setRipples((rs) => rs.filter((r) => r.id !== id));
+        }, 650),
+      );
+      if (bug) {
+        setShowBug(true);
+        window.clearTimeout(bugTimer);
+        bugTimer = window.setTimeout(() => setShowBug(false), 1700);
+      }
     };
 
     interface CS {
@@ -297,7 +323,7 @@ export default function SwarmDemo() {
             s.holdT = 0;
             if (tgt.click != null && !s.fired) {
               s.fired = true;
-              doClick(tgt.click);
+              doClick(tgt.click, tgt.x, tgt.y, !!tgt.bug);
             }
           }
         }
@@ -312,6 +338,8 @@ export default function SwarmDemo() {
       cancelAnimationFrame(raf);
       io.disconnect();
       window.clearTimeout(pressTimer);
+      window.clearTimeout(bugTimer);
+      rippleTimers.forEach((t) => window.clearTimeout(t));
     };
   }, [reduced]);
 
@@ -323,6 +351,21 @@ export default function SwarmDemo() {
         </h2>
 
         {/* Scene: one SVG, 880x540 design space, scales as a unit. */}
+        <style>{`
+          @keyframes swarm-ripple {
+            from { transform: scale(0.3); opacity: 0.9; }
+            to { transform: scale(1.6); opacity: 0; }
+          }
+          @keyframes swarm-particle {
+            from { transform: translate(0px, 0px) scale(1); opacity: 1; }
+            to { transform: translate(var(--pdx), var(--pdy)) scale(0.3); opacity: 0; }
+          }
+          @keyframes swarm-tagpop {
+            0% { transform: scale(0.4); opacity: 0; }
+            60% { transform: scale(1.1); opacity: 1; }
+            100% { transform: scale(1); opacity: 1; }
+          }
+        `}</style>
         <div
           ref={sceneRef}
           className="mx-auto mt-12 max-w-3xl"
@@ -427,7 +470,81 @@ export default function SwarmDemo() {
               </g>
             ))}
 
-            {/* ------- parked cursors (animated in the next pass) ------- */}
+            {/* ------- click ripples ------- */}
+            {ripples.map((r) => (
+              <g key={r.id}>
+                <rect
+                  x={r.x - 22}
+                  y={r.y - 22}
+                  width={44}
+                  height={44}
+                  fill="none"
+                  stroke={INK}
+                  strokeWidth={3}
+                  style={{
+                    transformBox: "fill-box",
+                    transformOrigin: "center",
+                    animation: `swarm-ripple 550ms ${EASE} forwards`,
+                  }}
+                />
+                {PARTICLE_ANGLES.map((a, pi) => (
+                  <rect
+                    key={pi}
+                    x={r.x - 5}
+                    y={r.y - 5}
+                    width={10}
+                    height={10}
+                    fill={pi % 2 ? "#ffffff" : INK}
+                    stroke={INK}
+                    strokeWidth={1}
+                    style={
+                      {
+                        "--pdx": `${Math.cos(a) * PARTICLE_DIST}px`,
+                        "--pdy": `${Math.sin(a) * PARTICLE_DIST}px`,
+                        transformBox: "fill-box",
+                        transformOrigin: "center",
+                        animation: `swarm-particle 550ms ${EASE} forwards`,
+                      } as React.CSSProperties
+                    }
+                  />
+                ))}
+              </g>
+            ))}
+
+            {/* ------- bug tag ------- */}
+            {showBug && (
+              <g
+                style={{
+                  transformBox: "fill-box",
+                  transformOrigin: "center",
+                  animation: `swarm-tagpop 320ms ${EASE}`,
+                }}
+              >
+                <rect
+                  x={375}
+                  y={226}
+                  width={120}
+                  height={36}
+                  fill={RED}
+                  stroke={RED_DARK}
+                  strokeWidth={3}
+                />
+                <rect x={429} y={262} width={12} height={18} fill={RED_DARK} />
+                <text
+                  x={435}
+                  y={251}
+                  textAnchor="middle"
+                  fontSize={17}
+                  fontWeight={700}
+                  fill="#ffffff"
+                  fontFamily="'Space Grotesk', sans-serif"
+                >
+                  bug found
+                </text>
+              </g>
+            )}
+
+            {/* ------- swarm cursors (driven by the rAF loop) ------- */}
             {PARK.map((p, i) => (
               <g
                 key={i}
