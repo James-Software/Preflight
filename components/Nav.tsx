@@ -2,7 +2,7 @@ import { PixelSprite, PLANE_MAP, PLANE_PALETTE } from "./pixel-art";
 
 export default function Nav() {
   return (
-    <nav className="absolute inset-x-0 top-0 z-20">
+    <nav className="absolute inset-x-0 top-0 z-20 bg-white">
       <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-5">
         {/* logo slot: wordmark for now — James is making the logo */}
         <a href="#top" className="flex items-center gap-2.5">
