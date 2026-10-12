@@ -141,6 +141,13 @@ function stampCloud(
       const n = noise(px / 52, py / 52);
       d = d * (0.68 + 0.62 * n);
       if (wisp) d *= 0.6; // wisps never form solid cores
+      // Soft canvas edges: fade density to zero near the rect boundary.
+      // The side puffs otherwise reach the canvas edge at ~44% density and
+      // get hard-clipped by the rectangle, so every cloud looks sliced.
+      const fx = Math.min(gx * DOT, W - gx * DOT) / W;
+      const fy = Math.min(gy * DOT, H - gy * DOT) / H;
+      const ft = Math.min(1, Math.min(fx, fy) / 0.08);
+      d *= ft * ft * (3 - 2 * ft); // smoothstep over the outer 8%
       if (d < 0.12) continue;
       if (rand() > Math.min(1, d * 1.02)) continue;
       // Layer-space 3px grid cell (DOT=3): skip if another cloud in this
