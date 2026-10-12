@@ -11,8 +11,6 @@ const SCROLL_AFTER = 32;
 // literal class strings so Tailwind's scanner picks them up.
 const MORPH_TRANSITION =
   "transition-[width,max-width,margin-top,padding,border-radius,border-color,box-shadow,background-color] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]";
-const BG_TRANSITION =
-  "transition-[background-color] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]";
 
 export default function Nav() {
   const [scrolled, setScrolled] = useState(
@@ -45,16 +43,12 @@ export default function Nav() {
   const t = reduced ? "" : MORPH_TRANSITION;
 
   return (
-    <nav
-      className={`fixed inset-x-0 top-0 z-50 ${reduced ? "" : BG_TRANSITION} ${
-        scrolled ? "bg-transparent" : "bg-white"
-      }`}
-    >
+    <nav className="fixed inset-x-0 top-0 z-50">
       <div
         className={`mx-auto flex items-center justify-between ${t} ${
           scrolled
             ? "mt-3 w-[calc(100%-2rem)] max-w-[36rem] rounded-full border border-ink/10 bg-white/90 px-5 py-2.5 shadow-[0_8px_30px_rgba(30,27,75,0.12)] backdrop-blur-md"
-            : "w-full max-w-6xl rounded-none border border-transparent bg-white px-6 py-5 shadow-none"
+            : "w-full max-w-6xl rounded-none border border-transparent bg-transparent px-6 py-5 shadow-none"
         }`}
       >
         <a
