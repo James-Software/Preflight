@@ -208,10 +208,11 @@ const LAYERS: LayerSpec[] = [
       { x0: 0.88, y: 0.44, w: 600, seed: 5524 },
       { x0: 0.12, y: 0.62, w: 300, seed: 4420, wisp: true },
       { x0: 0.58, y: 0.66, w: 360, seed: 4421, wisp: true },
-      // Fillers: mid-right coverage, all wisps so the headline zone stays airy
-      { x0: 0.78, y: 0.42, w: 380, seed: 4601, wisp: true },
-      { x0: 0.97, y: 0.54, w: 440, seed: 4602, wisp: true },
-      { x0: 0.86, y: 0.64, w: 360, seed: 4603, wisp: true },
+      // Fillers: solid right-side clouds so the right flank reads on landing
+      // (their left halves dissolve into the headline clear-stage — by design)
+      { x0: 0.9, y: 0.4, w: 460, seed: 4601 },
+      { x0: 1.0, y: 0.55, w: 500, seed: 4602 },
+      { x0: 0.94, y: 0.66, w: 420, seed: 4603 },
       { x0: 0.34, y: 0.62, w: 340, seed: 4604, wisp: true },
     ],
     mouse: 22,
