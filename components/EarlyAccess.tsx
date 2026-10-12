@@ -74,7 +74,7 @@ export default function EarlyAccess() {
             <button
               type="submit"
               disabled={sending}
-              className="pressable btn-gradient rounded-full px-6 py-3 text-sm font-medium text-white disabled:opacity-70"
+              className="pressable btn-gradient cursor-pointer rounded-full px-6 py-3 text-sm font-medium text-white disabled:cursor-wait disabled:opacity-70"
             >
               {sending ? "Joining…" : "Notify me"}
             </button>
