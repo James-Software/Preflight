@@ -96,6 +96,12 @@ function stampCloud(
   H: number,
   seed: number,
   wisp = false,
+  // Shared per-layer occupancy grid + this cloud's top-left in layer space.
+  // Overlapping clouds skip cells already claimed, so stacked clouds merge
+  // into one uniform-density mass instead of double-stamping dense blobs.
+  occ: Set<string>,
+  bx: number,
+  by: number,
 ) {
   const rand = mulberry32(seed);
   const noise = makeNoise(seed ^ 0x9e3779b9);
@@ -137,6 +143,11 @@ function stampCloud(
       if (wisp) d *= 0.6; // wisps never form solid cores
       if (d < 0.12) continue;
       if (rand() > Math.min(1, d * 1.02)) continue;
+      // Layer-space 3px grid cell (DOT=3): skip if another cloud in this
+      // layer already claimed it, so overlaps merge like real clouds.
+      const key = `${Math.round((bx + gx * DOT) / 3)},${Math.round((by + gy * DOT) / 3)}`;
+      if (occ.has(key)) continue;
+      occ.add(key);
       ctx.fillStyle = wisp ? ramp(Math.min(d, 0.33), rand) : ramp(d, rand);
       ctx.fillRect(gx * DOT, gy * DOT, DOT, DOT);
     }
@@ -243,6 +254,9 @@ export default function DitherClouds({ getScrollP }: DitherCloudsProps) {
         const host = layerRefs.current[li];
         if (!host) return [];
         host.innerHTML = "";
+        // One occupancy grid per layer, built in deterministic
+        // layer.clouds order so the merged result is stable.
+        const occ = new Set<string>();
         return layer.clouds.map((c) => {
           const cw = Math.ceil(c.w * s);
           const ch = Math.ceil(cw * 0.42);
@@ -257,10 +271,15 @@ export default function DitherClouds({ getScrollP }: DitherCloudsProps) {
           canvas.style.width = `${cw}px`;
           canvas.style.height = `${ch}px`;
           canvas.style.display = "block";
+          // Base top-left at t=0 in layer space (matches place() with
+          // animate=false): the occupancy key must live in layer space,
+          // not canvas space.
+          const bx = c.x0 * w - MARGIN - cw / 2;
+          const by = c.y * h - ch / 2;
           const ctx = canvas.getContext("2d");
           if (ctx) {
             ctx.scale(dpr, dpr);
-            stampCloud(ctx, cw, ch, c.seed, !!c.wisp);
+            stampCloud(ctx, cw, ch, c.seed, !!c.wisp, occ, bx, by);
           }
           el.appendChild(canvas);
           host.appendChild(el);
@@ -325,7 +344,11 @@ export default function DitherClouds({ getScrollP }: DitherCloudsProps) {
     };
     window.addEventListener("mousemove", onMouse, { passive: true });
 
-    const start = performance.now();
+    // Accumulated active time: only advances on frames that actually place.
+    // The old wall-clock (now - start) kept accruing while the tab was
+    // hidden or the hero was off-screen, so clouds teleported on return.
+    let lastNow = performance.now();
+    let activeT = 0;
     let raf = 0;
     let heroVisible = true;
     const io = new IntersectionObserver(
@@ -337,10 +360,15 @@ export default function DitherClouds({ getScrollP }: DitherCloudsProps) {
     io.observe(wrap);
     const tick = (now: number) => {
       raf = requestAnimationFrame(tick);
+      // Clamp the delta: rAF pauses in hidden tabs, so without this the
+      // whole hidden duration would land in one frame and teleport clouds.
+      const dt = Math.min((now - lastNow) / 1000, 0.1);
+      lastNow = now;
       if (document.hidden || !heroVisible) return;
+      activeT += dt;
       mx += (tmx - mx) * 0.055;
       my += (tmy - my) * 0.055;
-      place(mx, my, (now - start) / 1000, true);
+      place(mx, my, activeT, true);
     };
     raf = requestAnimationFrame(tick);
 
@@ -366,17 +394,19 @@ export default function DitherClouds({ getScrollP }: DitherCloudsProps) {
       className="pointer-events-none absolute inset-0 z-0"
       aria-hidden="true"
       style={{
-        // Clear a soft stage behind the hero headline: clouds fade out as
-        // they drift into the text zone and back in as they leave. The mask
-        // is static in screen space (the wrap itself never transforms), so
-        // the stage holds steady while layers parallax/scroll inside it.
-        // Ellipse sized so the eyebrow, headline, subcopy, and CTAs sit in
-        // clear sky; edges stay rich. Dots must never show through the
-        // transparent gradient glyphs of "takeoff.".
+        // Clear a deep, soft stage behind the hero headline: clouds fade out
+        // as they drift into the text zone and back in as they leave. The
+        // mask is static in screen space (the wrap itself never transforms),
+        // so the stage holds steady while layers parallax/scroll inside it.
+        // The fully-clear core covers the eyebrow, headline, subcopy, and
+        // CTAs with margin; the long feather makes the transition
+        // imperceptible — no visible ellipse edge, no snap at the boundary.
+        // Dots must never show through the transparent gradient glyphs of
+        // "takeoff.".
         WebkitMaskImage:
-          "radial-gradient(ellipse 60% 42% at 50% 34%, transparent 46%, black 86%)",
+          "radial-gradient(ellipse 62% 44% at 50% 34%, transparent 55%, black 90%)",
         maskImage:
-          "radial-gradient(ellipse 60% 42% at 50% 34%, transparent 46%, black 86%)",
+          "radial-gradient(ellipse 62% 44% at 50% 34%, transparent 55%, black 90%)",
       }}
     >
       {LAYERS.map((_, i) => (
