@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef } from "react";
 import DitherClouds from "./DitherClouds";
-import Plane3D, { planeFlight } from "./Plane3D";
+import PixelPlane, { planeFlight } from "./PixelPlane";
 
 const TRAIL_DOTS = 14;
 
@@ -118,13 +118,13 @@ export default function PixelSky({ heroRef, contentRef }: PixelSkyProps) {
         ))}
       </div>
 
-      {/* the plane: real-time 3D model, scroll-driven takeoff */}
+      {/* the plane: pixel-art sprite, scroll-driven takeoff */}
       <div
         ref={planeRef}
         className="absolute left-0 top-0 z-10 will-change-transform"
         style={{ transform: "translate(8vw, 74vh) translate(-50%, -50%)" }}
       >
-        <Plane3D getScrollP={getScrollP} />
+        <PixelPlane getScrollP={getScrollP} />
       </div>
     </div>
   );
