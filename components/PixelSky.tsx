@@ -59,8 +59,8 @@ export default function PixelSky({ heroRef, contentRef }: PixelSkyProps) {
       }
       const content = contentRef.current;
       if (content) {
+        // The copy lifts gently with scroll but never fades out.
         content.style.transform = `translate3d(0, ${p * -48}px, 0)`;
-        content.style.opacity = String(Math.max(0, 1 - p * 0.9));
       }
     };
 
