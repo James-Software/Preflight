@@ -9,16 +9,30 @@ export default function EarlyAccess() {
   const [email, setEmail] = useState("");
   const [done, setDone] = useState(false);
   const [error, setError] = useState("");
+  const [sending, setSending] = useState(false);
 
-  const submit = (e: React.FormEvent) => {
+  const submit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
       setError("Enter a valid email address.");
       return;
     }
     setError("");
-    setDone(true);
-    // TODO: POST to waitlist endpoint (Supabase) when the backend lands.
+    setSending(true);
+    try {
+      const res = await fetch("/api/waitlist", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: email.trim() }),
+      });
+      const data = (await res.json()) as { ok?: boolean; error?: string };
+      if (!res.ok || !data.ok) throw new Error(data.error || "Request failed");
+      setDone(true);
+    } catch {
+      setError("Something went wrong. Please try again.");
+    } finally {
+      setSending(false);
+    }
   };
 
   return (
@@ -54,13 +68,15 @@ export default function EarlyAccess() {
               onChange={(e) => setEmail(e.target.value)}
               placeholder="you@company.com"
               aria-label="Email address"
-              className="flex-1 rounded-xl border border-mist bg-white px-4 py-3 text-sm text-ink placeholder:text-ink/35 focus:border-primary focus:outline-none"
+              disabled={sending}
+              className="flex-1 rounded-xl border border-mist bg-white px-4 py-3 text-sm text-ink placeholder:text-ink/35 focus:border-primary focus:outline-none disabled:opacity-60"
             />
             <button
               type="submit"
-              className="pressable btn-gradient rounded-full px-6 py-3 text-sm font-medium text-white"
+              disabled={sending}
+              className="pressable btn-gradient rounded-full px-6 py-3 text-sm font-medium text-white disabled:opacity-70"
             >
-              Notify me
+              {sending ? "Joining…" : "Notify me"}
             </button>
           </form>
         )}
