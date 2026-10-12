@@ -5,12 +5,20 @@ export default function Footer() {
         <p className="font-display text-sm font-bold tracking-tight text-ink">
           Preflight
         </p>
-        <a
-          href="/privacy"
-          className="text-sm text-ink/45 transition-colors duration-150 hover:text-ink"
-        >
-          Privacy Policy
-        </a>
+        <div className="flex items-center gap-5">
+          <a
+            href="/privacy"
+            className="text-sm text-ink/45 transition-colors duration-150 hover:text-ink"
+          >
+            Privacy Policy
+          </a>
+          <a
+            href="/terms"
+            className="text-sm text-ink/45 transition-colors duration-150 hover:text-ink"
+          >
+            Terms of Service
+          </a>
+        </div>
         <p className="text-sm text-ink/45">&copy; 2026</p>
       </div>
     </footer>
