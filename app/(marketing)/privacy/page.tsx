@@ -81,7 +81,7 @@ const SECTIONS: { heading: string; body: string[] }[] = [
   {
     heading: "12. Contact",
     body: [
-      "Questions about this policy or your data? Email us at hello@apreflight.vercel.app and we will get back to you.",
+      "Questions about this policy or your data? Email us at hello@preflight.dev and we will get back to you.",
     ],
   },
 ];
