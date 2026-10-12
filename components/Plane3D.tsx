@@ -13,7 +13,7 @@ export function planeFlight(t: number) {
   const x = 8 + (68 - 8) * t; // 8% -> 68% of hero width
   const y = 66 - 54 * Math.pow(t, 1.5); // 66% -> 12%, accelerating climb
   const scale = 1 - 0.45 * Math.pow(t, 1.4); // 1 -> ~0.55: recedes into distance
-  const bank = -10 * Math.sin(Math.PI * t); // gentle roll into the climb
+  const bank = -15 * Math.sin(Math.PI * t); // gentle roll into the climb
   const pitch = -14 * Math.sin((Math.PI / 2) * t); // nose-up ramp
   return { x, y, scale, bank, pitch };
 }
@@ -87,7 +87,7 @@ export default function Plane3D({ getScrollP }: Plane3DProps) {
       renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
       renderer.setClearColor(0x000000, 0);
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
-      renderer.toneMappingExposure = 1.12;
+      renderer.toneMappingExposure = 1.22;
       host.appendChild(renderer.domElement);
 
       scene = new THREE.Scene();
@@ -95,12 +95,12 @@ export default function Plane3D({ getScrollP }: Plane3DProps) {
       camera.position.set(0, 0.7, 7.4);
       camera.lookAt(0, 0.05, 0);
 
-      // Lighting: soft sky fill + warm key + purple rim (the color grade).
-      scene.add(new THREE.HemisphereLight(0xede9fe, 0xffffff, 0.85));
-      const key = new THREE.DirectionalLight(0xffffff, 1.5);
+      // Lighting: soft sky fill + strong key + visible purple rim (the color grade).
+      scene.add(new THREE.HemisphereLight(0xede9fe, 0xffffff, 1.05));
+      const key = new THREE.DirectionalLight(0xffffff, 2.2);
       key.position.set(4, 6, 3);
       scene.add(key);
-      const rim = new THREE.DirectionalLight(0x8b5cf6, 1.2);
+      const rim = new THREE.DirectionalLight(0x8b5cf6, 2.4);
       rim.position.set(-5, 2, -4);
       scene.add(rim);
 
@@ -112,8 +112,8 @@ export default function Plane3D({ getScrollP }: Plane3DProps) {
           metalness: 0.08,
           ...extra,
         });
-      const indigo = mat("#4f46e5");
-      const deepIndigo = mat("#4338ca");
+      const indigo = mat("#6366f1");
+      const deepIndigo = mat("#4f46e5");
       const peri = mat("#a5b4fc");
       const periLight = mat("#c7d2fe", { roughness: 0.35, metalness: 0.15 });
       const mid = mat("#818cf8");
