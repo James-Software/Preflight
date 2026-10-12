@@ -11,10 +11,10 @@ export default async function Dashboard() {
     <main className="min-h-screen bg-white">
       <header className="border-b border-mist">
         <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <a href="/" className="flex items-center gap-2.5" aria-label="Preflight home">
+          <a href="/" className="flex items-center gap-2.5" aria-label="PreFlight home">
             <PixelPlaneSprite width={28} />
             <span className="font-display text-lg font-bold tracking-tight text-ink">
-              Preflight
+              PreFlight
             </span>
           </a>
           <div className="flex items-center gap-3">
