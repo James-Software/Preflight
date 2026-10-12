@@ -1,6 +1,6 @@
 import Hero from "@/components/Hero";
 import HowItWorks from "@/components/HowItWorks";
-import WhyStrip from "@/components/WhyStrip";
+import SwarmDemo from "@/components/SwarmDemo";
 import EarlyAccess from "@/components/EarlyAccess";
 import Footer from "@/components/Footer";
 
@@ -9,7 +9,7 @@ export default function Home() {
     <main className="bg-white">
       <Hero />
       <HowItWorks />
-      <WhyStrip />
+      <SwarmDemo />
       <EarlyAccess />
       <Footer />
     </main>
