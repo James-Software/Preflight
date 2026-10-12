@@ -22,15 +22,12 @@ export default function Hero() {
         ref={contentRef}
         className="relative z-20 mx-auto max-w-3xl px-6 pt-36 text-center will-change-transform md:pt-44"
       >
-        <p className="text-xs font-semibold tracking-[0.22em] text-primary">
-          AI QA SWARM
-        </p>
         <h1 className="font-display mt-5 text-5xl font-bold tracking-tight text-ink md:text-7xl">
-          Cleared for <span className="text-gradient">takeoff.</span>
+          Cleared for takeoff.
         </h1>
         <p className="mx-auto mt-6 max-w-xl text-lg leading-relaxed text-ink/65">
           Preflight sends a swarm of AI agents to test your app like real
-          users. Every bug they find comes back as fix.
+          users. Every bug they find comes back as a fix.
         </p>
         <div className="mt-9 flex flex-col items-center justify-center gap-3 sm:flex-row">
           <a

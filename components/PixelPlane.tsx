@@ -87,6 +87,38 @@ ART.forEach((row, y) => {
   }
 });
 
+interface PixelPlaneSpriteProps {
+  /** rendered width in px */
+  width?: number;
+  className?: string;
+}
+
+/**
+ * The pixel jet as a static, reusable sprite — the same hand-authored
+ * rects, no animation. Used for the nav logo; the animated hero plane
+ * below renders this too.
+ */
+export function PixelPlaneSprite({
+  width = ART_W * PX,
+  className,
+}: PixelPlaneSpriteProps) {
+  return (
+    <svg
+      width={width}
+      height={(width * ART_H) / ART_W}
+      viewBox={`0 0 ${ART_W} ${ART_H}`}
+      shapeRendering="crispEdges"
+      className={className}
+      aria-hidden="true"
+      focusable="false"
+    >
+      {RECTS.map((r, i) => (
+        <rect key={i} x={r.x} y={r.y} width={1.02} height={1.02} fill={r.fill} />
+      ))}
+    </svg>
+  );
+}
+
 interface PixelPlaneProps {
   /** 0..1 scroll progress of the takeoff, owned by PixelSky */
   getScrollP: () => number;
@@ -148,25 +180,7 @@ export default function PixelPlane({ getScrollP }: PixelPlaneProps) {
       className="pointer-events-none will-change-transform"
       aria-hidden="true"
     >
-      <svg
-        width={ART_W * PX}
-        height={ART_H * PX}
-        viewBox={`0 0 ${ART_W} ${ART_H}`}
-        shapeRendering="crispEdges"
-        role="img"
-        aria-label="Pixel-art airplane"
-      >
-        {RECTS.map((r, i) => (
-          <rect
-            key={i}
-            x={r.x}
-            y={r.y}
-            width={1.02}
-            height={1.02}
-            fill={r.fill}
-          />
-        ))}
-      </svg>
+      <PixelPlaneSprite width={ART_W * PX} />
     </div>
   );
 }
