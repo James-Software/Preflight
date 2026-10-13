@@ -1,37 +1,4 @@
-"use client";
-
-import { useState } from "react";
-
 export default function EarlyAccess() {
-  const [email, setEmail] = useState("");
-  const [done, setDone] = useState(false);
-  const [error, setError] = useState("");
-  const [sending, setSending] = useState(false);
-
-  const submit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
-      setError("Enter a valid email address.");
-      return;
-    }
-    setError("");
-    setSending(true);
-    try {
-      const res = await fetch("/api/waitlist", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim() }),
-      });
-      const data = (await res.json()) as { ok?: boolean; error?: string };
-      if (!res.ok || !data.ok) throw new Error(data.error || "Request failed");
-      setDone(true);
-    } catch {
-      setError("Something went wrong. Please try again.");
-    } finally {
-      setSending(false);
-    }
-  };
-
   return (
     <section id="early-access" className="bg-white py-24 md:py-32">
       <div className="mx-auto max-w-xl px-6 text-center">
@@ -42,78 +9,41 @@ export default function EarlyAccess() {
           Be first in line for takeoff.
         </h2>
         <p className="mt-4 text-base leading-relaxed text-ink/60">
-          PreFlight is in final approach. Leave your email and we will notify
-          you at launch.
+          PreFlight is in final approach. Join the waitlist with GitHub. Every
+          request is reviewed by hand.
         </p>
-
-        {done ? (
-          <div className="mx-auto mt-8 flex max-w-md items-center justify-center gap-3 rounded-2xl border border-mist bg-lavender px-6 py-5">
-            <svg
-              width="22"
-              height="22"
-              viewBox="0 0 24 24"
-              fill="none"
-              aria-hidden="true"
-              className="shrink-0"
-            >
-              <path
-                d="M4 12.5l5 5L20 6.5"
-                stroke="#4338CA"
-                strokeWidth={2.5}
-                strokeLinecap="round"
-                strokeLinejoin="round"
-              />
-            </svg>
-            <p className="text-sm font-medium text-ink">
-              You are on the manifest. We will email you at launch.
-            </p>
-          </div>
-        ) : (
-          <form
-            onSubmit={submit}
-            className="mx-auto mt-8 flex max-w-md flex-col gap-3 sm:flex-row"
-            noValidate
+        <a
+          href="/login"
+          className="pressable btn-gradient mt-8 inline-flex items-center gap-2.5 rounded-full px-7 py-3.5 text-sm font-medium text-white"
+        >
+          <svg
+            width="18"
+            height="18"
+            viewBox="0 0 24 24"
+            fill="currentColor"
+            aria-hidden="true"
           >
-            <input
-              type="email"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="you@company.com"
-              aria-label="Email address"
-              disabled={sending}
-              className="flex-1 rounded-xl border border-mist bg-white px-4 py-3 text-sm text-ink placeholder:text-ink/35 focus:border-primary focus:outline-none disabled:opacity-60"
-            />
-            <button
-              type="submit"
-              disabled={sending}
-              className="pressable btn-gradient cursor-pointer rounded-full px-6 py-3 text-sm font-medium text-white disabled:cursor-wait disabled:opacity-70"
-            >
-              {sending ? "Joining…" : "Notify me"}
-            </button>
-          </form>
-        )}
-        {!done && (
-          <p className="mx-auto mt-4 max-w-md text-xs leading-relaxed text-ink/40">
-            By joining the waitlist, you agree to our{" "}
-            <a
-              href="/terms"
-              className="underline underline-offset-2 transition-colors duration-150 hover:text-ink"
-            >
-              Terms of Service
-            </a>{" "}
-            and{" "}
-            <a
-              href="/privacy"
-              className="underline underline-offset-2 transition-colors duration-150 hover:text-ink"
-            >
-              Privacy Policy
-            </a>
-            .
-          </p>
-        )}
-        {error && !done && (
-          <p className="mt-3 text-sm font-medium text-red-600">{error}</p>
-        )}
+            <path d="M12 .297c-6.63 0-12 5.373-12 12 0 5.303 3.438 9.8 8.205 11.385.6.113.82-.258.82-.577 0-.285-.01-1.04-.015-2.04-3.338.724-4.042-1.61-4.042-1.61C4.422 18.07 3.633 17.7 3.633 17.7c-1.087-.744.084-.729.084-.729 1.205.084 1.838 1.236 1.838 1.236 1.07 1.835 2.809 1.305 3.495.998.108-.776.417-1.305.76-1.605-2.665-.3-5.466-1.332-5.466-5.93 0-1.31.465-2.38 1.235-3.22-.135-.303-.54-1.523.105-3.176 0 0 1.005-.322 3.3 1.23.96-.267 1.98-.399 3-.405 1.02.006 2.04.138 3 .405 2.28-1.552 3.285-1.23 3.285-1.23.645 1.653.24 2.873.12 3.176.765.84 1.23 1.91 1.23 3.22 0 4.61-2.805 5.625-5.475 5.92.42.36.81 1.096.81 2.22 0 1.606-.015 2.896-.015 3.286 0 .315.21.69.825.57C20.565 22.092 24 17.592 24 12.297c0-6.627-5.373-12-12-12" />
+          </svg>
+          Join the waitlist with GitHub
+        </a>
+        <p className="mx-auto mt-4 max-w-md text-xs leading-relaxed text-ink/40">
+          By joining the waitlist, you agree to our{" "}
+          <a
+            href="/terms"
+            className="underline underline-offset-2 transition-colors duration-150 hover:text-ink"
+          >
+            Terms of Service
+          </a>{" "}
+          and{" "}
+          <a
+            href="/privacy"
+            className="underline underline-offset-2 transition-colors duration-150 hover:text-ink"
+          >
+            Privacy Policy
+          </a>
+          .
+        </p>
       </div>
     </section>
   );
