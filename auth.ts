@@ -48,11 +48,18 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         return false;
       }
     },
-    async jwt({ token, profile }) {
+    async jwt({ token, profile, account }) {
+      const t = token as unknown as Record<string, unknown>;
       const p = profile as { login?: string } | undefined;
       if (p?.login) {
-        (token as unknown as Record<string, unknown>).githubLogin =
-          p.login.toLowerCase();
+        t.githubLogin = p.login.toLowerCase();
+      }
+      // Persist the GitHub user access token for server-side API calls
+      // (repo listing, verification). It lives only in the encrypted JWT;
+      // it is never copied onto the session, so it never reaches the browser.
+      // Present on `account` at sign-in; the JWT keeps it across refreshes.
+      if (account?.access_token) {
+        t.githubAccessToken = account.access_token;
       }
       return token;
     },
