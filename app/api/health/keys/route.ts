@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import { getSql } from "@/lib/db";
-import { isEmailAllowed } from "@/lib/allowlist";
+import { isAdminLogin } from "@/lib/access";
 import { NextResponse } from "next/server";
 
 type CheckResult = {
@@ -26,16 +26,12 @@ async function check(
 
 /**
  * GET /api/health/keys — verifies every integration key in the Vercel
- * environment against its live API. Allowlisted users only; never returns
- * key values, only pass/fail.
+ * environment against its live API. Admin only; never returns key values,
+ * only pass/fail.
  */
 export async function GET() {
   const session = await auth();
-  const email = session?.user?.email?.toLowerCase().trim();
-  const allowed = email
-    ? await isEmailAllowed(email).catch(() => false)
-    : false;
-  if (!allowed) {
+  if (!isAdminLogin(session?.user?.githubLogin)) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
 
