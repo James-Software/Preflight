@@ -12,3 +12,6 @@ out/
 # misc
 .DS_Store
 *.log
+
+# trigger.dev
+.trigger/
