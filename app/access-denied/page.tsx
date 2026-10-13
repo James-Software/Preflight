@@ -3,17 +3,12 @@ export default function AccessDenied() {
     <main className="flex min-h-screen items-center justify-center bg-white px-6">
       <div className="max-w-sm text-center">
         <h1 className="font-display text-2xl font-bold tracking-tight text-ink">
-          You&apos;re not on the list
+          You are on the waitlist
         </h1>
         <p className="mt-3 text-sm leading-relaxed text-ink/60">
-          PreFlight is invite-only right now. If you were expecting access,{" "}
-          <a
-            href="/#early-access"
-            className="font-medium text-ink underline underline-offset-2 transition-colors duration-150 hover:text-ink/70"
-          >
-            join the waitlist
-          </a>{" "}
-          or email{" "}
+          PreFlight is invite-only right now. We have your GitHub account on
+          the list and review every request by hand. Try logging in again
+          later. If you were expecting access, email{" "}
           <a
             href="mailto:james@preflight.dev"
             className="font-medium text-ink underline underline-offset-2 transition-colors duration-150 hover:text-ink/70"
