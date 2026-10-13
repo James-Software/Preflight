@@ -1,66 +1,84 @@
-import { auth, signOut } from "@/auth";
+import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import { PixelPlaneSprite } from "@/components/PixelPlane";
+import { listProjects } from "@/lib/schema";
+import DashboardHeader from "@/components/DashboardHeader";
+
+function formatDate(iso: string): string {
+  return new Date(iso).toLocaleDateString("en-US", {
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  });
+}
 
 export default async function Dashboard() {
   const session = await auth();
   if (!session?.user) redirect("/login");
+  const githubId = session.user.githubId;
+  if (!githubId) redirect("/login");
+
+  const projects = await listProjects(githubId);
   const user = session.user;
 
   return (
     <main className="min-h-screen bg-white">
-      <header className="border-b border-mist">
-        <div className="mx-auto flex max-w-6xl items-center justify-between px-6 py-4">
-          <a href="/" className="flex items-center gap-2.5" aria-label="PreFlight home">
-            <PixelPlaneSprite width={28} />
-            <span className="font-display text-lg font-bold tracking-tight text-ink">
-              PreFlight
-            </span>
-          </a>
-          <div className="flex items-center gap-3">
-            {user.image ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img
-                src={user.image}
-                alt=""
-                className="h-8 w-8 rounded-full ring-1 ring-ink/10"
-              />
-            ) : null}
-            <form
-              action={async () => {
-                "use server";
-                await signOut({ redirectTo: "/" });
-              }}
-            >
-              <button
-                type="submit"
-                className="cursor-pointer rounded-full px-4 py-2 text-sm font-medium text-ink/60 transition-colors duration-150 hover:text-ink"
-              >
-                Sign out
-              </button>
-            </form>
-          </div>
-        </div>
-      </header>
+      <DashboardHeader user={user} />
 
       <div className="mx-auto max-w-6xl px-6 py-14">
-        <h1 className="font-display text-3xl font-bold tracking-tight text-ink">
-          Welcome{user.name ? `, ${user.name.split(" ")[0]}` : ""}.
-        </h1>
-        <p className="mt-2 text-sm text-ink/60">{user.email}</p>
-
-        <div className="mt-10 rounded-2xl border border-mist bg-lavender/50 px-8 py-14 text-center">
-          <p className="font-display text-lg font-bold text-ink">
-            No projects yet
-          </p>
-          <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-ink/60">
-            Connect an app URL and a GitHub repository to run your first
-            swarm.
-          </p>
-          <p className="mt-4 text-xs text-ink/40">
-            Project onboarding ships in the next milestone.
-          </p>
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="font-display text-3xl font-bold tracking-tight text-ink">
+              Projects
+            </h1>
+            <p className="mt-2 text-sm text-ink/60">
+              Every app the swarm is cleared to test.
+            </p>
+          </div>
+          <a
+            href="/dashboard/projects/new"
+            className="pressable btn-gradient rounded-full px-5 py-2.5 text-sm font-medium text-white"
+          >
+            New project
+          </a>
         </div>
+
+        {projects.length === 0 ? (
+          <div className="mt-10 rounded-2xl border border-mist bg-lavender/50 px-8 py-14 text-center">
+            <p className="font-display text-lg font-bold text-ink">
+              No projects yet
+            </p>
+            <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-ink/60">
+              Connect an app URL and a GitHub repository to run your first
+              swarm.
+            </p>
+            <a
+              href="/dashboard/projects/new"
+              className="pressable btn-gradient mt-6 inline-block rounded-full px-6 py-3 text-sm font-medium text-white"
+            >
+              Create your first project
+            </a>
+          </div>
+        ) : (
+          <div className="mt-8 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+            {projects.map((project) => (
+              <a
+                key={project.id}
+                href={`/dashboard/projects/${project.id}`}
+                className="group rounded-2xl border border-mist bg-white px-6 py-5 transition-colors duration-200 hover:border-ink/25"
+              >
+                <p className="font-display text-base font-bold tracking-tight text-ink">
+                  {project.repo_full_name}
+                </p>
+                <p className="mt-1 truncate text-sm text-ink/60">
+                  {project.app_url}
+                </p>
+                <p className="mt-3 text-xs text-ink/40">
+                  Created {formatDate(project.created_at)}
+                </p>
+              </a>
+            ))}
+          </div>
+        )}
       </div>
     </main>
   );
