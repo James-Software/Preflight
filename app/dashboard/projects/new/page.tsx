@@ -2,16 +2,20 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { createProject } from "@/lib/schema";
 import DashboardHeader from "@/components/DashboardHeader";
+import RepoPicker from "@/components/RepoPicker";
 
 const ERRORS: Record<string, string> = {
   "bad-url": "Enter a valid app URL starting with http:// or https://.",
-  "bad-repo": "Enter the repo as owner/name.",
+  "bad-repo": "Pick a repository from the list or paste a valid github.com link.",
+  "unowned-repo": "You can only connect repositories you own.",
+  "no-repo": "Pick a repository first.",
 };
 
 async function create(formData: FormData) {
   "use server";
   const session = await auth();
   const githubId = session?.user?.githubId;
+  const githubLogin = session?.user?.githubLogin?.toLowerCase();
   if (!githubId) redirect("/login");
 
   const appUrl = String(formData.get("appUrl") ?? "").trim();
@@ -26,8 +30,18 @@ async function create(formData: FormData) {
   if (url.protocol !== "http:" && url.protocol !== "https:") {
     redirect("/dashboard/projects/new?error=bad-url");
   }
-  if (!/^[A-Za-z0-9_.-]+\/[A-Za-z0-9_.-]+$/.test(repoFullName)) {
+  if (!repoFullName) {
+    redirect("/dashboard/projects/new?error=no-repo");
+  }
+  const repoMatch = repoFullName.match(/^([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)$/);
+  if (!repoMatch) {
     redirect("/dashboard/projects/new?error=bad-repo");
+  }
+  // Ownership is the security boundary, re-enforced server-side: the repo's
+  // owner segment must be the caller's GitHub login. (The picker verified
+  // existence and access moments before submit.)
+  if (!githubLogin || repoMatch[1].toLowerCase() !== githubLogin) {
+    redirect("/dashboard/projects/new?error=unowned-repo");
   }
 
   const project = await createProject(githubId, url.toString(), repoFullName);
@@ -78,26 +92,7 @@ export default async function NewProject({
               className="w-full rounded-xl border border-mist bg-white px-4 py-3 text-sm text-ink placeholder:text-ink/40 focus:border-ink/30 focus:outline-none"
             />
           </div>
-          <div>
-            <label
-              htmlFor="repo"
-              className="mb-1.5 block text-sm font-medium text-ink"
-            >
-              GitHub repository
-            </label>
-            <input
-              id="repo"
-              name="repo"
-              type="text"
-              required
-              placeholder="owner/name"
-              pattern="[A-Za-z0-9_.-]+/[A-Za-z0-9_.-]+"
-              className="w-full rounded-xl border border-mist bg-white px-4 py-3 text-sm text-ink placeholder:text-ink/40 focus:border-ink/30 focus:outline-none"
-            />
-            <p className="mt-1.5 text-xs text-ink/40">
-              One-click repo picker ships with the GitHub App install flow.
-            </p>
-          </div>
+          <RepoPicker name="repo" />
 
           {error && ERRORS[error] ? (
             <p className="text-sm font-medium text-red-600">{ERRORS[error]}</p>
