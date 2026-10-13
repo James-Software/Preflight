@@ -1,6 +1,16 @@
-import NextAuth from "next-auth";
+import NextAuth, { type DefaultSession } from "next-auth";
 import GitHub from "next-auth/providers/github";
 import { isEmailAllowed } from "@/lib/allowlist";
+
+// The GitHub numeric user id rides on the JWT as token.sub. Expose it on
+// the session so server code can scope database rows to the caller.
+declare module "next-auth" {
+  interface Session {
+    user: {
+      githubId?: string;
+    } & DefaultSession["user"];
+  }
+}
 
 // GitHub-only login for now. JWT sessions mean no database tables are
 // needed for auth itself — the session lives in an encrypted cookie.
@@ -23,6 +33,13 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       } catch {
         return false;
       }
+    },
+    // Copy the GitHub user id from the JWT onto the session.
+    async session({ session, token }) {
+      if (token.sub) {
+        session.user.githubId = token.sub;
+      }
+      return session;
     },
   },
 });
