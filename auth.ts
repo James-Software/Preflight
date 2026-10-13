@@ -1,13 +1,15 @@
 import NextAuth, { type DefaultSession } from "next-auth";
 import GitHub from "next-auth/providers/github";
-import { isEmailAllowed } from "@/lib/allowlist";
+import { isLoginAllowed, addToWaitlist } from "@/lib/access";
 
-// The GitHub numeric user id rides on the JWT as token.sub. Expose it on
-// the session so server code can scope database rows to the caller.
+// The GitHub numeric user id rides on the JWT as token.sub; the username
+// rides as token.githubLogin. Both are exposed on the session so server
+// code can scope database rows and gate admin pages to the caller.
 declare module "next-auth" {
   interface Session {
     user: {
       githubId?: string;
+      githubLogin?: string;
     } & DefaultSession["user"];
   }
 }
@@ -23,30 +25,44 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     error: "/access-denied",
   },
   callbacks: {
-    // Invite-only: deny the sign-in unless the GitHub email is on the
-    // allowed_emails list. Fails closed if the DB is unreachable.
-    // TEMP DEBUG: logs the email GitHub returns (remove after diagnosing).
+    // Invite-only by GitHub username. Email is NOT used: the GitHub App
+    // user flow does not return private emails. A non-allowlisted sign-in
+    // is recorded on the waitlist automatically, then denied.
+    // Fails closed if the DB is unreachable.
     async signIn({ user, profile }) {
-      const login = (profile as { login?: string } | undefined)?.login ?? "(unknown)";
-      const email = user.email?.toLowerCase().trim();
-      console.log(`[auth-debug] signIn: login=${login} email=${email ?? "(none)"}`);
-      if (!email) {
-        console.log("[auth-debug] denied: no email from GitHub");
-        return false;
-      }
+      const p = profile as
+        | { login?: string; id?: number }
+        | undefined;
+      const login = p?.login?.toLowerCase().trim();
+      if (!login) return false;
       try {
-        const allowed = await isEmailAllowed(email);
-        console.log(`[auth-debug] ${allowed ? "allowed" : "denied"}: ${email}`);
-        return allowed;
-      } catch (e) {
-        console.log(`[auth-debug] denied (db error): ${e instanceof Error ? e.message : String(e)}`);
+        if (await isLoginAllowed(login)) return true;
+        await addToWaitlist({
+          login,
+          githubId: p?.id != null ? String(p.id) : null,
+          name: user.name ?? null,
+          avatarUrl: user.image ?? null,
+        });
+        return false;
+      } catch {
         return false;
       }
     },
-    // Copy the GitHub user id from the JWT onto the session.
+    async jwt({ token, profile }) {
+      const p = profile as { login?: string } | undefined;
+      if (p?.login) {
+        (token as unknown as Record<string, unknown>).githubLogin =
+          p.login.toLowerCase();
+      }
+      return token;
+    },
     async session({ session, token }) {
       if (token.sub) {
         session.user.githubId = token.sub;
+      }
+      const gl = (token as unknown as Record<string, unknown>).githubLogin;
+      if (typeof gl === "string") {
+        session.user.githubLogin = gl;
       }
       return session;
     },
