@@ -25,12 +25,21 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
   callbacks: {
     // Invite-only: deny the sign-in unless the GitHub email is on the
     // allowed_emails list. Fails closed if the DB is unreachable.
-    async signIn({ user }) {
+    // TEMP DEBUG: logs the email GitHub returns (remove after diagnosing).
+    async signIn({ user, profile }) {
+      const login = (profile as { login?: string } | undefined)?.login ?? "(unknown)";
       const email = user.email?.toLowerCase().trim();
-      if (!email) return false;
+      console.log(`[auth-debug] signIn: login=${login} email=${email ?? "(none)"}`);
+      if (!email) {
+        console.log("[auth-debug] denied: no email from GitHub");
+        return false;
+      }
       try {
-        return await isEmailAllowed(email);
-      } catch {
+        const allowed = await isEmailAllowed(email);
+        console.log(`[auth-debug] ${allowed ? "allowed" : "denied"}: ${email}`);
+        return allowed;
+      } catch (e) {
+        console.log(`[auth-debug] denied (db error): ${e instanceof Error ? e.message : String(e)}`);
         return false;
       }
     },
