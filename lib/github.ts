@@ -18,7 +18,12 @@ export type GithubContext = {
 export async function getGithubContext(
   req: NextRequest
 ): Promise<GithubContext | null> {
-  const token = await getToken({ req, secret: process.env.AUTH_SECRET });
+  // Production uses the __Secure- cookie prefix; getToken must be told.
+  const token = await getToken({
+    req,
+    secret: process.env.AUTH_SECRET,
+    secureCookie: process.env.NODE_ENV === "production",
+  });
   const t = token as unknown as Record<string, unknown> | null;
   const accessToken = t?.githubAccessToken;
   const login = t?.githubLogin;
