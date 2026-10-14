@@ -87,11 +87,20 @@ export default function Nav() {
         <div className="flex items-center gap-1.5">
           {status !== "loading" &&
             (session?.user ? (
-              <a
-                href="/dashboard"
-                className="flex items-center gap-2 rounded-full py-1 pl-1 pr-3 transition-colors duration-150 hover:bg-ink/5"
-                aria-label="Open dashboard"
-              >
+              <>
+                <a
+                  href="/dashboard"
+                  className={`pressable rounded-full px-4 py-2.5 text-sm font-medium text-ink/70 transition-colors duration-150 hover:text-ink ${
+                    scrolled ? "" : GLOW_TEXT
+                  }`}
+                >
+                  Dashboard
+                </a>
+                <a
+                  href="/dashboard"
+                  className="flex items-center gap-2 rounded-full py-1 pl-1 pr-3 transition-colors duration-150 hover:bg-ink/5"
+                  aria-label="Open dashboard"
+                >
                 {session.user.image ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -108,6 +117,7 @@ export default function Nav() {
                   {session.user.name?.split(" ")[0] ?? "Dashboard"}
                 </span>
               </a>
+              </>
             ) : (
               <>
                 <a
