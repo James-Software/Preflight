@@ -1,0 +1,348 @@
+import { MODEL_CONFIG } from "@/lib/model-config";
+
+/* ------------------------------------------------------------------ */
+/* Model wrappers. The driver (vision) picks browser actions as JSON; */
+/* the judge returns pass/fail verdicts and severity assessments.     */
+/* Model ids come from src/lib/model-config.ts — swap them there.      */
+/* ------------------------------------------------------------------ */
+
+const OPENROUTER_CHAT = "https://openrouter.ai/api/v1/chat/completions";
+const OPENROUTER_DECISIONS = "https://openrouter.ai/api/alpha/decisions";
+
+function openRouterKey(): string {
+  const k = process.env.OPENROUTER_API_KEY;
+  if (!k) throw new Error("OPENROUTER_API_KEY is not set");
+  return k;
+}
+
+function baseHeaders(): HeadersInit {
+  return {
+    Authorization: `Bearer ${openRouterKey()}`,
+    "Content-Type": "application/json",
+    "HTTP-Referer": "https://apreflight.vercel.app",
+    "X-Title": "PreFlight",
+  };
+}
+
+type ChatContentPart =
+  | { type: "text"; text: string }
+  | { type: "image_url"; image_url: { url: string } };
+
+const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
+
+/** Raw chat completion text, with backoff on free-tier 429s. */
+async function postChat(args: {
+  model: string;
+  system: string;
+  user: ChatContentPart[];
+  maxTokens?: number;
+}): Promise<string> {
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const res = await fetch(OPENROUTER_CHAT, {
+      method: "POST",
+      headers: baseHeaders(),
+      body: JSON.stringify({
+        model: args.model,
+        messages: [
+          { role: "system", content: args.system },
+          { role: "user", content: args.user },
+        ],
+        response_format: { type: "json_object" },
+        max_tokens: args.maxTokens ?? 1024,
+      }),
+    });
+    if (res.status === 429 && attempt < 2) {
+      await sleep(10000 * (attempt + 1));
+      continue;
+    }
+    if (!res.ok) {
+      const t = await res.text().catch(() => "");
+      throw new Error(`OpenRouter chat error ${res.status}: ${t.slice(0, 200)}`);
+    }
+    const data = (await res.json()) as {
+      choices?: { message?: { content?: string } }[];
+    };
+    const text = data.choices?.[0]?.message?.content;
+    if (typeof text !== "string" || !text.trim()) {
+      throw new Error("OpenRouter returned no content");
+    }
+    return text;
+  }
+  throw new Error("OpenRouter chat failed after retries");
+}
+
+/* ------------------------------ driver ------------------------------ */
+
+export type AgentAction =
+  | { action: "click"; role: string; name: string; reasoning: string }
+  | { action: "fill"; role: string; name: string; value: string; reasoning: string }
+  | { action: "goto"; value: string; reasoning: string }
+  | { action: "wait"; value: number; reasoning: string }
+  | { action: "scroll"; direction: "up" | "down"; reasoning: string }
+  | { action: "press"; role: string; name: string; key: string; reasoning: string }
+  | { action: "done"; reasoning: string }
+  | { action: "report_bug"; title: string; detail: string; reasoning: string };
+
+const DRIVER_SYSTEM = `You are PreFlight, a QA test agent operating a real browser. You see the current page as a screenshot and an accessibility tree. Work through the test step to achieve its goal.
+
+Output ONLY a single JSON object — no markdown, no text outside the JSON. Exact schema:
+
+{
+  "action": "click" | "fill" | "goto" | "wait" | "scroll" | "press" | "done" | "report_bug",
+  "role": "button",
+  "name": "Sign up",
+  "value": "...",
+  "direction": "down",
+  "key": "Enter",
+  "title": "...",
+  "detail": "...",
+  "reasoning": "..."
+}
+
+Field use:
+- click: role + name of the element, copied EXACTLY from the accessibility tree.
+- fill: role + name + value (the text to type).
+- goto: value is the full URL.
+- wait: value is milliseconds (max 10000).
+- scroll: direction "up" or "down".
+- press: role + name + key (e.g. "Enter").
+- done: the step's goal is achieved. Move on.
+- report_bug: title (short) + detail (what is broken and how to reproduce). Then keep testing.
+
+Rules:
+- reasoning is REQUIRED: one sentence on why this action moves the test forward.
+- Only use role+name pairs that appear in the accessibility tree.
+- Never repeat an action that just failed; try a different target or approach.
+- Prefer clicking visible buttons and links over typing URLs.
+- If the page looks like it is still loading, use "wait".`;
+
+const REPAIR_SUFFIX = `
+Your last output was not valid JSON matching the schema. Output ONLY the JSON object, nothing else.`;
+
+const KNOWN_ACTIONS = new Set([
+  "click", "fill", "goto", "wait", "scroll", "press", "done", "report_bug",
+]);
+
+function validateAction(raw: unknown): AgentAction {
+  if (typeof raw !== "object" || raw === null) throw new Error("not an object");
+  const a = raw as Record<string, unknown>;
+  if (typeof a.action !== "string" || !KNOWN_ACTIONS.has(a.action)) {
+    throw new Error(`unknown action: ${String(a.action)}`);
+  }
+  if (typeof a.reasoning !== "string" || !a.reasoning.trim()) {
+    throw new Error("missing reasoning");
+  }
+  switch (a.action) {
+    case "click":
+    case "press":
+      if (typeof a.role !== "string" || typeof a.name !== "string") {
+        throw new Error(`${a.action} needs role + name`);
+      }
+      if (a.action === "press" && typeof a.key !== "string") {
+        throw new Error("press needs key");
+      }
+      break;
+    case "fill":
+      if (
+        typeof a.role !== "string" ||
+        typeof a.name !== "string" ||
+        typeof a.value !== "string"
+      ) {
+        throw new Error("fill needs role + name + value");
+      }
+      break;
+    case "goto":
+      if (typeof a.value !== "string" || !/^https?:\/\//.test(a.value)) {
+        throw new Error("goto needs a URL in value");
+      }
+      break;
+    case "wait":
+      if (typeof a.value !== "number") throw new Error("wait needs ms in value");
+      a.value = Math.min(Math.max(0, Math.round(a.value)), 10000);
+      break;
+    case "scroll":
+      if (a.direction !== "up" && a.direction !== "down") {
+        throw new Error('scroll needs direction "up" or "down"');
+      }
+      break;
+    case "report_bug":
+      if (typeof a.title !== "string" || typeof a.detail !== "string") {
+        throw new Error("report_bug needs title + detail");
+      }
+      break;
+  }
+  return a as unknown as AgentAction;
+}
+
+export async function driverDecide(input: {
+  goal: string;
+  history: string[];
+  axTree: string;
+  consoleLogs: string[];
+  screenshotBase64: string;
+}): Promise<AgentAction> {
+  const user: ChatContentPart[] = [
+    {
+      type: "text",
+      text: [
+        `Current goal: ${input.goal}`,
+        ``,
+        `Actions so far (most recent last):`,
+        ...(input.history.length > 0 ? input.history : ["(none yet)"]),
+        ``,
+        `Accessibility tree (roles and names you may target):`,
+        input.axTree,
+        ``,
+        `Recent console output:`,
+        input.consoleLogs.length > 0 ? input.consoleLogs.join("\n") : "(none)",
+      ].join("\n"),
+    },
+    {
+      type: "image_url",
+      image_url: { url: `data:image/jpeg;base64,${input.screenshotBase64}` },
+    },
+  ];
+  let lastErr: unknown = null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const text = await postChat({
+      model: MODEL_CONFIG.driver.model,
+      system: attempt === 0 ? DRIVER_SYSTEM : DRIVER_SYSTEM + REPAIR_SUFFIX,
+      user,
+    });
+    try {
+      return validateAction(JSON.parse(text));
+    } catch (e) {
+      lastErr = e;
+    }
+  }
+  throw lastErr instanceof Error ? lastErr : new Error("driver failed");
+}
+
+/* ------------------------------ judge ------------------------------ */
+
+/** Jev Decisions API call (only used when the judge provider is openrouter-decisions). */
+async function decisionsAsk(args: {
+  state: string;
+  questions: Record<string, unknown>;
+}): Promise<unknown> {
+  const res = await fetch(OPENROUTER_DECISIONS, {
+    method: "POST",
+    headers: baseHeaders(),
+    body: JSON.stringify({
+      model: MODEL_CONFIG.judge.model,
+      state: args.state.slice(0, 30000),
+      questions: args.questions,
+    }),
+  });
+  if (!res.ok) {
+    const t = await res.text().catch(() => "");
+    throw new Error(
+      `Jev Decisions API error ${res.status}: ${t.slice(0, 200)}. The Decisions API is alpha and may need access enabled on your OpenRouter account.`
+    );
+  }
+  return res.json();
+}
+
+function noulProbability(payload: unknown, qid: string): number {
+  const p = payload as Record<string, unknown>;
+  const a = (p?.answers as Record<string, unknown> | undefined)?.[qid] ??
+    (p as Record<string, unknown>)?.[qid] ?? p;
+  const obj = a as Record<string, unknown>;
+  for (const k of ["probability", "noul", "p_true", "p"]) {
+    if (typeof obj?.[k] === "number") return obj[k] as number;
+  }
+  throw new Error("Unrecognized Decisions API response shape");
+}
+
+function choiceWinner(payload: unknown, qid: string): string {
+  const p = payload as Record<string, unknown>;
+  const a = (p?.answers as Record<string, unknown> | undefined)?.[qid] ??
+    (p as Record<string, unknown>)?.[qid] ?? p;
+  const obj = a as Record<string, unknown>;
+  if (typeof obj?.choice === "string") return obj.choice as string;
+  if (typeof obj?.argmax === "string") return obj.argmax as string;
+  throw new Error("Unrecognized Decisions API choice response");
+}
+
+const clamp01 = (n: number) =>
+  Number.isFinite(n) ? Math.min(1, Math.max(0, n)) : 0.5;
+
+export async function judgeStep(input: {
+  stepTitle: string;
+  stepDetail: string;
+  observation: string;
+}): Promise<{ verdict: "pass" | "fail"; confidence: number }> {
+  if (MODEL_CONFIG.judge.provider === "openrouter-decisions") {
+    const ans = await decisionsAsk({
+      state: `QA test step: "${input.stepTitle}". Attempted: ${input.stepDetail}. Final observation: ${input.observation}`,
+      questions: {
+        step_ok: {
+          type: "noul",
+          instructions:
+            "Did the test step succeed? True if the observation shows the step's goal was achieved without errors. False if anything failed, errored, or looks broken.",
+        },
+      },
+    });
+    const p = noulProbability(ans, "step_ok");
+    return { verdict: p >= 0.5 ? "pass" : "fail", confidence: clamp01(Math.abs(p - 0.5) * 2) };
+  }
+  const text = await postChat({
+    model: MODEL_CONFIG.judge.model,
+    system: `You judge QA test steps. Output ONLY JSON: {"verdict": "pass" or "fail", "confidence": number between 0 and 1}.`,
+    user: [
+      {
+        type: "text",
+        text: `Step: ${input.stepTitle}\nAttempted: ${input.stepDetail}\nFinal observation:\n${input.observation}`,
+      },
+    ],
+    maxTokens: 256,
+  });
+  const raw = JSON.parse(text) as { verdict?: unknown; confidence?: unknown };
+  return {
+    verdict: raw.verdict === "fail" ? "fail" : "pass",
+    confidence: clamp01(Number(raw.confidence) || 0.5),
+  };
+}
+
+export type Severity = "low" | "medium" | "high" | "critical";
+
+export async function assessSeverity(input: {
+  title: string;
+  detail: string;
+}): Promise<{ severity: Severity; confidence: number }> {
+  if (MODEL_CONFIG.judge.provider === "openrouter-decisions") {
+    const ans = await decisionsAsk({
+      state: `Bug found by a QA agent. Title: "${input.title}". Detail: ${input.detail}`,
+      questions: {
+        severity: {
+          type: "choice",
+          instructions: "How severe is this bug for a real user?",
+          criteria: {
+            low: "Cosmetic issue or minor annoyance; the app still works.",
+            medium: "A feature is degraded or confusing but usable.",
+            high: "A core flow is broken for many users.",
+            critical: "The app is unusable, data is lost, or there is a security issue.",
+          },
+        },
+      },
+    });
+    const winner = choiceWinner(ans, "severity");
+    const sev: Severity =
+      winner === "low" || winner === "high" || winner === "critical"
+        ? winner
+        : "medium";
+    return { severity: sev, confidence: 0.7 };
+  }
+  const text = await postChat({
+    model: MODEL_CONFIG.judge.model,
+    system: `You triage QA bugs. Output ONLY JSON: {"severity": "low" | "medium" | "high" | "critical", "confidence": number between 0 and 1}. low = cosmetic; medium = degraded but usable; high = core flow broken; critical = unusable, data loss, or security.`,
+    user: [{ type: "text", text: `Title: ${input.title}\nDetail: ${input.detail}` }],
+    maxTokens: 256,
+  });
+  const raw = JSON.parse(text) as { severity?: unknown; confidence?: unknown };
+  const sev: Severity =
+    raw.severity === "low" || raw.severity === "high" || raw.severity === "critical"
+      ? raw.severity
+      : "medium";
+  return { severity: sev, confidence: clamp01(Number(raw.confidence) || 0.5) };
+}
