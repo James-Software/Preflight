@@ -41,6 +41,34 @@ export async function getGithubContext(
 const API_BASE = "https://api.github.com";
 const API_VERSION = "2022-11-28";
 
+/** GitHub App slug for "Preflight QA" — install links and detection. */
+export const GITHUB_APP_SLUG = "preflight-qa";
+
+/**
+ * True when the user has installed the PreFlight GitHub App on their
+ * account. Without an installation the login token can only see public
+ * repositories, so private repos never appear in the picker. Fails
+ * closed to false.
+ */
+export async function isAppInstalledForUser(
+  ctx: GithubContext
+): Promise<boolean> {
+  try {
+    const res = await fetch(`${API_BASE}/user/installations?per_page=100`, {
+      headers: apiHeaders(ctx.accessToken),
+    });
+    if (!res.ok) return false;
+    const data = (await res.json()) as {
+      installations?: { app_slug?: string }[];
+    };
+    return (data.installations ?? []).some(
+      (i) => i.app_slug === GITHUB_APP_SLUG
+    );
+  } catch {
+    return false;
+  }
+}
+
 function apiHeaders(accessToken: string): HeadersInit {
   return {
     Authorization: `Bearer ${accessToken}`,
