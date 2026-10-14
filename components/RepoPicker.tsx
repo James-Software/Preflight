@@ -48,6 +48,8 @@ export default function RepoPicker({ name }: { name: string }) {
   const [selected, setSelected] = useState("");
   const [selectedPrivate, setSelectedPrivate] = useState(false);
   const [appInstalled, setAppInstalled] = useState<boolean | null>(null);
+  // Account-level installation: without it the token only sees public repos.
+  const [appMissing, setAppMissing] = useState(false);
   const [paste, setPaste] = useState("");
   const [verifying, setVerifying] = useState(false);
   const [verifyError, setVerifyError] = useState("");
@@ -73,6 +75,18 @@ export default function RepoPicker({ name }: { name: string }) {
           return;
         }
         setRepos(data.repos ?? []);
+        // If the app isn't installed on their account, private repos are
+        // invisible to the token — offer a one-click install.
+        try {
+          const instRes = await fetch("/api/github/installation");
+          if (instRes.ok) {
+            const inst = (await instRes.json()) as { installed?: boolean };
+            if (cancelled) return;
+            setAppMissing(inst.installed === false);
+          }
+        } catch {
+          // Banner stays hidden on transient failure; public repos still work.
+        }
       } catch {
         if (!cancelled) {
           setLoadError("Could not load your repositories.");
@@ -156,13 +170,32 @@ export default function RepoPicker({ name }: { name: string }) {
         <div className="rounded-xl border border-mist bg-lavender px-4 py-3 text-sm text-ink/70">
           {loadError}
         </div>
-      ) : repos.length === 0 ? (
-        <div className="rounded-xl border border-mist px-4 py-3 text-sm text-ink/60">
-          No repositories found on your GitHub account.
-        </div>
       ) : (
         <>
-          <input
+          {appMissing && (
+            <div className="mb-3 rounded-xl border border-mist bg-lavender px-4 py-3">
+              <p className="text-sm font-medium text-ink">
+                Want your private repositories here?
+              </p>
+              <p className="mt-1 text-xs leading-relaxed text-ink/60">
+                Install the PreFlight app on your GitHub account. One click,
+                and you come right back to this list.
+              </p>
+              <a
+                href="https://github.com/apps/preflight-qa/installations/new"
+                className="pressable btn-gradient mt-2 inline-block rounded-full px-4 py-2 text-xs font-medium text-white"
+              >
+                Install PreFlight on GitHub
+              </a>
+            </div>
+          )}
+          {repos.length === 0 ? (
+            <div className="rounded-xl border border-mist px-4 py-3 text-sm text-ink/60">
+              No repositories found on your GitHub account.
+            </div>
+          ) : (
+            <>
+              <input
             type="text"
             value={query}
             onChange={(e) => setQuery(e.target.value)}
@@ -215,6 +248,8 @@ export default function RepoPicker({ name }: { name: string }) {
               </li>
             )}
           </ul>
+            </>
+          )}
         </>
       )}
 
