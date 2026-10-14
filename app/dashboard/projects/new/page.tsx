@@ -2,14 +2,7 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { createProject } from "@/lib/schema";
 import DashboardHeader from "@/components/DashboardHeader";
-import RepoPicker from "@/components/RepoPicker";
-
-const ERRORS: Record<string, string> = {
-  "bad-url": "Enter a valid app URL starting with http:// or https://.",
-  "bad-repo": "Pick a repository from the list or paste a valid github.com link.",
-  "unowned-repo": "You can only connect repositories you own.",
-  "no-repo": "Pick a repository first.",
-};
+import NewProjectForm from "@/components/NewProjectForm";
 
 async function create(formData: FormData) {
   "use server";
@@ -75,36 +68,7 @@ export default async function NewProject({
           swarm will test the app like real users.
         </p>
 
-        <form action={create} className="mt-8 space-y-5">
-          <div>
-            <label
-              htmlFor="appUrl"
-              className="mb-1.5 block text-sm font-medium text-ink"
-            >
-              App URL
-            </label>
-            <input
-              id="appUrl"
-              name="appUrl"
-              type="url"
-              required
-              placeholder="https://myapp.com"
-              className="w-full rounded-xl border border-mist bg-white px-4 py-3 text-sm text-ink placeholder:text-ink/40 focus:border-ink/30 focus:outline-none"
-            />
-          </div>
-          <RepoPicker name="repo" />
-
-          {error && ERRORS[error] ? (
-            <p className="text-sm font-medium text-red-600">{ERRORS[error]}</p>
-          ) : null}
-
-          <button
-            type="submit"
-            className="pressable btn-gradient cursor-pointer rounded-full px-6 py-3 text-sm font-medium text-white"
-          >
-            Create project
-          </button>
-        </form>
+        <NewProjectForm action={create} error={error} />
       </div>
     </main>
   );
