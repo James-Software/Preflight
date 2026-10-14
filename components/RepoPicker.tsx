@@ -14,6 +14,7 @@ type VerifyResponse =
       ok: true;
       fullName: string;
       private: boolean;
+      homepage: string | null;
       appInstalled: boolean | null;
     }
   | { ok: false; error: string };
@@ -40,7 +41,13 @@ function errorMessage(data: unknown, fallback: string): string {
   return fallback;
 }
 
-export default function RepoPicker({ name }: { name: string }) {
+export default function RepoPicker({
+  name,
+  onHomepage,
+}: {
+  name: string;
+  onHomepage?: (homepage: string | null) => void;
+}) {
   const [repos, setRepos] = useState<Repo[] | null>(null);
   const [loadError, setLoadError] = useState("");
   const [needsLogin, setNeedsLogin] = useState(false);
@@ -130,6 +137,7 @@ export default function RepoPicker({ name }: { name: string }) {
       setSelected(data.fullName);
       setSelectedPrivate(data.private);
       setAppInstalled(data.appInstalled);
+      onHomepage?.(data.homepage ?? null);
     } catch {
       setVerifyError("Could not verify the repository.");
     } finally {
