@@ -168,3 +168,79 @@ export async function listRuns(projectId: number): Promise<Run[]> {
   if (!Array.isArray(rows)) return [];
   return rows as Run[];
 }
+
+export interface Agent {
+  id: number;
+  run_id: number;
+  assignment: unknown;
+  status: string;
+}
+
+export async function createRun(projectId: number): Promise<Run> {
+  await ensureSchema();
+  const sql = getSql();
+  const rows = await sql`
+    INSERT INTO runs (project_id, status)
+    VALUES (${projectId}, 'queued')
+    RETURNING id, project_id, status, plan, created_at, started_at, finished_at
+  `;
+  if (!Array.isArray(rows) || rows.length === 0) {
+    throw new Error("Failed to create run");
+  }
+  return rows[0] as Run;
+}
+
+export async function updateRunStatus(
+  runId: number,
+  status: string
+): Promise<void> {
+  await ensureSchema();
+  await getSql()`UPDATE runs SET status = ${status} WHERE id = ${runId}`;
+}
+
+export async function createAgent(
+  runId: number,
+  assignment: unknown
+): Promise<Agent> {
+  await ensureSchema();
+  const sql = getSql();
+  const rows = await sql`
+    INSERT INTO agents (run_id, assignment, status)
+    VALUES (${runId}, ${JSON.stringify(assignment)}, 'queued')
+    RETURNING id, run_id, assignment, status
+  `;
+  if (!Array.isArray(rows) || rows.length === 0) {
+    throw new Error("Failed to create agent");
+  }
+  return rows[0] as Agent;
+}
+
+export async function updateAgentStatus(
+  agentId: number,
+  status: string
+): Promise<void> {
+  await ensureSchema();
+  await getSql()`UPDATE agents SET status = ${status} WHERE id = ${agentId}`;
+}
+
+export async function createFinding(input: {
+  runId: number;
+  agentId: number | null;
+  severity: string;
+  title: string;
+  reproSteps: string | null;
+  screenshotUrl: string | null;
+  consoleLogs: string | null;
+  networkErrors: unknown;
+}): Promise<void> {
+  await ensureSchema();
+  await getSql()`
+    INSERT INTO findings
+      (run_id, agent_id, severity, title, repro_steps, screenshot_url,
+       console_logs, network_errors, status)
+    VALUES
+      (${input.runId}, ${input.agentId}, ${input.severity}, ${input.title},
+       ${input.reproSteps}, ${input.screenshotUrl}, ${input.consoleLogs},
+       ${JSON.stringify(input.networkErrors)}::jsonb, 'open')
+  `;
+}
