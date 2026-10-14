@@ -21,7 +21,7 @@ export type WaitlistEntry = {
   created_at: string;
 };
 
-async function ensureAccessTables() {
+export async function ensureAccessTables() {
   const sql = getSql();
   await sql`
     CREATE TABLE IF NOT EXISTS allowed_github_users (
