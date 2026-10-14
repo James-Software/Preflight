@@ -90,6 +90,7 @@ type GhRepoJson = {
   private: boolean;
   default_branch: string;
   pushed_at: string | null;
+  homepage?: string | null;
   permissions?: { admin?: boolean; push?: boolean; pull?: boolean };
 };
 
@@ -140,6 +141,7 @@ export type VerifyResult =
       fullName: string;
       private: boolean;
       defaultBranch: string;
+      homepage: string | null;
       appInstalled: boolean | null;
     }
   | { ok: false; error: string };
@@ -197,6 +199,7 @@ export async function verifyRepo(
     fullName: data.full_name,
     private: data.private,
     defaultBranch: data.default_branch,
+    homepage: data.homepage?.trim() || null,
     appInstalled,
   };
 }
