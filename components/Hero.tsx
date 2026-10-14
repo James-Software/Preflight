@@ -1,10 +1,10 @@
 "use client";
 
 import { useRef } from "react";
-import Nav from "./Nav";
+import Nav, { type NavUser } from "./Nav";
 import PixelSky from "./PixelSky";
 
-export default function Hero() {
+export default function Hero({ user }: { user: NavUser | null }) {
   const heroRef = useRef<HTMLElement>(null);
   const contentRef = useRef<HTMLDivElement>(null);
 
@@ -16,7 +16,7 @@ export default function Hero() {
       style={{ minHeight: "112svh" }}
     >
       <PixelSky heroRef={heroRef} contentRef={contentRef} />
-      <Nav />
+      <Nav user={user} />
 
       <div
         ref={contentRef}
