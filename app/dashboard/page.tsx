@@ -2,6 +2,7 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { listProjects } from "@/lib/schema";
 import DashboardHeader from "@/components/DashboardHeader";
+import InviteCard from "@/components/InviteCard";
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", {
@@ -41,6 +42,7 @@ export default async function Dashboard() {
             New project
           </a>
         </div>
+        <InviteCard />
 
         {projects.length === 0 ? (
           <div className="mt-10 rounded-2xl border border-mist bg-lavender/50 px-8 py-14 text-center">
