@@ -1,0 +1,53 @@
+/* ------------------------------------------------------------------ */
+/* Browserbase: real cloud browsers. Sessions are created per agent and  */
+/* always closed in a finally block. Playwright connects over CDP.       */
+/* ------------------------------------------------------------------ */
+
+const BB_API = "https://api.browserbase.com/v1/sessions";
+
+export type BrowserSession = {
+  id: string;
+  connectUrl: string;
+};
+
+function bbKey(): string {
+  const k = process.env.BROWSERBASE_API_KEY;
+  if (!k) throw new Error("BROWSERBASE_API_KEY is not set");
+  return k;
+}
+
+export async function createBrowserSession(): Promise<BrowserSession> {
+  const key = bbKey();
+  const body: Record<string, string> = {};
+  if (process.env.BROWSERBASE_PROJECT_ID) {
+    body.projectId = process.env.BROWSERBASE_PROJECT_ID;
+  }
+  const res = await fetch(BB_API, {
+    method: "POST",
+    headers: { "x-bb-api-key": key, "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const t = await res.text().catch(() => "");
+    throw new Error(`Browserbase session error ${res.status}: ${t.slice(0, 200)}`);
+  }
+  const data = (await res.json()) as { id?: string };
+  if (!data.id) throw new Error("Browserbase returned no session id");
+  return {
+    id: data.id,
+    connectUrl: `wss://connect.browserbase.com?apiKey=${key}&sessionId=${data.id}`,
+  };
+}
+
+export async function closeBrowserSession(sessionId: string): Promise<void> {
+  const res = await fetch(`${BB_API}/${sessionId}`, {
+    method: "DELETE",
+    headers: { "x-bb-api-key": bbKey() },
+  });
+  if (!res.ok) {
+    const t = await res.text().catch(() => "");
+    throw new Error(
+      `Browserbase close error ${res.status}: ${t.slice(0, 200)}`
+    );
+  }
+}
