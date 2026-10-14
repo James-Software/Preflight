@@ -1,6 +1,7 @@
 import NextAuth, { type DefaultSession } from "next-auth";
 import GitHub from "next-auth/providers/github";
 import { isLoginAllowed, addToWaitlist } from "@/lib/access";
+import { claimInvite, INVITE_COOKIE } from "@/lib/invites";
 
 // The GitHub numeric user id rides on the JWT as token.sub; the username
 // rides as token.githubLogin. Both are exposed on the session so server
@@ -37,6 +38,28 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (!login) return false;
       try {
         if (await isLoginAllowed(login)) return true;
+        // Invite claim: /invite/[code] drops a short-lived cookie with the
+        // code before sending the user through GitHub OAuth. A valid claim
+        // allowlists them immediately with referred = true.
+        let inviteCode: string | undefined;
+        try {
+          const { cookies } = await import("next/headers");
+          inviteCode = (await cookies()).get(INVITE_COOKIE)?.value;
+        } catch {
+          inviteCode = undefined;
+        }
+        if (inviteCode) {
+          const claimed = await claimInvite(inviteCode, login);
+          if (claimed) {
+            try {
+              const { cookies } = await import("next/headers");
+              (await cookies()).delete(INVITE_COOKIE);
+            } catch {
+              // Non-fatal; the cookie expires on its own.
+            }
+            return true;
+          }
+        }
         await addToWaitlist({
           login,
           githubId: p?.id != null ? String(p.id) : null,
