@@ -1,8 +1,13 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
 import { PixelPlaneSprite } from "./PixelPlane";
+
+/** Minimal session user shape the nav needs. Resolved server-side. */
+export type NavUser = {
+  name?: string | null;
+  image?: string | null;
+};
 
 /** px scrolled before the bar morphs into a floating pill */
 const SCROLL_AFTER = 32;
@@ -20,12 +25,11 @@ const GLOW_TEXT =
   "[text-shadow:0_0_14px_rgba(255,255,255,0.95),0_0_34px_rgba(255,255,255,0.85)]";
 const GLOW_SPRITE = "[filter:drop-shadow(0_0_7px_rgba(255,255,255,0.95))]";
 
-export default function Nav() {
+export default function Nav({ user }: { user: NavUser | null }) {
   const [scrolled, setScrolled] = useState(
     () => typeof window !== "undefined" && window.scrollY > SCROLL_AFTER,
   );
   const [reduced, setReduced] = useState(false);
-  const { data: session, status } = useSession();
 
   useEffect(() => {
     setReduced(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
@@ -85,8 +89,7 @@ export default function Nav() {
           </a>
         </div>
         <div className="flex items-center gap-1.5">
-          {status !== "loading" &&
-            (session?.user ? (
+          {user ? (
               <>
                 <a
                   href="/dashboard"
@@ -101,10 +104,10 @@ export default function Nav() {
                   className="flex items-center gap-2 rounded-full py-1 pl-1 pr-3 transition-colors duration-150 hover:bg-ink/5"
                   aria-label="Open dashboard"
                 >
-                {session.user.image ? (
+                {user.image ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
-                    src={session.user.image}
+                    src={user.image}
                     alt=""
                     className="h-8 w-8 rounded-full ring-1 ring-ink/10"
                   />
@@ -114,7 +117,7 @@ export default function Nav() {
                     scrolled ? "" : GLOW_TEXT
                   }`}
                 >
-                  {session.user.name?.split(" ")[0] ?? "Dashboard"}
+                  {user.name?.split(" ")[0] ?? "Dashboard"}
                 </span>
               </a>
               </>
@@ -135,7 +138,7 @@ export default function Nav() {
                   Get early access
                 </a>
               </>
-            ))}
+            )}
         </div>
       </div>
     </nav>
