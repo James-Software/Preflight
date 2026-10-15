@@ -10,10 +10,10 @@ export default function AccessDenied() {
           the list and review every request by hand. Try logging in again
           later. If you were expecting access, email{" "}
           <a
-            href="mailto:james@preflight.dev"
+            href="mailto:hello@trypreflight.dev"
             className="font-medium text-ink underline underline-offset-2 transition-colors duration-150 hover:text-ink/70"
           >
-            james@preflight.dev
+            hello@trypreflight.dev
           </a>
           .
         </p>
