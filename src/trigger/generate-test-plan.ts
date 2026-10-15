@@ -21,7 +21,7 @@ export const generateTestPlan = task({
     const sql = getSql();
 
     const rows = await sql`
-      SELECT r.id AS run_id, p.app_url, p.repo_full_name
+      SELECT r.id AS run_id, r.target_url, p.app_url, p.repo_full_name
       FROM runs r
       JOIN projects p ON p.id = r.project_id
       WHERE r.id = ${payload.runId}
@@ -31,7 +31,8 @@ export const generateTestPlan = task({
     }
     const run = rows[0] as {
       run_id: number;
-      app_url: string;
+      target_url: string | null;
+      app_url: string | null;
       repo_full_name: string;
     };
 
@@ -40,7 +41,11 @@ export const generateTestPlan = task({
       WHERE id = ${payload.runId}
     `;
 
-    const plan = await buildSmokePlan(run.app_url);
+    const baseUrl = run.target_url ?? run.app_url;
+    if (!baseUrl) {
+      throw new Error(`Run ${payload.runId} has no target URL`);
+    }
+    const plan = await buildSmokePlan(baseUrl);
 
     await sql`
       UPDATE runs
