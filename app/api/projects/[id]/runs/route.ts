@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { tasks } from "@trigger.dev/sdk";
 import { auth } from "@/auth";
-import { getProject, listRuns, createRun } from "@/lib/schema";
+import { getProject, listRuns, createRun, updateRunStatus } from "@/lib/schema";
 import { getSql } from "@/lib/db";
 import {
   getGithubContext,
@@ -100,8 +100,29 @@ export async function POST(
     targetUrl = preview.url;
   }
 
-  const run = await createRun(project.id, targetUrl);
+  let run;
+  try {
+    run = await createRun(project.id, targetUrl);
+  } catch (e) {
+    console.error("createRun failed", e);
+    return NextResponse.json(
+      { error: "Could not create the run. Try again." },
+      { status: 500 }
+    );
+  }
   // Fire and forget: the task updates the run row as it progresses.
-  await tasks.trigger("run-swarm", { runId: run.id, targetUrl });
+  // Surface trigger failures instead of a generic 500 so the real cause
+  // (e.g. tasks not deployed to Trigger.dev) is visible.
+  try {
+    await tasks.trigger("run-swarm", { runId: run.id, targetUrl });
+  } catch (e) {
+    console.error("tasks.trigger(run-swarm) failed", e);
+    await updateRunStatus(run.id, "failed").catch(() => {});
+    const msg = e instanceof Error ? e.message : String(e);
+    return NextResponse.json(
+      { error: `Could not start the swarm: ${msg.slice(0, 300)}` },
+      { status: 500 }
+    );
+  }
   return NextResponse.json({ run });
 }
