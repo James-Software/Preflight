@@ -72,7 +72,7 @@ export default async function Dashboard() {
                   {project.repo_full_name}
                 </p>
                 <p className="mt-1 truncate text-sm text-ink/60">
-                  {project.app_url}
+                  {project.app_url ?? "Default branch preview deployment"}
                 </p>
                 <p className="mt-3 text-xs text-ink/40">
                   Created {formatDate(project.created_at)}
