@@ -36,7 +36,10 @@ export default async function ProjectPage({
         <h1 className="font-display mt-4 text-3xl font-bold tracking-tight text-ink">
           {project.repo_full_name}
         </h1>
-        <p className="mt-2 text-sm text-ink/60">{project.app_url}</p>
+        <p className="mt-2 text-sm text-ink/60">
+          {project.app_url ??
+            "Runs test the default branch's latest preview deployment."}
+        </p>
 
         <div className="mt-10">
           <div className="flex items-center justify-between">
@@ -51,6 +54,7 @@ export default async function ProjectPage({
               id: r.id,
               status: r.status,
               created_at: r.created_at,
+              target_url: r.target_url,
               findingsCount: 0,
             }))}
           />
