@@ -147,6 +147,59 @@ export type VerifyResult =
   | { ok: false; error: string };
 
 /**
+ * Latest successful preview deployment for a repo's default branch.
+ * Used when a project has no App URL: the run tests the branch's current
+ * preview instead of a fixed URL. Returns null when nothing suitable exists.
+ * Throws GithubAuthError when the caller's token is expired.
+ */
+export async function resolveDefaultBranchPreview(
+  ctx: GithubContext,
+  owner: string,
+  repo: string
+): Promise<{ url: string; branch: string } | null> {
+  const repoRes = await fetch(`${API_BASE}/repos/${owner}/${repo}`, {
+    headers: apiHeaders(ctx.accessToken),
+  });
+  if (repoRes.status === 401) throw new GithubAuthError();
+  if (!repoRes.ok) return null;
+  const repoData = (await repoRes.json()) as { default_branch?: string };
+  const branch = repoData.default_branch || "main";
+
+  const depRes = await fetch(
+    `${API_BASE}/repos/${owner}/${repo}/deployments?ref=${encodeURIComponent(
+      branch
+    )}&per_page=10`,
+    { headers: apiHeaders(ctx.accessToken) }
+  );
+  if (depRes.status === 401) throw new GithubAuthError();
+  if (!depRes.ok) return null;
+  const deployments = (await depRes.json()) as {
+    id: number;
+    environment_url?: string | null;
+  }[];
+
+  // Latest deployment whose newest status is a success, with a URL.
+  for (const d of deployments.slice(0, 5)) {
+    if (!d.environment_url) continue;
+    try {
+      const stRes = await fetch(
+        `${API_BASE}/repos/${owner}/${repo}/deployments/${d.id}/statuses?per_page=1`,
+        { headers: apiHeaders(ctx.accessToken) }
+      );
+      if (stRes.status === 401) throw new GithubAuthError();
+      if (!stRes.ok) continue;
+      const statuses = (await stRes.json()) as { state?: string }[];
+      if (statuses[0]?.state === "success") {
+        return { url: d.environment_url, branch };
+      }
+    } catch (e) {
+      if (e instanceof GithubAuthError) throw e;
+    }
+  }
+  return null;
+}
+
+/**
  * Verify a repo for project creation. Ownership is the security boundary:
  * the owner segment must be the caller's login. Also reports whether the
  * PreFlight GitHub App is installed (needed later for fix PRs); null when
