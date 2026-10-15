@@ -45,7 +45,6 @@ export default function NewProjectForm({
           id="appUrl"
           name="appUrl"
           type="url"
-          required
           placeholder="https://myapp.com"
           value={appUrl}
           onChange={(e) => {
@@ -55,8 +54,9 @@ export default function NewProjectForm({
           className="w-full rounded-xl border border-mist bg-white px-4 py-3 text-sm text-ink placeholder:text-ink/40 focus:border-ink/30 focus:outline-none"
         />
         <p className="mt-1.5 text-xs text-ink/40">
-          Fills in automatically from the repository&apos;s website when it has
-          one.
+          Optional. Fills in automatically from the repository&apos;s website
+          when it has one. If left empty, runs test the default
+          branch&apos;s latest preview deployment.
         </p>
       </div>
       <RepoPicker name="repo" onHomepage={handleHomepage} />
