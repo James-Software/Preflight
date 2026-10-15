@@ -19,10 +19,10 @@ function chunk<T>(arr: T[], n: number): T[][] {
 export const runSwarm = task({
   id: "run-swarm",
   maxDuration: 1800,
-  run: async (payload: { runId: number }) => {
+  run: async (payload: { runId: number; targetUrl?: string }) => {
     const sql = getSql();
     const rows = await sql`
-      SELECT r.id, r.plan, p.app_url
+      SELECT r.id, r.status, r.plan, r.target_url, p.app_url
       FROM runs r
       JOIN projects p ON p.id = r.project_id
       WHERE r.id = ${payload.runId}
@@ -30,7 +30,35 @@ export const runSwarm = task({
     if (!Array.isArray(rows) || rows.length === 0) {
       throw new Error(`Run ${payload.runId} not found`);
     }
-    const run = rows[0] as { id: number; plan: unknown; app_url: string };
+    const run = rows[0] as {
+      id: number;
+      status: string;
+      plan: unknown;
+      target_url: string | null;
+      app_url: string | null;
+    };
+    // The run may have been cancelled (or failed) between trigger and
+    // pickup. Never spend Browserbase/LLM money on a dead run.
+    if (
+      run.status === "cancelled" ||
+      run.status === "failed" ||
+      run.status === "done"
+    ) {
+      return {
+        runId: payload.runId,
+        status: "skipped",
+        reason: `run already ${run.status}`,
+      };
+    }
+    // Resolved at run creation: explicit target, else the project's App URL.
+    const targetUrl =
+      payload.targetUrl ?? run.target_url ?? run.app_url ?? null;
+    if (!targetUrl) {
+      await updateRunStatus(payload.runId, "failed");
+      throw new Error(
+        "Run has no target URL: set an App URL on the project or connect a hosting provider for preview deployments."
+      );
+    }
 
     let plan = run.plan as PlanStep[] | null;
     if (!Array.isArray(plan) || plan.length === 0) {
@@ -66,7 +94,7 @@ export const runSwarm = task({
             runId: payload.runId,
             agentIndex: i,
             assignment,
-            appUrl: run.app_url,
+            appUrl: targetUrl,
           },
         }))
       );
