@@ -14,14 +14,20 @@ async function create(formData: FormData) {
   const appUrl = String(formData.get("appUrl") ?? "").trim();
   const repoFullName = String(formData.get("repo") ?? "").trim();
 
-  let url: URL;
-  try {
-    url = new URL(appUrl);
-  } catch {
-    redirect("/dashboard/projects/new?error=bad-url");
-  }
-  if (url.protocol !== "http:" && url.protocol !== "https:") {
-    redirect("/dashboard/projects/new?error=bad-url");
+  // App URL is optional: empty means runs target the default branch's
+  // latest preview deployment, resolved when the run starts.
+  let appUrlOrNull: string | null = null;
+  if (appUrl) {
+    let url: URL;
+    try {
+      url = new URL(appUrl);
+    } catch {
+      redirect("/dashboard/projects/new?error=bad-url");
+    }
+    if (url.protocol !== "http:" && url.protocol !== "https:") {
+      redirect("/dashboard/projects/new?error=bad-url");
+    }
+    appUrlOrNull = url.toString();
   }
   if (!repoFullName) {
     redirect("/dashboard/projects/new?error=no-repo");
@@ -37,7 +43,7 @@ async function create(formData: FormData) {
     redirect("/dashboard/projects/new?error=unowned-repo");
   }
 
-  const project = await createProject(githubId, url.toString(), repoFullName);
+  const project = await createProject(githubId, appUrlOrNull, repoFullName);
   redirect(`/dashboard/projects/${project.id}`);
 }
 
