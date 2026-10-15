@@ -28,6 +28,28 @@ export default function RunsList({
   initialRuns: RunRow[];
 }) {
   const [runs, setRuns] = useState<RunRow[]>(initialRuns);
+  const [cancelling, setCancelling] = useState<number | null>(null);
+
+  const cancelRun = async (runId: number) => {
+    setCancelling(runId);
+    try {
+      const res = await fetch(
+        `/api/projects/${projectId}/runs/${runId}/cancel`,
+        { method: "POST" }
+      );
+      if (res.ok) {
+        setRuns((prev) =>
+          prev.map((r) =>
+            r.id === runId ? { ...r, status: "cancelled" } : r
+          )
+        );
+      }
+    } catch {
+      // keep the row as-is; user can retry
+    } finally {
+      setCancelling(null);
+    }
+  };
 
   useEffect(() => {
     if (!runs.some((r) => ACTIVE.has(r.status))) return;
@@ -77,15 +99,27 @@ export default function RunsList({
               </p>
             )}
           </div>
-          <span className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-ink/50">
+          <div className="flex shrink-0 items-center gap-3">
             {ACTIVE.has(run.status) && (
-              <span
-                className="h-2 w-2 animate-pulse rounded-full bg-primary"
-                aria-hidden="true"
-              />
+              <button
+                type="button"
+                onClick={() => void cancelRun(run.id)}
+                disabled={cancelling === run.id}
+                className="pressable cursor-pointer rounded-full border border-mist px-3 py-1 text-xs font-medium text-ink/60 transition-colors duration-150 hover:border-ink/30 hover:text-ink disabled:cursor-wait disabled:opacity-60"
+              >
+                {cancelling === run.id ? "Stopping…" : "Stop"}
+              </button>
             )}
-            {run.status}
-          </span>
+            <span className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-ink/50">
+              {ACTIVE.has(run.status) && (
+                <span
+                  className="h-2 w-2 animate-pulse rounded-full bg-primary"
+                  aria-hidden="true"
+                />
+              )}
+              {run.status}
+            </span>
+          </div>
         </li>
       ))}
     </ul>
