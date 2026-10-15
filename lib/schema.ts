@@ -198,6 +198,25 @@ export async function createRun(
   return rows[0] as Run;
 }
 
+/**
+ * Cancel an active run. Scoped to the project and only touches runs that
+ * are still in flight — a finished run can't be cancelled. Returns true
+ * when a run was actually cancelled.
+ */
+export async function cancelRun(
+  runId: number,
+  projectId: number
+): Promise<boolean> {
+  await ensureSchema();
+  const rows = await getSql()`
+    UPDATE runs SET status = 'cancelled', finished_at = NOW()
+    WHERE id = ${runId} AND project_id = ${projectId}
+      AND status IN ('queued', 'planning', 'planned', 'running')
+    RETURNING id
+  `;
+  return Array.isArray(rows) && rows.length > 0;
+}
+
 export async function updateRunStatus(
   runId: number,
   status: string
