@@ -9,7 +9,7 @@ import { getSql } from "@/lib/db";
 export interface Project {
   id: number;
   owner_github_id: string;
-  app_url: string;
+  app_url: string | null;
   repo_full_name: string;
   github_installation_id: number | null;
   created_at: string;
@@ -20,6 +20,7 @@ export interface Run {
   project_id: number;
   status: string;
   plan: unknown;
+  target_url: string | null;
   created_at: string;
   started_at: string | null;
   finished_at: string | null;
@@ -31,7 +32,7 @@ export async function ensureSchema(): Promise<void> {
     CREATE TABLE IF NOT EXISTS projects (
       id SERIAL PRIMARY KEY,
       owner_github_id TEXT NOT NULL,
-      app_url TEXT NOT NULL,
+      app_url TEXT,
       repo_full_name TEXT NOT NULL,
       github_installation_id BIGINT,
       created_at TIMESTAMPTZ DEFAULT NOW()
@@ -43,11 +44,15 @@ export async function ensureSchema(): Promise<void> {
       project_id INT REFERENCES projects(id),
       status TEXT NOT NULL DEFAULT 'queued',
       plan JSONB,
+      target_url TEXT,
       created_at TIMESTAMPTZ DEFAULT NOW(),
       started_at TIMESTAMPTZ,
       finished_at TIMESTAMPTZ
     )
   `;
+  // Migrate tables created before these columns existed.
+  await sql`ALTER TABLE projects ALTER COLUMN app_url DROP NOT NULL`;
+  await sql`ALTER TABLE runs ADD COLUMN IF NOT EXISTS target_url TEXT`;
   await sql`
     CREATE TABLE IF NOT EXISTS agents (
       id SERIAL PRIMARY KEY,
@@ -106,7 +111,7 @@ export async function ensureSchema(): Promise<void> {
 
 export async function createProject(
   ownerGithubId: string,
-  appUrl: string,
+  appUrl: string | null,
   repoFullName: string
 ): Promise<Project> {
   await ensureSchema();
@@ -160,7 +165,7 @@ export async function listRuns(projectId: number): Promise<Run[]> {
   await ensureSchema();
   const sql = getSql();
   const rows = await sql`
-    SELECT id, project_id, status, plan, created_at, started_at, finished_at
+    SELECT id, project_id, status, plan, target_url, created_at, started_at, finished_at
     FROM runs
     WHERE project_id = ${projectId}
     ORDER BY created_at DESC
@@ -176,13 +181,16 @@ export interface Agent {
   status: string;
 }
 
-export async function createRun(projectId: number): Promise<Run> {
+export async function createRun(
+  projectId: number,
+  targetUrl?: string | null
+): Promise<Run> {
   await ensureSchema();
   const sql = getSql();
   const rows = await sql`
-    INSERT INTO runs (project_id, status)
-    VALUES (${projectId}, 'queued')
-    RETURNING id, project_id, status, plan, created_at, started_at, finished_at
+    INSERT INTO runs (project_id, status, target_url)
+    VALUES (${projectId}, 'queued', ${targetUrl ?? null})
+    RETURNING id, project_id, status, plan, target_url, created_at, started_at, finished_at
   `;
   if (!Array.isArray(rows) || rows.length === 0) {
     throw new Error("Failed to create run");
