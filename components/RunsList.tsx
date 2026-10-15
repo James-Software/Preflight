@@ -6,6 +6,7 @@ export type RunRow = {
   id: number;
   status: string;
   created_at: string;
+  target_url: string | null;
   findingsCount: number;
 };
 
@@ -70,6 +71,11 @@ export default function RunsList({
               {run.findingsCount > 0 &&
                 ` · ${run.findingsCount} finding${run.findingsCount === 1 ? "" : "s"}`}
             </p>
+            {run.target_url && (
+              <p className="mt-0.5 max-w-[20rem] truncate text-xs text-ink/40">
+                {run.target_url}
+              </p>
+            )}
           </div>
           <span className="flex items-center gap-2 text-xs font-medium uppercase tracking-wide text-ink/50">
             {ACTIVE.has(run.status) && (
