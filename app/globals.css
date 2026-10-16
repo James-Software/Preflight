@@ -115,7 +115,7 @@ html {
   }
 }
 .animate-dot-rise {
-  animation: dot-rise 3s linear infinite;
+  animation: dot-rise 1.5s linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
