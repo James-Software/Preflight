@@ -1,6 +1,6 @@
 import { auth } from "@/auth";
 import Hero from "@/components/Hero";
-import SwarmDemo from "@/components/SwarmDemo";
+import RealBrowsers from "@/components/RealBrowsers";
 import EarlyAccess from "@/components/EarlyAccess";
 import Footer from "@/components/Footer";
 
@@ -11,7 +11,7 @@ export default async function Home() {
   return (
     <main className="bg-[#05060a]">
       <Hero user={session?.user ?? null} />
-      <SwarmDemo />
+      <RealBrowsers />
       <EarlyAccess />
       <Footer />
     </main>
