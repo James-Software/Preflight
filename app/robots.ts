@@ -7,6 +7,6 @@ export default function robots(): MetadataRoute.Robots {
       allow: "/",
       disallow: ["/dashboard/", "/api/"],
     },
-    sitemap: "https://trypreflight.dev/sitemap.xml",
+    sitemap: "https://www.trypreflight.dev/sitemap.xml",
   };
 }
