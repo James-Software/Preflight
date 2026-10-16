@@ -8,8 +8,9 @@ export type NavUser = {
   image?: string | null;
 };
 
-/** px scrolled before the bar becomes the floating pill */
-const SCROLL_AFTER = 72;
+/** px scrolled before the bar becomes the floating pill — effectively
+    immediate, with just enough buffer to ignore sub-pixel scroll noise */
+const SCROLL_AFTER = 8;
 
 // James's motion spec: 100-300ms, cubic-bezier(0.16,1,0.3,1). Only the
 // morphing properties transition — never transition-all. border-radius is
