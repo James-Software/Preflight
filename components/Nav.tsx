@@ -103,13 +103,25 @@ export default function Nav({
           className={`flex items-center gap-2.5 ${spriteGlow}`}
           aria-label="PreFlight home"
         >
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img
-            src="/logo.png"
-            alt="PreFlight logo"
-            height={30}
-            className="h-[30px] w-auto"
-          />
+          {/* Crossfade: gradient plane at top, white plane once the pill appears */}
+          <span className="relative block h-[30px] w-[106px]" aria-hidden="true">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logo.png"
+              alt=""
+              className={`absolute inset-0 m-auto h-[30px] w-auto transition-opacity duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                scrolled ? "opacity-0" : "opacity-100"
+              }`}
+            />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logo-white.png"
+              alt=""
+              className={`absolute inset-0 m-auto h-[30px] w-auto transition-opacity duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                scrolled ? "opacity-100" : "opacity-0"
+              }`}
+            />
+          </span>
           <span
             className={`font-display text-lg font-bold tracking-tight ${topSolid} ${glow}`}
           >
