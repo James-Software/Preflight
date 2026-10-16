@@ -12,6 +12,7 @@ export interface Project {
   app_url: string | null;
   repo_full_name: string;
   github_installation_id: number | null;
+  screenshot_retention_days: number | null;
   created_at: string;
 }
 
@@ -35,6 +36,7 @@ export async function ensureSchema(): Promise<void> {
       app_url TEXT,
       repo_full_name TEXT NOT NULL,
       github_installation_id BIGINT,
+      screenshot_retention_days INT,
       created_at TIMESTAMPTZ DEFAULT NOW()
     )
   `;
@@ -53,6 +55,7 @@ export async function ensureSchema(): Promise<void> {
   // Migrate tables created before these columns existed.
   await sql`ALTER TABLE projects ALTER COLUMN app_url DROP NOT NULL`;
   await sql`ALTER TABLE runs ADD COLUMN IF NOT EXISTS target_url TEXT`;
+  await sql`ALTER TABLE projects ADD COLUMN IF NOT EXISTS screenshot_retention_days INT`;
   await sql`
     CREATE TABLE IF NOT EXISTS agents (
       id SERIAL PRIMARY KEY,
@@ -120,7 +123,7 @@ export async function createProject(
     INSERT INTO projects (owner_github_id, app_url, repo_full_name)
     VALUES (${ownerGithubId}, ${appUrl}, ${repoFullName})
     RETURNING id, owner_github_id, app_url, repo_full_name,
-              github_installation_id, created_at
+              github_installation_id, screenshot_retention_days, created_at
   `;
   if (!Array.isArray(rows) || rows.length === 0) {
     throw new Error("Failed to create project");
@@ -135,7 +138,7 @@ export async function listProjects(
   const sql = getSql();
   const rows = await sql`
     SELECT id, owner_github_id, app_url, repo_full_name,
-           github_installation_id, created_at
+           github_installation_id, screenshot_retention_days, created_at
     FROM projects
     WHERE owner_github_id = ${ownerGithubId}
     ORDER BY created_at DESC
@@ -152,7 +155,7 @@ export async function getProject(
   const sql = getSql();
   const rows = await sql`
     SELECT id, owner_github_id, app_url, repo_full_name,
-           github_installation_id, created_at
+           github_installation_id, screenshot_retention_days, created_at
     FROM projects
     WHERE id = ${id} AND owner_github_id = ${ownerGithubId}
     LIMIT 1
