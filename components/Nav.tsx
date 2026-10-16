@@ -53,16 +53,24 @@ export default function Nav({
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(sync);
     };
-    // Browsers restore the scroll position asynchronously after load
-    // without firing a scroll event — re-check so a refreshed mid-page
-    // load gets the pill instead of being stuck transparent.
-    const t1 = window.setTimeout(sync, 100);
-    const t2 = window.setTimeout(sync, 800);
+    // Browsers restore the scroll position asynchronously after load,
+    // sometimes seconds later, without firing a scroll event. Poll briefly
+    // after mount so a refreshed mid-page load gets the pill instead of
+    // being stuck transparent. Cheap: one scrollY read per frame, stops
+    // after 3s.
+    const pollStart = performance.now();
+    let pollRaf = 0;
+    const poll = () => {
+      sync();
+      if (performance.now() - pollStart < 3000) {
+        pollRaf = requestAnimationFrame(poll);
+      }
+    };
+    pollRaf = requestAnimationFrame(poll);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => {
       cancelAnimationFrame(raf);
-      window.clearTimeout(t1);
-      window.clearTimeout(t2);
+      cancelAnimationFrame(pollRaf);
       window.removeEventListener("scroll", onScroll);
     };
   }, []);
