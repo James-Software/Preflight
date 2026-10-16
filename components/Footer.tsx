@@ -18,6 +18,12 @@ export default function Footer() {
           >
             Terms of Service
           </a>
+          <a
+            href="/blog"
+            className="text-sm text-white/45 transition-colors duration-150 hover:text-white"
+          >
+            Blog
+          </a>
         </div>
         <p className="text-sm text-white/45">&copy; 2026</p>
       </div>
