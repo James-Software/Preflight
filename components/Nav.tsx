@@ -8,25 +8,136 @@ export type NavUser = {
   image?: string | null;
 };
 
-/** px scrolled before the bar morphs into a floating pill */
+/** px scrolled before the bar swaps to the floating pill */
 const SCROLL_AFTER = 32;
 
-// James's motion spec: 100-300ms, cubic-bezier(0.16,1,0.3,1). Only the
-// morphing properties transition — never transition-all. Written as full
+// James's motion spec: 100-300ms, cubic-bezier(0.16,1,0.3,1). Only opacity and
+// transform animate — both run on the compositor, so the swap stays smooth
+// even under heavy backdrop blur. Never transition-all. Written as full
 // literal class strings so Tailwind's scanner picks them up.
-// border-radius is intentionally NOT transitioned: the pill snaps to fully
-// rounded the instant scrolling starts, so the glass lands on an already-
-// rounded bar instead of visibly morphing from a rectangle.
-const MORPH_TRANSITION =
-  "transition-[width,max-width,margin-top,padding,border-color,box-shadow,background-color] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]";
+const SWAP =
+  "transition-[opacity,transform] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]";
 
-// Soft white halo behind nav content while the bar is transparent (top of
-// page), so dark text stays readable over light artwork. Only active in
-// the non-pill state on light backgrounds — the pill carries its own
-// white background, and dark mode needs no halo.
+// Soft white halo behind nav text while the bar is transparent (top of page),
+// so dark text stays readable over light artwork.
 const GLOW_TEXT =
   "[text-shadow:0_0_14px_rgba(255,255,255,0.95),0_0_34px_rgba(255,255,255,0.85)]";
 const GLOW_SPRITE = "[filter:drop-shadow(0_0_7px_rgba(255,255,255,0.95))]";
+
+// Liquid glass: saturated blur, translucent fill, and inset edge highlights
+// so light catches the rounded rim like real glass.
+const GLASS_DARK =
+  "rounded-full border border-white/20 bg-[#0b0d16]/60 shadow-[inset_0_1px_1px_rgba(255,255,255,0.18),inset_0_-1px_1px_rgba(255,255,255,0.06),0_8px_30px_rgba(0,0,0,0.45)] backdrop-blur-2xl backdrop-saturate-150";
+const GLASS_LIGHT =
+  "rounded-full border border-white/50 bg-white/60 shadow-[inset_0_1px_1px_rgba(255,255,255,0.7),inset_0_-1px_1px_rgba(255,255,255,0.25),0_8px_30px_rgba(30,27,75,0.14)] backdrop-blur-2xl backdrop-saturate-150";
+
+function Wordmark({
+  white,
+  solid,
+  glow,
+}: {
+  white: boolean;
+  solid: string;
+  glow: string;
+}) {
+  return (
+    <a
+      href="#top"
+      className={`flex items-center gap-2.5 ${glow}`}
+      aria-label="PreFlight home"
+    >
+      <span className="relative block h-[30px] w-[106px]" aria-hidden="true">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img
+          src={white ? "/logo-white.png" : "/logo.png"}
+          alt=""
+          className="absolute inset-0 m-auto h-[30px] w-auto"
+        />
+      </span>
+      <span className={`font-display text-lg font-bold tracking-tight ${solid}`}>
+        PreFlight
+      </span>
+    </a>
+  );
+}
+
+function NavLinks({ muted, glow }: { muted: string; glow: string }) {
+  return (
+    <div className="hidden items-center gap-8 md:flex">
+      <a
+        href="#how-it-works"
+        className={`text-sm font-medium transition-colors duration-150 ${muted} ${glow}`}
+      >
+        How it works
+      </a>
+    </div>
+  );
+}
+
+function NavActions({
+  user,
+  muted,
+  solid,
+  glow,
+  dark,
+}: {
+  user: NavUser | null;
+  muted: string;
+  solid: string;
+  glow: string;
+  dark: boolean;
+}) {
+  return (
+    <div className="flex items-center gap-1.5">
+      {user ? (
+        <>
+          <a
+            href="/dashboard"
+            className={`pressable rounded-full px-4 py-2.5 text-sm font-medium transition-colors duration-150 ${muted} ${glow}`}
+          >
+            Dashboard
+          </a>
+          <a
+            href="/dashboard"
+            className={`flex items-center gap-2 rounded-full py-1 pl-1 pr-3 transition-colors duration-150 ${
+              dark ? "hover:bg-white/10" : "hover:bg-ink/5"
+            }`}
+            aria-label="Open dashboard"
+          >
+            {user.image ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img
+                src={user.image}
+                alt=""
+                className={`h-8 w-8 rounded-full ring-1 ${
+                  dark ? "ring-white/20" : "ring-ink/10"
+                }`}
+              />
+            ) : null}
+            <span className={`text-sm font-medium ${solid} ${glow}`}>
+              {user.name?.split(" ")[0] ?? "Dashboard"}
+            </span>
+          </a>
+        </>
+      ) : (
+        <>
+          <a
+            href="/login"
+            className={`rounded-full px-4 py-2.5 text-sm font-medium transition-colors duration-150 ${muted} ${glow}`}
+          >
+            Log in
+          </a>
+          <a
+            href="#early-access"
+            className="pressable btn-gradient rounded-full px-4 py-2.5 text-sm font-medium text-white"
+          >
+            Get early access
+          </a>
+        </>
+      )}
+    </div>
+  );
+}
 
 export default function Nav({
   user,
@@ -78,116 +189,62 @@ export default function Nav({
     };
   }, []);
 
-  const t = reduced ? "" : MORPH_TRANSITION;
+  const t = reduced ? "" : SWAP;
+  const solid = dark ? "text-white" : "text-ink";
 
-  // Top-of-page colors: white on dark hero, ink on light. The bar itself
-  // stays transparent at the top; the glass pill only appears on scroll.
-  // On dark, the pill is dark glass (a white pill reads as solid, not glass).
-  // Liquid glass: saturated blur, translucent fill, and inset edge highlights
-  // so light catches the rounded rim like real glass.
-  const pillBar = dark
-    ? "mt-3 w-[calc(100%-2rem)] max-w-[36rem] rounded-full border border-white/20 bg-[#0b0d16]/60 px-5 py-2.5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.18),inset_0_-1px_1px_rgba(255,255,255,0.06),0_8px_30px_rgba(0,0,0,0.45)] backdrop-blur-2xl backdrop-saturate-150"
-    : "mt-3 w-[calc(100%-2rem)] max-w-[36rem] rounded-full border border-white/50 bg-white/60 px-5 py-2.5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.7),inset_0_-1px_1px_rgba(255,255,255,0.25),0_8px_30px_rgba(30,27,75,0.14)] backdrop-blur-2xl backdrop-saturate-150";
-  const topBar = scrolled
-    ? pillBar
-    : "w-full max-w-6xl rounded-none border border-transparent bg-transparent px-6 py-5 shadow-none";
-  const topSolid = dark ? "text-white" : "text-ink";
+  // Top bar (transparent): dimmer muted tone + halo glow on light.
   const topMuted = dark
     ? "text-white/70 hover:text-white"
-    : scrolled
-      ? "text-ink/70 hover:text-ink"
-      : "text-ink/60 hover:text-ink";
-  const glow = scrolled || dark ? "" : GLOW_TEXT;
-  const spriteGlow = scrolled || dark ? "" : GLOW_SPRITE;
+    : "text-ink/60 hover:text-ink";
+  const topGlow = dark ? "" : GLOW_TEXT;
+  const topSprite = dark ? "" : GLOW_SPRITE;
+  // Pill (glass): no glow needed, slightly brighter muted on light.
+  const pillMuted = dark
+    ? "text-white/70 hover:text-white"
+    : "text-ink/70 hover:text-ink";
 
   return (
     <nav className="fixed inset-x-0 top-0 z-50">
-      <div className={`mx-auto flex items-center justify-between ${t} ${topBar}`}>
-        <a
-          href="#top"
-          className={`flex items-center gap-2.5 ${spriteGlow}`}
-          aria-label="PreFlight home"
+      {/* Transparent top bar — fades out on scroll */}
+      <div
+        className={`mx-auto flex w-full max-w-6xl items-center justify-between px-6 py-5 ${t} ${
+          scrolled
+            ? "pointer-events-none -translate-y-1 opacity-0"
+            : "translate-y-0 opacity-100"
+        }`}
+      >
+        <Wordmark white={false} solid={solid} glow={topSprite} />
+        <NavLinks muted={topMuted} glow={topGlow} />
+        <NavActions
+          user={user}
+          muted={topMuted}
+          solid={solid}
+          glow={topGlow}
+          dark={dark}
+        />
+      </div>
+      {/* Floating glass pill — fades and settles in on scroll */}
+      <div
+        className={`absolute inset-x-0 top-3 ${t} ${
+          scrolled
+            ? "translate-y-0 scale-100 opacity-100"
+            : "pointer-events-none translate-y-2 scale-[0.98] opacity-0"
+        }`}
+      >
+        <div
+          className={`mx-auto flex w-[calc(100%-2rem)] max-w-[36rem] items-center justify-between px-5 py-2.5 ${
+            dark ? GLASS_DARK : GLASS_LIGHT
+          }`}
         >
-          {/* Crossfade: gradient plane at top, white plane once the pill appears */}
-          <span className="relative block h-[30px] w-[106px]" aria-hidden="true">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/logo.png"
-              alt=""
-              className={`absolute inset-0 m-auto h-[30px] w-auto transition-opacity duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-                scrolled ? "opacity-0" : "opacity-100"
-              }`}
-            />
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/logo-white.png"
-              alt=""
-              className={`absolute inset-0 m-auto h-[30px] w-auto transition-opacity duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
-                scrolled ? "opacity-100" : "opacity-0"
-              }`}
-            />
-          </span>
-          <span
-            className={`font-display text-lg font-bold tracking-tight ${topSolid} ${glow}`}
-          >
-            PreFlight
-          </span>
-        </a>
-        <div className="hidden items-center gap-8 md:flex">
-          <a
-            href="#how-it-works"
-            className={`text-sm font-medium transition-colors duration-150 ${topMuted} ${glow}`}
-          >
-            How it works
-          </a>
-        </div>
-        <div className="flex items-center gap-1.5">
-          {user ? (
-            <>
-              <a
-                href="/dashboard"
-                className={`pressable rounded-full px-4 py-2.5 text-sm font-medium transition-colors duration-150 ${topMuted} ${glow}`}
-              >
-                Dashboard
-              </a>
-              <a
-                href="/dashboard"
-                className={`flex items-center gap-2 rounded-full py-1 pl-1 pr-3 transition-colors duration-150 ${
-                  dark ? "hover:bg-white/10" : "hover:bg-ink/5"
-                }`}
-                aria-label="Open dashboard"
-              >
-                {user.image ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={user.image}
-                    alt=""
-                    className={`h-8 w-8 rounded-full ring-1 ${
-                      dark ? "ring-white/20" : "ring-ink/10"
-                    }`}
-                  />
-                ) : null}
-                <span className={`text-sm font-medium ${topSolid} ${glow}`}>
-                  {user.name?.split(" ")[0] ?? "Dashboard"}
-                </span>
-              </a>
-            </>
-          ) : (
-            <>
-              <a
-                href="/login"
-                className={`rounded-full px-4 py-2.5 text-sm font-medium transition-colors duration-150 ${topMuted} ${glow}`}
-              >
-                Log in
-              </a>
-              <a
-                href="#early-access"
-                className="pressable btn-gradient rounded-full px-4 py-2.5 text-sm font-medium text-white"
-              >
-                Get early access
-              </a>
-            </>
-          )}
+          <Wordmark white={true} solid={solid} glow="" />
+          <NavLinks muted={pillMuted} glow="" />
+          <NavActions
+            user={user}
+            muted={pillMuted}
+            solid={solid}
+            glow=""
+            dark={dark}
+          />
         </div>
       </div>
     </nav>
