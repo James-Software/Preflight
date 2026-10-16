@@ -80,7 +80,7 @@ export default function Hero({ user }: { user: NavUser | null }) {
 
           <div className="relative px-6 py-16 text-center md:py-20">
             <h1
-              className="animate-hero-rise font-display mx-auto max-w-4xl text-5xl font-bold tracking-tight text-white md:text-7xl"
+              className="animate-hero-rise mx-auto max-w-4xl font-sans text-5xl font-semibold tracking-[-0.035em] text-white md:text-8xl"
               style={{ textShadow: "0 2px 24px rgba(30,20,120,0.35)" }}
             >
               Is your app ready to fly?
