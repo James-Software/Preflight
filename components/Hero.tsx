@@ -29,7 +29,7 @@ export default function Hero({ user }: { user: NavUser | null }) {
           className="relative flex w-full flex-1 items-center justify-center overflow-hidden rounded-[1.75rem] md:rounded-[2.5rem]"
           style={{
             boxShadow:
-              "inset 0 0 90px rgba(255,255,255,0.28), inset 0 2px 1px rgba(255,255,255,0.55), inset 0 -1px 0 rgba(255,255,255,0.15), 0 30px 80px -20px rgba(90,80,250,0.45)",
+              "inset 0 0 0 1px rgba(255,255,255,0.45), inset 0 0 45px rgba(255,255,255,0.42), inset 0 2px 1px rgba(255,255,255,0.6), inset 0 -1px 0 rgba(255,255,255,0.2), 0 30px 80px -20px rgba(90,80,250,0.45)",
           }}
         >
           {/* gradient bubble */}
@@ -58,15 +58,6 @@ export default function Hero({ user }: { user: NavUser | null }) {
           <div
             aria-hidden="true"
             className="absolute inset-x-0 top-0 h-44 bg-gradient-to-b from-white/30 to-transparent"
-          />
-          {/* bottom bloom (the sun) */}
-          <div
-            aria-hidden="true"
-            className="absolute inset-x-0 bottom-0 h-72"
-            style={{
-              background:
-                "radial-gradient(55% 95% at 50% 112%, rgba(255,255,255,0.55), rgba(255,255,255,0) 70%)",
-            }}
           />
 
           <div className="relative px-6 py-16 text-center md:py-20">
