@@ -4,9 +4,10 @@ import Nav, { type NavUser } from "./Nav";
 
 /* ------------------------------------------------------------------ */
 /* Hero — Cloudflare-style: near-black page, one big purplish-blue     */
-/* gradient bubble with a dotted texture and a soft bloom along the    */
-/* bottom edge. White headline, white pill CTA. The gradient drifts    */
-/* slowly; everything freezes under prefers-reduced-motion.            */
+/* gradient bubble filling ~96% of the viewport. Bright bubble light   */
+/* across the top edge (dots fade out up there), soft light on both    */
+/* sides, bloom along the bottom. The gradient drifts slowly;          */
+/* everything freezes under prefers-reduced-motion.                    */
 /* ------------------------------------------------------------------ */
 
 const BUBBLE_GRADIENT =
@@ -17,11 +18,20 @@ const DOT_TEXTURE =
 
 export default function Hero({ user }: { user: NavUser | null }) {
   return (
-    <section id="top" className="relative bg-[#05060a]">
+    <section
+      id="top"
+      className="relative flex min-h-svh flex-col bg-[#05060a]"
+    >
       <Nav user={user} dark />
 
-      <div className="px-3 pb-8 pt-24 md:px-5 md:pt-28">
-        <div className="relative mx-auto max-w-7xl overflow-hidden rounded-[1.75rem] shadow-[0_30px_80px_-20px_rgba(90,80,250,0.45)] md:rounded-[2.5rem]">
+      <div className="flex flex-1 px-[2vw] pb-[2vh] pt-[84px]">
+        <div
+          className="relative flex w-full flex-1 items-center justify-center overflow-hidden rounded-[1.75rem] md:rounded-[2.5rem]"
+          style={{
+            boxShadow:
+              "inset 0 2px 1px rgba(255,255,255,0.55), inset 0 -1px 0 rgba(255,255,255,0.15), 0 30px 80px -20px rgba(90,80,250,0.45)",
+          }}
+        >
           {/* gradient bubble */}
           <div
             aria-hidden="true"
@@ -31,19 +41,44 @@ export default function Hero({ user }: { user: NavUser | null }) {
               backgroundSize: "220% 220%",
             }}
           />
-          {/* dotted texture */}
+          {/* dotted texture, fading out toward the top */}
           <div
             aria-hidden="true"
             className="absolute inset-0"
             style={{
               backgroundImage: DOT_TEXTURE,
               backgroundSize: "24px 24px",
+              WebkitMaskImage:
+                "linear-gradient(to bottom, transparent 0%, black 32%)",
+              maskImage:
+                "linear-gradient(to bottom, transparent 0%, black 32%)",
             }}
           />
-          {/* top gloss */}
+          {/* bright bubble light across the top */}
           <div
             aria-hidden="true"
-            className="absolute inset-x-0 top-0 h-24 bg-gradient-to-b from-white/15 to-transparent"
+            className="absolute inset-x-0 top-0 h-64"
+            style={{
+              background:
+                "radial-gradient(75% 100% at 50% 0%, rgba(255,255,255,0.65), rgba(255,255,255,0) 70%)",
+            }}
+          />
+          {/* soft light on the sides */}
+          <div
+            aria-hidden="true"
+            className="absolute inset-y-0 left-0 w-56"
+            style={{
+              background:
+                "radial-gradient(100% 60% at 0% 22%, rgba(255,255,255,0.38), rgba(255,255,255,0) 70%)",
+            }}
+          />
+          <div
+            aria-hidden="true"
+            className="absolute inset-y-0 right-0 w-56"
+            style={{
+              background:
+                "radial-gradient(100% 60% at 100% 22%, rgba(255,255,255,0.38), rgba(255,255,255,0) 70%)",
+            }}
           />
           {/* bottom bloom */}
           <div
@@ -55,7 +90,7 @@ export default function Hero({ user }: { user: NavUser | null }) {
             }}
           />
 
-          <div className="relative px-6 py-24 text-center md:py-36">
+          <div className="relative px-6 py-16 text-center md:py-20">
             <h1
               className="animate-hero-rise font-display mx-auto max-w-4xl text-5xl font-bold tracking-tight text-white md:text-7xl"
               style={{ textShadow: "0 2px 24px rgba(30,20,120,0.35)" }}
