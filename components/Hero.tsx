@@ -47,9 +47,9 @@ export default function Hero({ user }: { user: NavUser | null }) {
             className="absolute inset-0"
             style={{
               WebkitMaskImage:
-                "radial-gradient(ellipse 100% 100% at 50% 50%, black 42%, transparent 92%)",
+                "radial-gradient(ellipse 50% 50% at 50% 50%, black 60%, transparent 90%)",
               maskImage:
-                "radial-gradient(ellipse 100% 100% at 50% 50%, black 42%, transparent 92%)",
+                "radial-gradient(ellipse 50% 50% at 50% 50%, black 60%, transparent 90%)",
             }}
           >
             <div
