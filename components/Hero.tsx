@@ -47,7 +47,7 @@ export default function Hero({ user }: { user: NavUser | null }) {
             className="absolute inset-0"
             style={{
               backgroundImage: DOT_TEXTURE,
-              backgroundSize: "24px 24px",
+              backgroundSize: "12px 12px",
               WebkitMaskImage:
                 "linear-gradient(to bottom, transparent 0%, black 32%)",
               maskImage:
