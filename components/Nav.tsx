@@ -1,7 +1,6 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { PixelPlaneSprite } from "./PixelPlane";
 
 /** Minimal session user shape the nav needs. Resolved server-side. */
 export type NavUser = {
@@ -87,7 +86,13 @@ export default function Nav({
           className={`flex items-center gap-2.5 ${spriteGlow}`}
           aria-label="PreFlight home"
         >
-          <PixelPlaneSprite width={30} />
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logo.png"
+            alt="PreFlight logo"
+            height={30}
+            className="h-[30px] w-auto"
+          />
           <span
             className={`font-display text-lg font-bold tracking-tight ${topSolid} ${glow}`}
           >
