@@ -43,14 +43,14 @@ export default function Hero({ user }: { user: NavUser | null }) {
           {/* dotted texture, fading out toward the top */}
           <div
             aria-hidden="true"
-            className="absolute inset-0"
+            className="animate-dot-rise absolute inset-0"
             style={{
               backgroundImage: DOT_TEXTURE,
               backgroundSize: "12px 12px",
               WebkitMaskImage:
-                "linear-gradient(to bottom, transparent 0%, black 32%)",
+                "radial-gradient(ellipse 85% 85% at 50% 50%, black 58%, transparent 100%)",
               maskImage:
-                "linear-gradient(to bottom, transparent 0%, black 32%)",
+                "radial-gradient(ellipse 85% 85% at 50% 50%, black 58%, transparent 100%)",
             }}
           />
           {/* bright light band across the top, no circular blobs */}
