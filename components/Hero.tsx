@@ -31,25 +31,25 @@ export default function Hero({ user }: { user: NavUser | null }) {
             boxShadow: "0 30px 80px -20px rgba(90,80,250,0.45)",
           }}
         >
-          {/* gradient bubble */}
+          {/* gradient bubble — static, no drift */}
           <div
             aria-hidden="true"
-            className="animate-bubble-drift absolute inset-0"
-            style={{
-              backgroundImage: BUBBLE_GRADIENT,
-              backgroundSize: "220% 220%",
-            }}
+            className="absolute inset-0"
+            style={{ backgroundImage: BUBBLE_GRADIENT }}
           />
-          {/* dotted texture: static fade mask on the wrapper, animated dots
-              on the inner layer so the two never fight */}
+          {/* dotted texture: inner-glow shaped fade — four straight edge
+              fades composited (like an inset box-shadow), so dots dissolve
+              near every edge instead of in an ellipse */}
           <div
             aria-hidden="true"
             className="absolute inset-0"
             style={{
               WebkitMaskImage:
-                "radial-gradient(ellipse 50% 50% at 50% 50%, black 60%, transparent 90%)",
+                "linear-gradient(to bottom, transparent, black 16%), linear-gradient(to top, transparent, black 16%), linear-gradient(to right, transparent, black 10%), linear-gradient(to left, transparent, black 10%)",
+              WebkitMaskComposite: "source-in",
               maskImage:
-                "radial-gradient(ellipse 50% 50% at 50% 50%, black 60%, transparent 90%)",
+                "linear-gradient(to bottom, transparent, black 16%), linear-gradient(to top, transparent, black 16%), linear-gradient(to right, transparent, black 10%), linear-gradient(to left, transparent, black 10%)",
+              maskComposite: "intersect",
             }}
           >
             <div
