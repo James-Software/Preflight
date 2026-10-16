@@ -40,19 +40,27 @@ export default function Hero({ user }: { user: NavUser | null }) {
               backgroundSize: "220% 220%",
             }}
           />
-          {/* dotted texture, fading out toward the top */}
+          {/* dotted texture: static fade mask on the wrapper, animated dots
+              on the inner layer so the two never fight */}
           <div
             aria-hidden="true"
-            className="animate-dot-rise absolute inset-0"
+            className="absolute inset-0"
             style={{
-              backgroundImage: DOT_TEXTURE,
-              backgroundSize: "12px 12px",
               WebkitMaskImage:
-                "radial-gradient(ellipse 85% 85% at 50% 50%, black 58%, transparent 100%)",
+                "radial-gradient(ellipse 100% 100% at 50% 50%, black 42%, transparent 92%)",
               maskImage:
-                "radial-gradient(ellipse 85% 85% at 50% 50%, black 58%, transparent 100%)",
+                "radial-gradient(ellipse 100% 100% at 50% 50%, black 42%, transparent 92%)",
             }}
-          />
+          >
+            <div
+              aria-hidden="true"
+              className="animate-dot-rise absolute inset-0"
+              style={{
+                backgroundImage: DOT_TEXTURE,
+                backgroundSize: "12px 12px",
+              }}
+            />
+          </div>
           {/* bright light band across the top, no circular blobs */}
           <div
             aria-hidden="true"
