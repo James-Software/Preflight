@@ -11,7 +11,7 @@ import Nav, { type NavUser } from "./Nav";
 /* ------------------------------------------------------------------ */
 
 const BUBBLE_GRADIENT =
-  "linear-gradient(180deg, #8aa5ff 0%, #6a6df5 48%, #4e2fd8 100%)";
+  "linear-gradient(to top right, #4e2fd8 0%, #6a6df5 48%, #8aa5ff 100%)";
 
 const DOT_TEXTURE =
   "radial-gradient(rgba(255,255,255,0.20) 1.2px, transparent 1.3px)";
