@@ -130,7 +130,7 @@ html {
   }
 }
 .animate-dot-rise {
-  animation: dot-rise 8s linear infinite;
+  animation: dot-rise 3s linear infinite;
 }
 
 @media (prefers-reduced-motion: reduce) {
