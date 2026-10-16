@@ -42,19 +42,27 @@ export default function Nav({
     let raf = 0;
     let last = window.scrollY > SCROLL_AFTER;
     setScrolled(last);
+    const sync = () => {
+      const s = window.scrollY > SCROLL_AFTER;
+      if (s !== last) {
+        last = s;
+        setScrolled(s);
+      }
+    };
     const onScroll = () => {
       cancelAnimationFrame(raf);
-      raf = requestAnimationFrame(() => {
-        const s = window.scrollY > SCROLL_AFTER;
-        if (s !== last) {
-          last = s;
-          setScrolled(s);
-        }
-      });
+      raf = requestAnimationFrame(sync);
     };
+    // Browsers restore the scroll position asynchronously after load
+    // without firing a scroll event — re-check so a refreshed mid-page
+    // load gets the pill instead of being stuck transparent.
+    const t1 = window.setTimeout(sync, 100);
+    const t2 = window.setTimeout(sync, 800);
     window.addEventListener("scroll", onScroll, { passive: true });
     return () => {
       cancelAnimationFrame(raf);
+      window.clearTimeout(t1);
+      window.clearTimeout(t2);
       window.removeEventListener("scroll", onScroll);
     };
   }, []);
@@ -63,14 +71,18 @@ export default function Nav({
 
   // Top-of-page colors: white on dark hero, ink on light. The bar itself
   // stays transparent at the top; the glass pill only appears on scroll.
+  // On dark, the pill is dark glass (a white pill reads as solid, not glass).
+  const pillBar = dark
+    ? "mt-3 w-[calc(100%-2rem)] max-w-[36rem] rounded-full border border-white/10 bg-[#0b0d16]/70 px-5 py-2.5 shadow-[0_8px_30px_rgba(0,0,0,0.45)] backdrop-blur-xl"
+    : "mt-3 w-[calc(100%-2rem)] max-w-[36rem] rounded-full border border-ink/10 bg-white/90 px-5 py-2.5 shadow-[0_8px_30px_rgba(30,27,75,0.12)] backdrop-blur-md";
   const topBar = scrolled
-    ? "mt-3 w-[calc(100%-2rem)] max-w-[36rem] rounded-full border border-ink/10 bg-white/90 px-5 py-2.5 shadow-[0_8px_30px_rgba(30,27,75,0.12)] backdrop-blur-md"
+    ? pillBar
     : "w-full max-w-6xl rounded-none border border-transparent bg-transparent px-6 py-5 shadow-none";
-  const topSolid = scrolled ? "text-ink" : dark ? "text-white" : "text-ink";
-  const topMuted = scrolled
-    ? "text-ink/70 hover:text-ink"
-    : dark
-      ? "text-white/70 hover:text-white"
+  const topSolid = dark ? "text-white" : "text-ink";
+  const topMuted = dark
+    ? "text-white/70 hover:text-white"
+    : scrolled
+      ? "text-ink/70 hover:text-ink"
       : "text-ink/60 hover:text-ink";
   const glow = scrolled || dark ? "" : GLOW_TEXT;
   const spriteGlow = scrolled || dark ? "" : GLOW_SPRITE;
@@ -116,11 +128,7 @@ export default function Nav({
               <a
                 href="/dashboard"
                 className={`flex items-center gap-2 rounded-full py-1 pl-1 pr-3 transition-colors duration-150 ${
-                  scrolled
-                    ? "hover:bg-ink/5"
-                    : dark
-                      ? "hover:bg-white/10"
-                      : "hover:bg-ink/5"
+                  dark ? "hover:bg-white/10" : "hover:bg-ink/5"
                 }`}
                 aria-label="Open dashboard"
               >
@@ -129,7 +137,9 @@ export default function Nav({
                   <img
                     src={user.image}
                     alt=""
-                    className="h-8 w-8 rounded-full ring-1 ring-ink/10"
+                    className={`h-8 w-8 rounded-full ring-1 ${
+                      dark ? "ring-white/20" : "ring-ink/10"
+                    }`}
                   />
                 ) : null}
                 <span className={`text-sm font-medium ${topSolid} ${glow}`}>
