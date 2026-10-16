@@ -108,10 +108,10 @@ html {
    one 12px tile. */
 @keyframes dot-rise {
   from {
-    background-position-y: 0;
+    background-position: 0 0;
   }
   to {
-    background-position-y: -12px;
+    background-position: 12px -12px;
   }
 }
 .animate-dot-rise {
