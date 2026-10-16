@@ -16,24 +16,24 @@ const sans = Inter({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://trypreflight.dev"),
+  metadataBase: new URL("https://www.trypreflight.dev"),
   title: {
-    default: "PreFlight — Cleared for takeoff",
+    default: "PreFlight — AI Agents That Test Your App Like Real Users",
     template: "%s | PreFlight",
   },
   description:
     "PreFlight sends a swarm of AI agents to test your app like real users. Every bug they find comes back as fix.",
   openGraph: {
-    title: "PreFlight — Cleared for takeoff",
+    title: "PreFlight — AI Agents That Test Your App Like Real Users",
     description:
       "PreFlight sends a swarm of AI agents to test your app like real users. Every bug they find comes back as fix.",
-    url: "https://trypreflight.dev",
+    url: "https://www.trypreflight.dev",
     siteName: "PreFlight",
     type: "website",
   },
   twitter: {
     card: "summary_large_image",
-    title: "PreFlight — Cleared for takeoff",
+    title: "PreFlight — AI Agents That Test Your App Like Real Users",
     description:
       "PreFlight sends a swarm of AI agents to test your app like real users. Every bug they find comes back as fix.",
   },
