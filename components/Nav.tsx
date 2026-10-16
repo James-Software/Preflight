@@ -17,9 +17,11 @@ const SCROLL_AFTER = 8;
 // intentionally NOT transitioned: the pill snaps to fully rounded the
 // instant scrolling starts, so the glass lands on an already-rounded bar.
 // Padding is constant across states (animating it caused layout jank).
+// margin-top is also constant (mt-3 on both states) so the vertical center
+// of the elements never shifts when the pill appears.
 // Written as full literal class strings so Tailwind's scanner picks them up.
 const MORPH_TRANSITION =
-  "transition-[max-width,width,margin-top,background-color,border-color,box-shadow] duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]";
+  "transition-[max-width,width,background-color,border-color,box-shadow] duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]";
 
 // Soft white halo behind nav content while the bar is transparent (top of
 // page), so dark text stays readable over light artwork. Only active in
@@ -91,7 +93,7 @@ export default function Nav({
     : "mt-3 w-[calc(100%-2.5rem)] max-w-[1060px] rounded-full border border-ink/10 bg-white/70 px-6 py-4 shadow-[inset_0_1px_1px_rgba(255,255,255,0.6),0_8px_30px_rgba(30,27,75,0.12)] backdrop-blur-xl";
   const topBar = scrolled
     ? pillBar
-    : "w-full max-w-6xl rounded-none border border-transparent bg-transparent px-6 py-4 shadow-none";
+    : "mt-3 w-full max-w-6xl rounded-none border border-transparent bg-transparent px-6 py-4 shadow-none";
   const topSolid = dark ? "text-white" : "text-ink";
   const topMuted = dark
     ? "text-white/70 hover:text-white"
