@@ -2,7 +2,6 @@ import { auth } from "@/auth";
 import Hero from "@/components/Hero";
 import ProofChapter from "@/components/ProofChapter";
 import Capabilities from "@/components/Capabilities";
-import InstallStrip from "@/components/InstallStrip";
 import EarlyAccess from "@/components/EarlyAccess";
 import Footer from "@/components/Footer";
 
@@ -15,7 +14,6 @@ export default async function Home() {
       <Hero user={session?.user ?? null} />
       <ProofChapter />
       <Capabilities />
-      <InstallStrip />
       <EarlyAccess />
       <Footer />
     </main>
