@@ -14,8 +14,11 @@ const SCROLL_AFTER = 32;
 // James's motion spec: 100-300ms, cubic-bezier(0.16,1,0.3,1). Only the
 // morphing properties transition — never transition-all. Written as full
 // literal class strings so Tailwind's scanner picks them up.
+// border-radius is intentionally NOT transitioned: the pill snaps to fully
+// rounded the instant scrolling starts, so the glass lands on an already-
+// rounded bar instead of visibly morphing from a rectangle.
 const MORPH_TRANSITION =
-  "transition-[width,max-width,margin-top,padding,border-radius,border-color,box-shadow,background-color] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]";
+  "transition-[width,max-width,margin-top,padding,border-color,box-shadow,background-color] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]";
 
 // Soft white halo behind nav content while the bar is transparent (top of
 // page), so dark text stays readable over light artwork. Only active in
@@ -80,9 +83,11 @@ export default function Nav({
   // Top-of-page colors: white on dark hero, ink on light. The bar itself
   // stays transparent at the top; the glass pill only appears on scroll.
   // On dark, the pill is dark glass (a white pill reads as solid, not glass).
+  // Liquid glass: saturated blur, translucent fill, and inset edge highlights
+  // so light catches the rounded rim like real glass.
   const pillBar = dark
-    ? "mt-3 w-[calc(100%-2rem)] max-w-[36rem] rounded-full border border-white/10 bg-[#0b0d16]/70 px-5 py-2.5 shadow-[0_8px_30px_rgba(0,0,0,0.45)] backdrop-blur-xl"
-    : "mt-3 w-[calc(100%-2rem)] max-w-[36rem] rounded-full border border-ink/10 bg-white/90 px-5 py-2.5 shadow-[0_8px_30px_rgba(30,27,75,0.12)] backdrop-blur-md";
+    ? "mt-3 w-[calc(100%-2rem)] max-w-[36rem] rounded-full border border-white/20 bg-[#0b0d16]/60 px-5 py-2.5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.18),inset_0_-1px_1px_rgba(255,255,255,0.06),0_8px_30px_rgba(0,0,0,0.45)] backdrop-blur-2xl backdrop-saturate-150"
+    : "mt-3 w-[calc(100%-2rem)] max-w-[36rem] rounded-full border border-white/50 bg-white/60 px-5 py-2.5 shadow-[inset_0_1px_1px_rgba(255,255,255,0.7),inset_0_-1px_1px_rgba(255,255,255,0.25),0_8px_30px_rgba(30,27,75,0.14)] backdrop-blur-2xl backdrop-saturate-150";
   const topBar = scrolled
     ? pillBar
     : "w-full max-w-6xl rounded-none border border-transparent bg-transparent px-6 py-5 shadow-none";
