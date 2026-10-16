@@ -1,16 +1,21 @@
 /* ------------------------------------------------------------------ */
 /* Model configuration — the one file to edit when swapping models.    */
 /*                                                                    */
-/* Defaults are FREE OpenRouter models: $0 to iterate. Env vars       */
-/* override the file without a code change (useful in Vercel).        */
+/* Defaults are PAID OpenRouter models. Free models require opting    */
+/* into model-improvement data sharing; with privacy set to "no       */
+/* training" they 402. Env vars override the file without a code      */
+/* change (useful in Vercel).                                          */
 /*                                                                    */
-/* Premium stack (when ready — just swap the ids below):              */
+/* Current stack (2026-10-16, est. ~$0.15-0.30 per 3-agent run):      */
 /*   driver:  openai/gpt-5.6-luna      (OpenRouter chat completions)   */
-/*   judge:   typesafe/jev-1.13        (OpenRouter Decisions API)      */
+/*   judge:   openai/gpt-4o-mini       (OpenRouter chat completions)   */
 /*                                                                    */
-/* Free-tier note: OpenRouter free models are rate-limited (~20        */
-/* req/min). The agent loop backs off and retries on 429s. If a free  */
-/* model misbehaves, swap the id — no other code changes needed.      */
+/* Note: typesafe/jev-1.13 (the planned Decisions-API judge) was not  */
+/* found on OpenRouter, so the judge stays on chat completions for    */
+/* now. Revisit if it becomes available.                              */
+/*                                                                    */
+/* Rate-limit note: the agent loop backs off and retries on 429s. If  */
+/* a model misbehaves, swap the id — no other code changes needed.    */
 /* ------------------------------------------------------------------ */
 
 export type JudgeProvider = "openrouter-chat" | "openrouter-decisions";
@@ -18,15 +23,14 @@ export type JudgeProvider = "openrouter-chat" | "openrouter-decisions";
 export const MODEL_CONFIG = {
   driver: {
     provider: "openrouter-chat" as const,
-    // Needs vision + JSON output. Free default; premium: "openai/gpt-5.6-luna".
-    model: process.env.DRIVER_MODEL || "google/gemma-4-31b-it:free",
+    // Needs vision + JSON output.
+    model: process.env.DRIVER_MODEL || "openai/gpt-5.6-luna",
   },
   judge: {
-    // "openrouter-chat": JSON verdicts via chat completions (free).
+    // "openrouter-chat": JSON verdicts via chat completions.
     // "openrouter-decisions": Jev typed decisions (fractions of a cent).
     provider: (process.env.JUDGE_PROVIDER ||
       "openrouter-chat") as JudgeProvider,
-    // Free default; premium: "typesafe/jev-1.13" (needs the decisions provider).
-    model: process.env.JUDGE_MODEL || "nvidia/nemotron-3.5-lightning:free",
+    model: process.env.JUDGE_MODEL || "openai/gpt-4o-mini",
   },
 };
