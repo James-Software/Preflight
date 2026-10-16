@@ -6,9 +6,8 @@ export default function AccessDenied() {
           You are on the waitlist
         </h1>
         <p className="mt-3 text-sm leading-relaxed text-ink/60">
-          PreFlight is invite-only right now. We have your GitHub account on
-          the list and review every request by hand. Try logging in again
-          later. If you were expecting access, email{" "}
+          PreFlight is invite-only right now. If you were expecting access,
+          email{" "}
           <a
             href="mailto:hello@trypreflight.dev"
             className="font-medium text-ink underline underline-offset-2 transition-colors duration-150 hover:text-ink/70"
