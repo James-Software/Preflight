@@ -1,6 +1,8 @@
 import { auth } from "@/auth";
 import Hero from "@/components/Hero";
-import FixPRs from "@/components/FixPRs";
+import ProofChapter from "@/components/ProofChapter";
+import Capabilities from "@/components/Capabilities";
+import InstallStrip from "@/components/InstallStrip";
 import EarlyAccess from "@/components/EarlyAccess";
 import Footer from "@/components/Footer";
 
@@ -11,7 +13,9 @@ export default async function Home() {
   return (
     <main className="bg-[#05060a]">
       <Hero user={session?.user ?? null} />
-      <FixPRs />
+      <ProofChapter />
+      <Capabilities />
+      <InstallStrip />
       <EarlyAccess />
       <Footer />
     </main>
