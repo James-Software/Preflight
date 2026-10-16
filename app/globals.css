@@ -118,3 +118,23 @@ html {
     animation: none;
   }
 }
+
+/* Bubble dot texture: dots drift slowly upward, looping seamlessly over
+   one 12px tile. */
+@keyframes dot-rise {
+  from {
+    background-position-y: 0;
+  }
+  to {
+    background-position-y: -12px;
+  }
+}
+.animate-dot-rise {
+  animation: dot-rise 8s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .animate-dot-rise {
+    animation: none;
+  }
+}
