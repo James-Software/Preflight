@@ -19,13 +19,20 @@ const MORPH_TRANSITION =
   "transition-[width,max-width,margin-top,padding,border-radius,border-color,box-shadow,background-color] duration-300 ease-[cubic-bezier(0.16,1,0.3,1)]";
 
 // Soft white halo behind nav content while the bar is transparent (top of
-// page), so dark text stays readable over the cloudscape. Only active in
-// the non-pill state — the pill carries its own white background.
+// page), so dark text stays readable over light artwork. Only active in
+// the non-pill state on light backgrounds — the pill carries its own
+// white background, and dark mode needs no halo.
 const GLOW_TEXT =
   "[text-shadow:0_0_14px_rgba(255,255,255,0.95),0_0_34px_rgba(255,255,255,0.85)]";
 const GLOW_SPRITE = "[filter:drop-shadow(0_0_7px_rgba(255,255,255,0.95))]";
 
-export default function Nav({ user }: { user: NavUser | null }) {
+export default function Nav({
+  user,
+  dark = false,
+}: {
+  user: NavUser | null;
+  dark?: boolean;
+}) {
   const [scrolled, setScrolled] = useState(
     () => typeof window !== "undefined" && window.scrollY > SCROLL_AFTER,
   );
@@ -55,6 +62,17 @@ export default function Nav({ user }: { user: NavUser | null }) {
 
   const t = reduced ? "" : MORPH_TRANSITION;
 
+  // Top-of-page colors: white on dark hero, ink on light. The scrolled
+  // pill is always the same white treatment.
+  const topSolid = scrolled ? "text-ink" : dark ? "text-white" : "text-ink";
+  const topMuted = scrolled
+    ? "text-ink/70 hover:text-ink"
+    : dark
+      ? "text-white/70 hover:text-white"
+      : "text-ink/60 hover:text-ink";
+  const glow = scrolled || dark ? "" : GLOW_TEXT;
+  const spriteGlow = scrolled || dark ? "" : GLOW_SPRITE;
+
   return (
     <nav className="fixed inset-x-0 top-0 z-50">
       <div
@@ -66,14 +84,12 @@ export default function Nav({ user }: { user: NavUser | null }) {
       >
         <a
           href="#top"
-          className={`flex items-center gap-2.5 ${scrolled ? "" : GLOW_SPRITE}`}
+          className={`flex items-center gap-2.5 ${spriteGlow}`}
           aria-label="PreFlight home"
         >
           <PixelPlaneSprite width={30} />
           <span
-            className={`font-display text-lg font-bold tracking-tight text-ink ${
-              scrolled ? "" : GLOW_TEXT
-            }`}
+            className={`font-display text-lg font-bold tracking-tight ${topSolid} ${glow}`}
           >
             PreFlight
           </span>
@@ -81,29 +97,31 @@ export default function Nav({ user }: { user: NavUser | null }) {
         <div className="hidden items-center gap-8 md:flex">
           <a
             href="#how-it-works"
-            className={`text-sm font-medium text-ink/60 transition-colors duration-150 hover:text-ink ${
-              scrolled ? "" : GLOW_TEXT
-            }` }
+            className={`text-sm font-medium transition-colors duration-150 ${topMuted} ${glow}`}
           >
             How it works
           </a>
         </div>
         <div className="flex items-center gap-1.5">
           {user ? (
-              <>
-                <a
-                  href="/dashboard"
-                  className={`pressable rounded-full px-4 py-2.5 text-sm font-medium text-ink/70 transition-colors duration-150 hover:text-ink ${
-                    scrolled ? "" : GLOW_TEXT
-                  }`}
-                >
-                  Dashboard
-                </a>
-                <a
-                  href="/dashboard"
-                  className="flex items-center gap-2 rounded-full py-1 pl-1 pr-3 transition-colors duration-150 hover:bg-ink/5"
-                  aria-label="Open dashboard"
-                >
+            <>
+              <a
+                href="/dashboard"
+                className={`pressable rounded-full px-4 py-2.5 text-sm font-medium transition-colors duration-150 ${topMuted} ${glow}`}
+              >
+                Dashboard
+              </a>
+              <a
+                href="/dashboard"
+                className={`flex items-center gap-2 rounded-full py-1 pl-1 pr-3 transition-colors duration-150 ${
+                  scrolled
+                    ? "hover:bg-ink/5"
+                    : dark
+                      ? "hover:bg-white/10"
+                      : "hover:bg-ink/5"
+                }`}
+                aria-label="Open dashboard"
+              >
                 {user.image ? (
                   // eslint-disable-next-line @next/next/no-img-element
                   <img
@@ -112,33 +130,27 @@ export default function Nav({ user }: { user: NavUser | null }) {
                     className="h-8 w-8 rounded-full ring-1 ring-ink/10"
                   />
                 ) : null}
-                <span
-                  className={`text-sm font-medium text-ink ${
-                    scrolled ? "" : GLOW_TEXT
-                  }`}
-                >
+                <span className={`text-sm font-medium ${topSolid} ${glow}`}>
                   {user.name?.split(" ")[0] ?? "Dashboard"}
                 </span>
               </a>
-              </>
-            ) : (
-              <>
-                <a
-                  href="/login"
-                  className={`rounded-full px-4 py-2.5 text-sm font-medium text-ink/70 transition-colors duration-150 hover:text-ink ${
-                    scrolled ? "" : GLOW_TEXT
-                  }`}
-                >
-                  Log in
-                </a>
-                <a
-                  href="#early-access"
-                  className="pressable btn-gradient rounded-full px-4 py-2.5 text-sm font-medium text-white"
-                >
-                  Get early access
-                </a>
-              </>
-            )}
+            </>
+          ) : (
+            <>
+              <a
+                href="/login"
+                className={`rounded-full px-4 py-2.5 text-sm font-medium transition-colors duration-150 ${topMuted} ${glow}`}
+              >
+                Log in
+              </a>
+              <a
+                href="#early-access"
+                className="pressable btn-gradient rounded-full px-4 py-2.5 text-sm font-medium text-white"
+              >
+                Get early access
+              </a>
+            </>
+          )}
         </div>
       </div>
     </nav>
