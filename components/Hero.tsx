@@ -29,7 +29,7 @@ export default function Hero({ user }: { user: NavUser | null }) {
           className="relative flex w-full flex-1 items-center justify-center overflow-hidden rounded-[1.75rem] md:rounded-[2.5rem]"
           style={{
             boxShadow:
-              "inset 0 2px 1px rgba(255,255,255,0.55), inset 0 -1px 0 rgba(255,255,255,0.15), 0 30px 80px -20px rgba(90,80,250,0.45)",
+              "inset 0 0 90px rgba(255,255,255,0.28), inset 0 2px 1px rgba(255,255,255,0.55), inset 0 -1px 0 rgba(255,255,255,0.15), 0 30px 80px -20px rgba(90,80,250,0.45)",
           }}
         >
           {/* gradient bubble */}
@@ -54,33 +54,12 @@ export default function Hero({ user }: { user: NavUser | null }) {
                 "linear-gradient(to bottom, transparent 0%, black 32%)",
             }}
           />
-          {/* bright bubble light across the top */}
+          {/* bright light band across the top, no circular blobs */}
           <div
             aria-hidden="true"
-            className="absolute inset-x-0 top-0 h-64"
-            style={{
-              background:
-                "radial-gradient(75% 100% at 50% 0%, rgba(255,255,255,0.65), rgba(255,255,255,0) 70%)",
-            }}
+            className="absolute inset-x-0 top-0 h-44 bg-gradient-to-b from-white/30 to-transparent"
           />
-          {/* soft light on the sides */}
-          <div
-            aria-hidden="true"
-            className="absolute inset-y-0 left-0 w-56"
-            style={{
-              background:
-                "radial-gradient(100% 60% at 0% 22%, rgba(255,255,255,0.38), rgba(255,255,255,0) 70%)",
-            }}
-          />
-          <div
-            aria-hidden="true"
-            className="absolute inset-y-0 right-0 w-56"
-            style={{
-              background:
-                "radial-gradient(100% 60% at 100% 22%, rgba(255,255,255,0.38), rgba(255,255,255,0) 70%)",
-            }}
-          />
-          {/* bottom bloom */}
+          {/* bottom bloom (the sun) */}
           <div
             aria-hidden="true"
             className="absolute inset-x-0 bottom-0 h-72"
