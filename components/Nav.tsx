@@ -67,7 +67,7 @@ export default function Nav({
   const topBar = scrolled
     ? "mt-3 w-[calc(100%-2rem)] max-w-[36rem] rounded-full border border-ink/10 bg-white/90 px-5 py-2.5 shadow-[0_8px_30px_rgba(30,27,75,0.12)] backdrop-blur-md"
     : dark
-      ? "w-full rounded-none border-b border-white/10 bg-[#05060a]/60 px-6 py-4 shadow-none backdrop-blur-xl"
+      ? "w-full max-w-6xl rounded-none border border-white/10 bg-[#05060a]/60 px-6 py-4 shadow-none backdrop-blur-xl"
       : "w-full max-w-6xl rounded-none border border-transparent bg-transparent px-6 py-5 shadow-none";
   const topSolid = scrolled ? "text-ink" : dark ? "text-white" : "text-ink";
   const topMuted = scrolled
