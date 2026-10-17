@@ -34,16 +34,16 @@ export default async function NewBlogPostPage() {
   if (!isAdminLogin(session.user.githubLogin)) redirect("/dashboard");
 
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-screen bg-white dark:bg-[#05060a]">
       <DashboardHeader user={session.user} />
       <div className="mx-auto max-w-3xl px-6 py-14">
         <a
           href="/dashboard/admin/blog"
-          className="text-sm font-medium text-ink/50 transition-colors duration-150 hover:text-ink"
+          className="text-sm font-medium text-ink/50 transition-colors duration-150 hover:text-ink dark:text-white/50 dark:hover:text-white"
         >
           &larr; All posts
         </a>
-        <h1 className="font-display mt-6 text-3xl font-bold tracking-tight text-ink">
+        <h1 className="font-display mt-6 text-3xl font-bold tracking-tight text-ink dark:text-white">
           New post
         </h1>
         <BlogEditor

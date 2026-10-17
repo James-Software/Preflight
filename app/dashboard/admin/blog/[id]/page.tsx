@@ -56,13 +56,13 @@ export default async function EditBlogPostPage({
   if (!post) redirect("/dashboard/admin/blog");
 
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-screen bg-white dark:bg-[#05060a]">
       <DashboardHeader user={session.user} />
       <div className="mx-auto max-w-3xl px-6 py-14">
         <div className="flex items-center justify-between">
           <a
             href="/dashboard/admin/blog"
-            className="text-sm font-medium text-ink/50 transition-colors duration-150 hover:text-ink"
+            className="text-sm font-medium text-ink/50 transition-colors duration-150 hover:text-ink dark:text-white/50 dark:hover:text-white"
           >
             &larr; All posts
           </a>
@@ -70,13 +70,13 @@ export default async function EditBlogPostPage({
             <input type="hidden" name="id" value={post.id} />
             <button
               type="submit"
-              className="cursor-pointer rounded-full px-4 py-2 text-sm font-medium text-red-600 transition-colors duration-150 hover:bg-red-50"
+              className="cursor-pointer rounded-full px-4 py-2 text-sm font-medium text-red-600 transition-colors duration-150 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-400/10"
             >
               Delete post
             </button>
           </form>
         </div>
-        <h1 className="font-display mt-6 text-3xl font-bold tracking-tight text-ink">
+        <h1 className="font-display mt-6 text-3xl font-bold tracking-tight text-ink dark:text-white">
           Edit post
         </h1>
         <BlogEditor
