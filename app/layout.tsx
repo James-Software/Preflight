@@ -47,15 +47,23 @@ export const viewport: Viewport = {
   themeColor: "#4a7cff",
 };
 
+// Runs before first paint: picks the theme from the saved choice, else the
+// OS setting, else dark (the brand default). Setting the class this early
+// means no flash of the wrong theme.
+const THEME_SCRIPT = `(function(){try{var s=localStorage.getItem("preflight-theme");var dark=s==="dark"||(!s&&!window.matchMedia("(prefers-color-scheme: light)").matches);document.documentElement.classList.toggle("dark",dark)}catch(e){document.documentElement.classList.add("dark")}})();`;
+
 export default function RootLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
+      <head>
+        <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
+      </head>
       <body
-        className={`${display.variable} ${sans.variable} font-sans bg-white text-ink antialiased`}
+        className={`${display.variable} ${sans.variable} font-sans bg-[#fafafa] text-ink antialiased dark:bg-[#05060a] dark:text-white`}
       >
         <Providers>{children}</Providers>
       </body>
