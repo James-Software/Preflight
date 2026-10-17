@@ -10,8 +10,8 @@ const SECTIONS: { heading: string; body: string[] }[] = [
   {
     heading: "1. Information you give us",
     body: [
-      "Waitlist and contact. When you join our waitlist or contact us, we collect your email address so we can notify you at launch and respond to you.",
-      "Account. When you create an account, we collect your name and email address. Login credentials are handled by our authentication provider; we never see your password.",
+      "Waitlist and contact. PreFlight is currently invite-only. When you sign in with GitHub to request access, we save your GitHub profile — your username, name, and avatar — so we can review your request. If you email us, we keep your message and address so we can reply.",
+      "Account. When you sign in with GitHub, we save your GitHub profile — your username, name, and avatar — so we can recognize you and control access. Login credentials are handled by our authentication provider; we never see your password.",
       "Projects. The URLs of the applications you ask us to test, along with your project settings and preferences.",
       "Payment. Payments are processed directly by Stripe. We never see or store your card numbers — Stripe handles all payment details under its own privacy policy. We store only your plan, credit balance, and billing status.",
     ],
