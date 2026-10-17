@@ -9,8 +9,8 @@ export default function Login() {
   }, []);
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-white">
-      <p className="text-sm text-ink/60">Redirecting to GitHub&hellip;</p>
+    <main className="flex min-h-screen items-center justify-center bg-white dark:bg-[#05060a]">
+      <p className="text-sm text-ink/60 dark:text-white/60">Redirecting to GitHub&hellip;</p>
     </main>
   );
 }
