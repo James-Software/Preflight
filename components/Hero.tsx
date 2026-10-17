@@ -22,7 +22,7 @@ export default function Hero({ user }: { user: NavUser | null }) {
       id="top"
       className="relative flex min-h-svh flex-col bg-[#05060a]"
     >
-      <Nav user={user} dark />
+      <Nav user={user} />
 
       <div className="flex flex-1 px-[2vw] pb-[2vh] pt-[84px]">
         <div
