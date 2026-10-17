@@ -2,11 +2,35 @@
 
 import { useEffect, useState } from "react";
 
+import ThemeToggle from "./ThemeToggle";
+
 /** Minimal session user shape the nav needs. Resolved server-side. */
 export type NavUser = {
   name?: string | null;
   image?: string | null;
 };
+
+/** Reads the real theme from <html class="dark">. Initialized from the DOM
+    — the blocking theme script in layout.tsx runs before hydration, so the
+    first render already matches (no flash). Kept in sync via
+    MutationObserver so the toggle updates the nav instantly. */
+function useDarkMode() {
+  const [isDark, setIsDark] = useState<boolean>(() =>
+    typeof document === "undefined"
+      ? true
+      : document.documentElement.classList.contains("dark"),
+  );
+  useEffect(() => {
+    const el = document.documentElement;
+    setIsDark(el.classList.contains("dark"));
+    const obs = new MutationObserver(() =>
+      setIsDark(el.classList.contains("dark")),
+    );
+    obs.observe(el, { attributes: true, attributeFilter: ["class"] });
+    return () => obs.disconnect();
+  }, []);
+  return isDark;
+}
 
 /** px scrolled before the bar becomes the floating pill — effectively
     immediate, with just enough buffer to ignore sub-pixel scroll noise */
@@ -43,13 +67,8 @@ const GLASS_DARK =
 const GLASS_LIGHT =
   "border border-ink/10 bg-white/70 shadow-[inset_0_1px_1px_rgba(255,255,255,0.6),0_8px_30px_rgba(30,27,75,0.12)] backdrop-blur-xl";
 
-export default function Nav({
-  user,
-  dark = false,
-}: {
-  user: NavUser | null;
-  dark?: boolean;
-}) {
+export default function Nav({ user }: { user: NavUser | null }) {
+  const dark = useDarkMode();
   const [scrolled, setScrolled] = useState(
     () => typeof window !== "undefined" && window.scrollY > SCROLL_AFTER,
   );
@@ -116,7 +135,7 @@ export default function Nav({
   const spriteGlow = scrolled || dark ? "" : GLOW_SPRITE;
 
   return (
-    <nav className="fixed inset-x-0 top-0 z-50">
+    <nav className="fixed inset-x-0 top-0 z-50" suppressHydrationWarning>
       <div className={`relative mx-auto mt-3 ${wt} ${barWidth}`}>
         {/* Glass background — rounded bar on mobile, pill on desktop.
             Always rounded, only fades in. Never flashes. */}
@@ -133,7 +152,9 @@ export default function Nav({
             className={`flex items-center gap-2.5 ${spriteGlow}`}
             aria-label="PreFlight home"
           >
-            {/* Crossfade: gradient plane at top, white plane once the pill appears */}
+            {/* Crossfade: gradient plane at top, white plane once the dark
+                pill appears. In light mode the pill is light glass, so the
+                gradient plane stays (a white plane would vanish). */}
             <span
               className="relative block h-[26px] w-[92px] md:h-[30px] md:w-[106px]"
               aria-hidden="true"
@@ -143,7 +164,7 @@ export default function Nav({
                 src="/logo.png"
                 alt=""
                 className={`absolute inset-0 m-auto h-[26px] w-auto transition-opacity duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] md:h-[30px] ${
-                  scrolled ? "opacity-0" : "opacity-100"
+                  scrolled && dark ? "opacity-0" : "opacity-100"
                 }`}
               />
               {/* eslint-disable-next-line @next/next/no-img-element */}
@@ -151,7 +172,7 @@ export default function Nav({
                 src="/logo-white.png"
                 alt=""
                 className={`absolute inset-0 m-auto h-[26px] w-auto transition-opacity duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] md:h-[30px] ${
-                  scrolled ? "opacity-100" : "opacity-0"
+                  scrolled && dark ? "opacity-100" : "opacity-0"
                 }`}
               />
             </span>
@@ -170,6 +191,7 @@ export default function Nav({
             </a>
           </div>
           <div className="flex items-center gap-1.5">
+            <ThemeToggle />
             {user ? (
               <>
                 <a
