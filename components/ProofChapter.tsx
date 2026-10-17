@@ -5,7 +5,7 @@
  */
 export default function ProofChapter() {
   return (
-    <section className="bg-[#05060a] py-24 md:py-32">
+    <section id="how-it-works" className="bg-[#05060a] py-24 md:py-32 scroll-mt-20">
       <div className="mx-auto max-w-6xl px-6">
         <div className="flex items-center justify-between gap-10">
           <div className="max-w-2xl">
