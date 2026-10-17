@@ -37,7 +37,7 @@ export default async function Dashboard() {
           </div>
           <a
             href="/dashboard/projects/new"
-            className="pressable btn-gradient rounded-full px-5 py-2.5 text-sm font-medium text-white"
+            className="pressable btn-gradient shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-xs font-medium text-white md:px-5 md:py-2.5 md:text-sm"
           >
             New project
           </a>
