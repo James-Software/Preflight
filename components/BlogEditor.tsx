@@ -50,7 +50,7 @@ export default function BlogEditor({
       <div>
         <label
           htmlFor="blog-title"
-          className="text-sm font-medium text-ink"
+          className="text-sm font-medium text-ink dark:text-white"
         >
           Title
         </label>
@@ -61,13 +61,13 @@ export default function BlogEditor({
           required
           defaultValue={initial.title}
           placeholder="Why your staging environment lies to you"
-          className="mt-2 w-full rounded-xl border border-mist bg-white px-4 py-3 text-[15px] text-ink outline-none transition-colors duration-150 placeholder:text-ink/30 focus:border-primary"
+          className="mt-2 w-full rounded-xl border border-mist bg-white px-4 py-3 text-[15px] text-ink outline-none transition-colors duration-150 placeholder:text-ink/30 focus:border-primary dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-white/30"
         />
       </div>
 
       <div className="grid gap-6 md:grid-cols-2">
         <div>
-          <label htmlFor="blog-slug" className="text-sm font-medium text-ink">
+          <label htmlFor="blog-slug" className="text-sm font-medium text-ink dark:text-white">
             Slug
           </label>
           <input
@@ -76,9 +76,9 @@ export default function BlogEditor({
             type="text"
             defaultValue={initial.slug}
             placeholder="auto-generated from the title"
-            className="mt-2 w-full rounded-xl border border-mist bg-white px-4 py-3 font-mono text-sm text-ink outline-none transition-colors duration-150 placeholder:text-ink/30 focus:border-primary"
+            className="mt-2 w-full rounded-xl border border-mist bg-white px-4 py-3 font-mono text-sm text-ink outline-none transition-colors duration-150 placeholder:text-ink/30 focus:border-primary dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-white/30"
           />
-          <p className="mt-1.5 text-xs text-ink/50">
+          <p className="mt-1.5 text-xs text-ink/50 dark:text-white/50">
             Leave blank to generate from the title. Lives at
             /blog/your-slug.
           </p>
@@ -86,7 +86,7 @@ export default function BlogEditor({
         <div>
           <label
             htmlFor="blog-description"
-            className="text-sm font-medium text-ink"
+            className="text-sm font-medium text-ink dark:text-white"
           >
             Description
           </label>
@@ -96,7 +96,7 @@ export default function BlogEditor({
             type="text"
             defaultValue={initial.description}
             placeholder="One or two sentences for previews and SEO."
-            className="mt-2 w-full rounded-xl border border-mist bg-white px-4 py-3 text-[15px] text-ink outline-none transition-colors duration-150 placeholder:text-ink/30 focus:border-primary"
+            className="mt-2 w-full rounded-xl border border-mist bg-white px-4 py-3 text-[15px] text-ink outline-none transition-colors duration-150 placeholder:text-ink/30 focus:border-primary dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-white/30"
           />
         </div>
       </div>
@@ -105,11 +105,11 @@ export default function BlogEditor({
         <div className="flex items-center justify-between">
           <label
             htmlFor="blog-markdown"
-            className="text-sm font-medium text-ink"
+            className="text-sm font-medium text-ink dark:text-white"
           >
             Content
           </label>
-          <div className="flex rounded-full border border-mist p-0.5">
+          <div className="flex rounded-full border border-mist p-0.5 dark:border-white/10">
             {(["write", "preview"] as const).map((t) => (
               <button
                 key={t}
@@ -117,8 +117,8 @@ export default function BlogEditor({
                 onClick={() => setTab(t)}
                 className={`rounded-full px-4 py-1.5 text-sm font-medium capitalize transition-colors duration-150 ${
                   tab === t
-                    ? "bg-ink text-white"
-                    : "text-ink/60 hover:text-ink"
+                    ? "bg-ink text-white dark:bg-white dark:text-ink"
+                    : "text-ink/60 hover:text-ink dark:text-white/60 dark:hover:text-white"
                 }`}
               >
                 {t}
@@ -133,14 +133,14 @@ export default function BlogEditor({
             value={markdown}
             onChange={(e) => setMarkdown(e.target.value)}
             placeholder={"# Your headline\n\nWrite in Markdown. **Bold**, `code`, lists, and fenced code blocks all work."}
-            className="mt-2 min-h-[50vh] w-full rounded-xl border border-mist bg-white px-4 py-3 font-mono text-sm leading-relaxed text-ink outline-none transition-colors duration-150 placeholder:text-ink/30 focus:border-primary"
+            className="mt-2 min-h-[50vh] w-full rounded-xl border border-mist bg-white px-4 py-3 font-mono text-sm leading-relaxed text-ink outline-none transition-colors duration-150 placeholder:text-ink/30 focus:border-primary dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-white/30"
           />
         ) : (
-          <div className="mt-2 min-h-[50vh] rounded-xl bg-[#05060a] p-6 md:p-8">
+          <div className="mt-2 min-h-[50vh] rounded-xl border border-ink/10 bg-white p-6 md:p-8 dark:border-white/10 dark:bg-[#05060a]">
             {markdown.trim() ? (
               <Markdown content={markdown} />
             ) : (
-              <p className="text-sm text-white/40">
+              <p className="text-sm text-ink/40 dark:text-white/40">
                 Nothing to preview yet.
               </p>
             )}
@@ -149,7 +149,7 @@ export default function BlogEditor({
       </div>
 
       <div className="flex items-center justify-between gap-4">
-        <label className="flex cursor-pointer items-center gap-2.5 text-sm font-medium text-ink">
+        <label className="flex cursor-pointer items-center gap-2.5 text-sm font-medium text-ink dark:text-white">
           <input
             type="checkbox"
             name="published"

@@ -37,26 +37,26 @@ export default async function BlogPostPage({
   if (!post) notFound();
 
   return (
-    <main className="min-h-screen bg-[#05060a]">
+    <main className="min-h-screen bg-[#fafafa] dark:bg-[#05060a]">
       <article className="mx-auto max-w-3xl px-6 py-20 md:py-28">
         <a
           href="/blog"
-          className="text-sm font-medium text-white/50 transition-colors duration-150 hover:text-white"
+          className="text-sm font-medium text-ink/50 transition-colors duration-150 hover:text-ink dark:text-white/50 dark:hover:text-white"
         >
           &larr; All posts
         </a>
-        <p className="mt-8 font-mono text-xs text-white/40">
+        <p className="mt-8 font-mono text-xs text-ink/40 dark:text-white/40">
           {formatDate(post.created_at)}
         </p>
-        <h1 className="font-display mt-3 text-balance text-4xl font-bold tracking-tight text-white md:text-5xl">
+        <h1 className="font-display mt-3 text-balance text-4xl font-bold tracking-tight text-ink md:text-5xl dark:text-white">
           {post.title}
         </h1>
         {post.description ? (
-          <p className="mt-4 text-lg leading-relaxed text-white/60">
+          <p className="mt-4 text-lg leading-relaxed text-ink/60 dark:text-white/60">
             {post.description}
           </p>
         ) : null}
-        <div className="mt-10 border-t border-white/10 pt-2">
+        <div className="mt-10 border-t border-ink/10 pt-2 dark:border-white/10">
           <Markdown content={post.markdown} />
         </div>
       </article>

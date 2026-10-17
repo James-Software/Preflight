@@ -107,19 +107,19 @@ const SECTIONS: { heading: string; body: string[] }[] = [
 
 export default function TermsPage() {
   return (
-    <main className="bg-white">
+    <main className="bg-white dark:bg-[#05060a]">
       <div className="mx-auto max-w-3xl px-6 py-20 md:py-28">
         <a
           href="/"
-          className="text-sm font-medium text-ink/50 transition-colors duration-150 hover:text-ink"
+          className="text-sm font-medium text-ink/50 transition-colors duration-150 hover:text-ink dark:text-white/50 dark:hover:text-white"
         >
           &larr; Back to PreFlight
         </a>
-        <h1 className="font-display mt-8 text-4xl font-bold tracking-tight text-ink md:text-5xl">
+        <h1 className="font-display mt-8 text-4xl font-bold tracking-tight text-ink md:text-5xl dark:text-white">
           Terms of Service
         </h1>
-        <p className="mt-4 text-sm text-ink/50">Effective October 12, 2026</p>
-        <p className="mt-8 text-base leading-relaxed text-ink/70">
+        <p className="mt-4 text-sm text-ink/50 dark:text-white/50">Effective October 12, 2026</p>
+        <p className="mt-8 text-base leading-relaxed text-ink/70 dark:text-neutral-300">
           These terms govern your use of PreFlight — the agent swarm that
           tests your app like real users and proposes fixes as pull
           requests. Please read them carefully.
@@ -127,12 +127,12 @@ export default function TermsPage() {
         <div className="mt-12 space-y-10">
           {SECTIONS.map((s) => (
             <section key={s.heading}>
-              <h2 className="font-display text-xl font-bold tracking-tight text-ink">
+              <h2 className="font-display text-xl font-bold tracking-tight text-ink dark:text-white">
                 {s.heading}
               </h2>
               <div className="mt-3 space-y-3">
                 {s.body.map((p, i) => (
-                  <p key={i} className="text-[15px] leading-relaxed text-ink/70">
+                  <p key={i} className="text-[15px] leading-relaxed text-ink/70 dark:text-neutral-300">
                     {p}
                   </p>
                 ))}
