@@ -3,11 +3,13 @@
 import Nav, { type NavUser } from "./Nav";
 
 /* ------------------------------------------------------------------ */
-/* Hero — Cloudflare-style: near-black page, one big purplish-blue     */
-/* gradient bubble filling ~96% of the viewport. Bright bubble light   */
+/* Hero — Cloudflare-style: one big purplish-blue gradient bubble      */
+/* filling ~96% of the viewport. The bubble is identical in both       */
+/* themes (white headline stays on the gradient); only the page        */
+/* behind it flips (#fafafa light, #05060a dark). Bright bubble light  */
 /* across the top edge (dots fade out up there), soft light on both    */
-/* sides, bloom along the bottom. The gradient drifts slowly;          */
-/* everything freezes under prefers-reduced-motion.                    */
+/* sides, bloom along the bottom. Everything is static; the dot layer  */
+/* rises unless prefers-reduced-motion freezes it.                     */
 /* ------------------------------------------------------------------ */
 
 const BUBBLE_GRADIENT =
@@ -20,7 +22,7 @@ export default function Hero({ user }: { user: NavUser | null }) {
   return (
     <section
       id="top"
-      className="relative flex min-h-svh flex-col bg-[#05060a]"
+      className="relative flex min-h-svh flex-col bg-[#fafafa] dark:bg-[#05060a]"
     >
       <Nav user={user} />
 
