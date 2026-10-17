@@ -15,12 +15,13 @@ const SCROLL_AFTER = 8;
 // James's motion spec: 100-300ms, cubic-bezier(0.16,1,0.3,1). Never
 // transition-all. The bar is two layers:
 // - Outer: morphs width only (subtle 6xl -> 1060px, like OpenWhispr).
-// - Glass background: ALWAYS rounded-full with blur applied — it only fades
-//   in via opacity. Nothing ever toggles backdrop-filter or border-radius,
-//   so there's no instant pop that can flash as a rectangle.
-// Padding and margin-top are constant across states, so the vertical center
-// of the elements never shifts. Written as full literal class strings so
-// Tailwind's scanner picks them up.
+// - Glass background: ALWAYS rounded with blur applied — rounded-2xl bar
+//   on mobile, rounded-full pill on desktop. It only fades in via opacity.
+//   Nothing ever toggles backdrop-filter or border-radius at a given
+//   breakpoint, so there's no instant pop that can flash as a rectangle.
+// Padding and margin-top are constant across scroll states, so the vertical
+// center of the elements never shifts. Written as full literal class strings
+// so Tailwind's scanner picks them up.
 const WIDTH_TRANSITION =
   "transition-[max-width,width] duration-200 ease-[cubic-bezier(0.16,1,0.3,1)]";
 const GLASS_FADE =
@@ -97,9 +98,12 @@ export default function Nav({
 
   // The pill narrows only slightly (like OpenWhispr) — it stays a bar, not
   // a tiny capsule.
+  // Mobile gets a rounded bar with tighter margins (no pill) — the pill
+  // only makes sense with room to breathe. Desktop keeps the
+  // OpenWhispr-style subtle width morph into the floating pill.
   const barWidth = scrolled
-    ? "w-[calc(100%-2.5rem)] max-w-[1060px]"
-    : "w-full max-w-6xl";
+    ? "w-[calc(100%-1.5rem)] md:w-[calc(100%-2.5rem)] max-w-[1060px]"
+    : "w-[calc(100%-1.5rem)] md:w-full md:max-w-6xl";
 
   // Top-of-page colors: white on dark hero, ink on light.
   const topSolid = dark ? "text-white" : "text-ink";
@@ -114,27 +118,31 @@ export default function Nav({
   return (
     <nav className="fixed inset-x-0 top-0 z-50">
       <div className={`relative mx-auto mt-3 ${wt} ${barWidth}`}>
-        {/* Glass background — always rounded, fades in. Never flashes. */}
+        {/* Glass background — rounded bar on mobile, pill on desktop.
+            Always rounded, only fades in. Never flashes. */}
         <div
           aria-hidden="true"
-          className={`absolute inset-0 rounded-full ${
+          className={`absolute inset-0 rounded-2xl md:rounded-full ${
             dark ? GLASS_DARK : GLASS_LIGHT
           } ${ft} ${scrolled ? "opacity-100" : "opacity-0"}`}
         />
         {/* Content — stable layout, never moves */}
-        <div className="relative flex w-full items-center justify-between px-6 py-4">
+        <div className="relative flex w-full items-center justify-between px-4 py-3 md:px-6 md:py-4">
           <a
             href="#top"
             className={`flex items-center gap-2.5 ${spriteGlow}`}
             aria-label="PreFlight home"
           >
             {/* Crossfade: gradient plane at top, white plane once the pill appears */}
-            <span className="relative block h-[30px] w-[106px]" aria-hidden="true">
+            <span
+              className="relative block h-[26px] w-[92px] md:h-[30px] md:w-[106px]"
+              aria-hidden="true"
+            >
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/logo.png"
                 alt=""
-                className={`absolute inset-0 m-auto h-[30px] w-auto transition-opacity duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                className={`absolute inset-0 m-auto h-[26px] w-auto transition-opacity duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] md:h-[30px] ${
                   scrolled ? "opacity-0" : "opacity-100"
                 }`}
               />
@@ -142,13 +150,13 @@ export default function Nav({
               <img
                 src="/logo-white.png"
                 alt=""
-                className={`absolute inset-0 m-auto h-[30px] w-auto transition-opacity duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] ${
+                className={`absolute inset-0 m-auto h-[26px] w-auto transition-opacity duration-300 ease-[cubic-bezier(0.16,1,0.3,1)] md:h-[30px] ${
                   scrolled ? "opacity-100" : "opacity-0"
                 }`}
               />
             </span>
             <span
-              className={`font-display text-lg font-bold tracking-tight ${topSolid} ${glow}`}
+              className={`hidden font-display text-lg font-bold tracking-tight min-[420px]:inline ${topSolid} ${glow}`}
             >
               PreFlight
             </span>
@@ -166,13 +174,13 @@ export default function Nav({
               <>
                 <a
                   href="/dashboard"
-                  className={`pressable rounded-full px-4 py-2.5 text-sm font-medium transition-colors duration-150 ${topMuted} ${glow}`}
+                  className={`pressable whitespace-nowrap rounded-full px-3 py-2 text-xs font-medium transition-colors duration-150 md:px-4 md:py-2.5 md:text-sm ${topMuted} ${glow}`}
                 >
                   Dashboard
                 </a>
                 <a
                   href="/dashboard"
-                  className={`flex items-center gap-2 rounded-full py-1 pl-1 pr-3 transition-colors duration-150 ${
+                  className={`flex shrink-0 items-center gap-2 rounded-full py-1 pl-1 pr-3 transition-colors duration-150 ${
                     dark ? "hover:bg-white/10" : "hover:bg-ink/5"
                   }`}
                   aria-label="Open dashboard"
@@ -187,7 +195,9 @@ export default function Nav({
                       }`}
                     />
                   ) : null}
-                  <span className={`text-sm font-medium ${topSolid} ${glow}`}>
+                  <span
+                    className={`whitespace-nowrap text-xs font-medium md:text-sm ${topSolid} ${glow}`}
+                  >
                     {user.name?.split(" ")[0] ?? "Dashboard"}
                   </span>
                 </a>
@@ -196,13 +206,13 @@ export default function Nav({
               <>
                 <a
                   href="/login"
-                  className={`rounded-full px-4 py-2.5 text-sm font-medium transition-colors duration-150 ${topMuted} ${glow}`}
+                  className={`whitespace-nowrap rounded-full px-3 py-2 text-xs font-medium transition-colors duration-150 md:px-4 md:py-2.5 md:text-sm ${topMuted} ${glow}`}
                 >
                   Log in
                 </a>
                 <a
                   href="#early-access"
-                  className="pressable btn-gradient rounded-full px-4 py-2.5 text-sm font-medium text-white"
+                  className="pressable btn-gradient whitespace-nowrap rounded-full px-3 py-2 text-xs font-medium text-white md:px-4 md:py-2.5 md:text-sm"
                 >
                   Get early access
                 </a>
