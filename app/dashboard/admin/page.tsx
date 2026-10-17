@@ -26,13 +26,13 @@ export default async function AdminPage() {
   const waitlist = await listWaitlist();
 
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-screen bg-white dark:bg-[#05060a]">
       <DashboardHeader user={session.user} />
       <div className="mx-auto max-w-6xl px-6 py-14">
-        <h1 className="font-display text-3xl font-bold tracking-tight text-ink">
+        <h1 className="font-display text-3xl font-bold tracking-tight text-ink dark:text-white">
           Waitlist
         </h1>
-        <p className="mt-2 text-sm text-ink/60">
+        <p className="mt-2 text-sm text-ink/60 dark:text-white/60">
           {waitlist.length === 0
             ? "Nobody waiting."
             : `${waitlist.length} ${waitlist.length === 1 ? "person" : "people"} waiting.`}{" "}
@@ -40,7 +40,7 @@ export default async function AdminPage() {
         </p>
 
         {waitlist.length > 0 && (
-          <ul className="mt-8 divide-y divide-mist rounded-2xl border border-mist">
+          <ul className="mt-8 divide-y divide-mist rounded-2xl border border-mist dark:divide-white/10 dark:border-white/10">
             {waitlist.map((entry) => (
               <li
                 key={entry.github_login}
@@ -51,16 +51,16 @@ export default async function AdminPage() {
                   <img
                     src={entry.avatar_url}
                     alt=""
-                    className="h-10 w-10 rounded-full ring-1 ring-ink/10"
+                    className="h-10 w-10 rounded-full ring-1 ring-ink/10 dark:ring-white/10"
                   />
                 ) : (
-                  <div className="h-10 w-10 rounded-full bg-lavender" />
+                  <div className="h-10 w-10 rounded-full bg-lavender dark:bg-white/10" />
                 )}
                 <div className="min-w-0 flex-1">
-                  <p className="truncate text-sm font-medium text-ink">
+                  <p className="truncate text-sm font-medium text-ink dark:text-white">
                     {entry.name ?? entry.github_login}
                   </p>
-                  <p className="truncate text-xs text-ink/50">
+                  <p className="truncate text-xs text-ink/50 dark:text-white/50">
                     @{entry.github_login}
                   </p>
                 </div>
@@ -78,9 +78,9 @@ export default async function AdminPage() {
           </ul>
         )}
 
-        <p className="mt-8 text-xs text-ink/40">
+        <p className="mt-8 text-xs text-ink/40 dark:text-white/40">
           Admin: {ADMIN_LOGIN}. To add someone directly, run in Neon:{" "}
-          <code className="rounded bg-lavender px-1.5 py-0.5">
+          <code className="rounded bg-lavender px-1.5 py-0.5 dark:bg-white/10 dark:text-white/80">
             INSERT INTO allowed_github_users (github_login) VALUES
             (&apos;their-login&apos;)
           </code>

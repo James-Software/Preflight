@@ -57,19 +57,19 @@ export default async function NewProject({
   const { error } = await searchParams;
 
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-screen bg-white dark:bg-[#05060a]">
       <DashboardHeader user={session.user} />
       <div className="mx-auto max-w-xl px-6 py-14">
         <a
           href="/dashboard"
-          className="text-sm font-medium text-ink/60 transition-colors duration-150 hover:text-ink"
+          className="text-sm font-medium text-ink/60 transition-colors duration-150 hover:text-ink dark:text-white/60 dark:hover:text-white"
         >
           &larr; All projects
         </a>
-        <h1 className="font-display mt-4 text-3xl font-bold tracking-tight text-ink">
+        <h1 className="font-display mt-4 text-3xl font-bold tracking-tight text-ink dark:text-white">
           New project
         </h1>
-        <p className="mt-2 text-sm leading-relaxed text-ink/60">
+        <p className="mt-2 text-sm leading-relaxed text-ink/60 dark:text-white/60">
           Point PreFlight at a deployed app and its GitHub repository. The
           swarm will test the app like real users.
         </p>

@@ -157,35 +157,35 @@ export default function RepoPicker({
 
   return (
     <div>
-      <span className="mb-1.5 block text-sm font-medium text-ink">
+      <span className="mb-1.5 block text-sm font-medium text-ink dark:text-white">
         GitHub repository
       </span>
       <input type="hidden" name={name} value={selected} />
 
       {needsLogin ? (
-        <div className="rounded-xl border border-mist bg-lavender px-4 py-3 text-sm text-ink/70">
+        <div className="rounded-xl border border-mist bg-lavender px-4 py-3 text-sm text-ink/70 dark:border-white/10 dark:bg-white/5 dark:text-white/70">
           Your GitHub session expired.{" "}
-          <a href="/login" className="font-medium text-ink underline underline-offset-2">
+          <a href="/login" className="font-medium text-ink underline underline-offset-2 dark:text-white">
             Log in again
           </a>{" "}
           to pick a repository.
         </div>
       ) : repos === null ? (
-        <div className="rounded-xl border border-mist px-4 py-3 text-sm text-ink/40">
+        <div className="rounded-xl border border-mist px-4 py-3 text-sm text-ink/40 dark:border-white/10 dark:text-white/40">
           Loading your repositories…
         </div>
       ) : loadError ? (
-        <div className="rounded-xl border border-mist bg-lavender px-4 py-3 text-sm text-ink/70">
+        <div className="rounded-xl border border-mist bg-lavender px-4 py-3 text-sm text-ink/70 dark:border-white/10 dark:bg-white/5 dark:text-white/70">
           {loadError}
         </div>
       ) : (
         <>
           {appMissing && (
-            <div className="mb-3 rounded-xl border border-mist bg-lavender px-4 py-3">
-              <p className="text-sm font-medium text-ink">
+            <div className="mb-3 rounded-xl border border-mist bg-lavender px-4 py-3 dark:border-white/10 dark:bg-white/5">
+              <p className="text-sm font-medium text-ink dark:text-white">
                 Want your private repositories here?
               </p>
-              <p className="mt-1 text-xs leading-relaxed text-ink/60">
+              <p className="mt-1 text-xs leading-relaxed text-ink/60 dark:text-white/60">
                 Install the PreFlight app on your GitHub account. One click,
                 and you come right back to this list.
               </p>
@@ -198,7 +198,7 @@ export default function RepoPicker({
             </div>
           )}
           {repos.length === 0 ? (
-            <div className="rounded-xl border border-mist px-4 py-3 text-sm text-ink/60">
+            <div className="rounded-xl border border-mist px-4 py-3 text-sm text-ink/60 dark:border-white/10 dark:text-white/60">
               No repositories found on your GitHub account.
             </div>
           ) : (
@@ -209,9 +209,9 @@ export default function RepoPicker({
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search your repositories…"
             aria-label="Search your repositories"
-            className="w-full rounded-xl border border-mist bg-white px-4 py-3 text-sm text-ink placeholder:text-ink/40 focus:border-ink/30 focus:outline-none"
+            className="w-full rounded-xl border border-mist bg-white px-4 py-3 text-sm text-ink placeholder:text-ink/40 focus:border-ink/30 focus:outline-none dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-white/40 dark:focus:border-white/30"
           />
-          <ul className="mt-2 max-h-56 overflow-y-auto rounded-xl border border-mist">
+          <ul className="mt-2 max-h-56 overflow-y-auto rounded-xl border border-mist dark:border-white/10">
             {filtered.map((r) => {
               const active = selected === r.fullName;
               return (
@@ -221,12 +221,12 @@ export default function RepoPicker({
                     onClick={() => void choose(r.fullName)}
                     disabled={verifying}
                     className={`pressable flex w-full cursor-pointer items-center gap-3 px-4 py-2.5 text-left text-sm transition-colors duration-150 disabled:cursor-wait ${
-                      active ? "bg-lavender" : "hover:bg-lavender/50"
+                      active ? "bg-lavender dark:bg-white/10" : "hover:bg-lavender/50 dark:hover:bg-white/5"
                     }`}
                   >
                     <span
                       className={`flex h-4 w-4 shrink-0 items-center justify-center rounded-full border ${
-                        active ? "border-primary" : "border-ink/25"
+                        active ? "border-primary" : "border-ink/25 dark:border-white/25"
                       }`}
                       aria-hidden="true"
                     >
@@ -234,14 +234,14 @@ export default function RepoPicker({
                         <span className="h-2 w-2 rounded-full bg-primary" />
                       )}
                     </span>
-                    <span className="min-w-0 flex-1 truncate font-medium text-ink">
+                    <span className="min-w-0 flex-1 truncate font-medium text-ink dark:text-white">
                       {r.fullName}
                     </span>
                     <span
                       className={`shrink-0 rounded-full px-2 py-0.5 text-[11px] font-medium ${
                         r.private
-                          ? "bg-ink/5 text-ink/60"
-                          : "bg-emerald-50 text-emerald-700"
+                          ? "bg-ink/5 text-ink/60 dark:bg-white/10 dark:text-white/60"
+                          : "bg-emerald-50 text-emerald-700 dark:bg-emerald-400/10 dark:text-emerald-300"
                       }`}
                     >
                       {r.private ? "Private" : "Public"}
@@ -251,7 +251,7 @@ export default function RepoPicker({
               );
             })}
             {filtered.length === 0 && (
-              <li className="px-4 py-3 text-sm text-ink/40">
+              <li className="px-4 py-3 text-sm text-ink/40 dark:text-white/40">
                 No matches. Try pasting a link below.
               </li>
             )}
@@ -269,27 +269,27 @@ export default function RepoPicker({
           placeholder="Or paste a github.com link…"
           aria-label="Paste a GitHub repository link"
           disabled={verifying}
-          className="flex-1 rounded-xl border border-mist bg-white px-4 py-3 text-sm text-ink placeholder:text-ink/40 focus:border-ink/30 focus:outline-none disabled:opacity-60"
+          className="flex-1 rounded-xl border border-mist bg-white px-4 py-3 text-sm text-ink placeholder:text-ink/40 focus:border-ink/30 focus:outline-none disabled:opacity-60 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-white/40 dark:focus:border-white/30"
         />
         <button
           type="submit"
           disabled={verifying}
-          className="pressable shrink-0 cursor-pointer rounded-full border border-mist px-5 py-3 text-sm font-medium text-ink transition-colors duration-150 hover:bg-lavender disabled:cursor-wait disabled:opacity-60"
+          className="pressable shrink-0 cursor-pointer rounded-full border border-mist px-5 py-3 text-sm font-medium text-ink transition-colors duration-150 hover:bg-lavender disabled:cursor-wait disabled:opacity-60 dark:border-white/10 dark:text-white dark:hover:bg-white/10"
         >
           {verifying ? "Checking…" : "Check"}
         </button>
       </form>
 
       {selected && (
-        <div className="mt-3 rounded-xl border border-mist bg-lavender px-4 py-3">
-          <p className="text-sm font-medium text-ink">
+        <div className="mt-3 rounded-xl border border-mist bg-lavender px-4 py-3 dark:border-white/10 dark:bg-white/5">
+          <p className="text-sm font-medium text-ink dark:text-white">
             {selected}{" "}
-            <span className="font-normal text-ink/50">
+            <span className="font-normal text-ink/50 dark:text-white/50">
               ({selectedPrivate ? "private" : "public"})
             </span>
           </p>
           {appInstalled === false && (
-            <p className="mt-1.5 text-xs leading-relaxed text-ink/60">
+            <p className="mt-1.5 text-xs leading-relaxed text-ink/60 dark:text-white/60">
               The PreFlight GitHub App is not installed on this repo yet. You
               can create the project, but automatic fix PRs will not work
               until you install it.{" "}
@@ -297,7 +297,7 @@ export default function RepoPicker({
                 href="https://github.com/settings/installations"
                 target="_blank"
                 rel="noreferrer"
-                className="font-medium text-ink underline underline-offset-2"
+                className="font-medium text-ink underline underline-offset-2 dark:text-white"
               >
                 Manage installations
               </a>
@@ -308,7 +308,7 @@ export default function RepoPicker({
       {verifyError && (
         <p className="mt-2 text-sm font-medium text-red-600">{verifyError}</p>
       )}
-      <p className="mt-1.5 text-xs text-ink/40">
+      <p className="mt-1.5 text-xs text-ink/40 dark:text-white/40">
         Only repositories you own can be connected.
       </p>
     </div>

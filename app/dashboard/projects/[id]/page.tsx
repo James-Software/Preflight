@@ -24,26 +24,26 @@ export default async function ProjectPage({
   const runs = await listRuns(project.id);
 
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-screen bg-white dark:bg-[#05060a]">
       <DashboardHeader user={session.user} />
       <div className="mx-auto max-w-6xl px-6 py-14">
         <a
           href="/dashboard"
-          className="text-sm font-medium text-ink/60 transition-colors duration-150 hover:text-ink"
+          className="text-sm font-medium text-ink/60 transition-colors duration-150 hover:text-ink dark:text-white/60 dark:hover:text-white"
         >
           &larr; All projects
         </a>
-        <h1 className="font-display mt-4 text-3xl font-bold tracking-tight text-ink">
+        <h1 className="font-display mt-4 text-3xl font-bold tracking-tight text-ink dark:text-white">
           {project.repo_full_name}
         </h1>
-        <p className="mt-2 text-sm text-ink/60">
+        <p className="mt-2 text-sm text-ink/60 dark:text-white/60">
           {project.app_url ??
             "Runs test the default branch's latest preview deployment."}
         </p>
 
         <div className="mt-10">
           <div className="flex items-center justify-between">
-            <h2 className="font-display text-xl font-bold tracking-tight text-ink">
+            <h2 className="font-display text-xl font-bold tracking-tight text-ink dark:text-white">
               Runs
             </h2>
             <RunSwarmButton projectId={project.id} />

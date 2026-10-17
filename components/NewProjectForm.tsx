@@ -37,7 +37,7 @@ export default function NewProjectForm({
       <div>
         <label
           htmlFor="appUrl"
-          className="mb-1.5 block text-sm font-medium text-ink"
+          className="mb-1.5 block text-sm font-medium text-ink dark:text-white"
         >
           App URL
         </label>
@@ -51,9 +51,9 @@ export default function NewProjectForm({
             setAppUrl(e.target.value);
             setUrlTouched(e.target.value.trim() !== "");
           }}
-          className="w-full rounded-xl border border-mist bg-white px-4 py-3 text-sm text-ink placeholder:text-ink/40 focus:border-ink/30 focus:outline-none"
+          className="w-full rounded-xl border border-mist bg-white px-4 py-3 text-sm text-ink placeholder:text-ink/40 focus:border-ink/30 focus:outline-none dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-white/40 dark:focus:border-white/30"
         />
-        <p className="mt-1.5 text-xs text-ink/40">
+        <p className="mt-1.5 text-xs text-ink/40 dark:text-white/40">
           Optional. Fills in automatically from the repository&apos;s website
           when it has one. If left empty, runs test the default
           branch&apos;s latest preview deployment.

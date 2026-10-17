@@ -22,16 +22,16 @@ export default async function Dashboard() {
   const user = session.user;
 
   return (
-    <main className="min-h-screen bg-white">
+    <main className="min-h-screen bg-white dark:bg-[#05060a]">
       <DashboardHeader user={user} />
 
       <div className="mx-auto max-w-6xl px-6 py-14">
         <div className="flex items-center justify-between">
           <div>
-            <h1 className="font-display text-3xl font-bold tracking-tight text-ink">
+            <h1 className="font-display text-3xl font-bold tracking-tight text-ink dark:text-white">
               Projects
             </h1>
-            <p className="mt-2 text-sm text-ink/60">
+            <p className="mt-2 text-sm text-ink/60 dark:text-white/60">
               Every app the swarm is cleared to test.
             </p>
           </div>
@@ -45,11 +45,11 @@ export default async function Dashboard() {
         <InviteCard />
 
         {projects.length === 0 ? (
-          <div className="mt-10 rounded-2xl border border-mist bg-lavender/50 px-8 py-14 text-center">
-            <p className="font-display text-lg font-bold text-ink">
+          <div className="mt-10 rounded-2xl border border-mist bg-lavender/50 px-8 py-14 text-center dark:border-white/10 dark:bg-white/5">
+            <p className="font-display text-lg font-bold text-ink dark:text-white">
               No projects yet
             </p>
-            <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-ink/60">
+            <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-ink/60 dark:text-white/60">
               Connect an app URL and a GitHub repository to run your first
               swarm.
             </p>
@@ -66,15 +66,15 @@ export default async function Dashboard() {
               <a
                 key={project.id}
                 href={`/dashboard/projects/${project.id}`}
-                className="group rounded-2xl border border-mist bg-white px-6 py-5 transition-colors duration-200 hover:border-ink/25"
+                className="group rounded-2xl border border-mist bg-white px-6 py-5 transition-colors duration-200 hover:border-ink/25 dark:border-white/10 dark:bg-[#0a0c14] dark:hover:border-white/25"
               >
-                <p className="font-display text-base font-bold tracking-tight text-ink">
+                <p className="font-display text-base font-bold tracking-tight text-ink dark:text-white">
                   {project.repo_full_name}
                 </p>
-                <p className="mt-1 truncate text-sm text-ink/60">
+                <p className="mt-1 truncate text-sm text-ink/60 dark:text-white/60">
                   {project.app_url ?? "Default branch preview deployment"}
                 </p>
-                <p className="mt-3 text-xs text-ink/40">
+                <p className="mt-3 text-xs text-ink/40 dark:text-white/40">
                   Created {formatDate(project.created_at)}
                 </p>
               </a>
