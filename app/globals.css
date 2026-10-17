@@ -1,5 +1,9 @@
 @import "tailwindcss";
 
+/* Class-based dark mode: `dark:` variants respond to <html class="dark">,
+   which the blocking theme script in layout.tsx sets before first paint. */
+@custom-variant dark (&:where(.dark, .dark *));
+
 @theme {
   --color-ink: #1e1b4b;
   --color-primary: #6366f1;
@@ -15,10 +19,18 @@
 
 html {
   scroll-behavior: smooth;
+  background-color: #fafafa;
+}
+
+html.dark {
   background-color: #05060a;
 }
 
 body {
+  background-color: #fafafa;
+}
+
+.dark body {
   background-color: #05060a;
 }
 
