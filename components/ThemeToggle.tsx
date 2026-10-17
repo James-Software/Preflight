@@ -1,10 +1,14 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import {
+  applyTheme,
+  currentTheme,
+  THEME_STORAGE_KEY,
+  type Theme,
+} from "./theme";
 
-const STORAGE_KEY = "preflight-theme";
-
-function MoonIcon({ className = "" }: { className?: string }) {
+export function MoonIcon({ className = "" }: { className?: string }) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -21,7 +25,7 @@ function MoonIcon({ className = "" }: { className?: string }) {
   );
 }
 
-function SunIcon({ className = "" }: { className?: string }) {
+export function SunIcon({ className = "" }: { className?: string }) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -52,20 +56,12 @@ export default function ThemeToggle({
 }) {
   // Initialized from the DOM — the blocking theme script already ran, so
   // this matches first paint (no flash, no hydration mismatch).
-  const [theme, setTheme] = useState<"light" | "dark">(() =>
-    typeof document === "undefined"
-      ? "dark"
-      : document.documentElement.classList.contains("dark")
-        ? "dark"
-        : "light",
-  );
+  const [theme, setTheme] = useState<Theme>(() => currentTheme());
 
-  // Stay in sync if something else (another tab) flips the class.
+  // Stay in sync if something else (another tab, the profile menu) flips it.
   useEffect(() => {
     const el = document.documentElement;
-    const obs = new MutationObserver(() =>
-      setTheme(el.classList.contains("dark") ? "dark" : "light"),
-    );
+    const obs = new MutationObserver(() => setTheme(currentTheme()));
     obs.observe(el, { attributes: true, attributeFilter: ["class"] });
     return () => obs.disconnect();
   }, []);
@@ -75,12 +71,12 @@ export default function ThemeToggle({
     const mq = window.matchMedia("(prefers-color-scheme: light)");
     const onChange = () => {
       try {
-        if (localStorage.getItem(STORAGE_KEY)) return;
+        if (localStorage.getItem(THEME_STORAGE_KEY)) return;
       } catch {
         return;
       }
-      const next = mq.matches ? "light" : "dark";
-      document.documentElement.classList.toggle("dark", next === "dark");
+      const next: Theme = mq.matches ? "light" : "dark";
+      applyTheme(next, false);
       setTheme(next);
     };
     mq.addEventListener("change", onChange);
@@ -88,13 +84,8 @@ export default function ThemeToggle({
   }, []);
 
   const toggle = () => {
-    const next = theme === "dark" ? "light" : "dark";
-    document.documentElement.classList.toggle("dark", next === "dark");
-    try {
-      localStorage.setItem(STORAGE_KEY, next);
-    } catch {
-      // Private mode — the theme just won't persist.
-    }
+    const next: Theme = theme === "dark" ? "light" : "dark";
+    applyTheme(next);
     setTheme(next);
   };
 
