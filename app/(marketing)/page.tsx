@@ -10,7 +10,7 @@ export default async function Home() {
   // in the first paint — no client-side session fetch, no empty nav.
   const session = await auth();
   return (
-    <main className="bg-[#05060a]">
+    <main className="bg-[#fafafa] dark:bg-[#05060a]">
       <Hero user={session?.user ?? null} />
       <ProofChapter />
       <Capabilities />
