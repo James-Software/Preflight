@@ -91,10 +91,10 @@ export default function ProofChapter() {
                 </p>
                 <p className="text-ink/40 dark:text-neutral-500">
                   <span className="text-ink/70 dark:text-neutral-300">agent-2</span> clicked “Pay
-                  now” — no response
+                  now”: no response
                 </p>
                 <p className="text-ink/40 dark:text-neutral-500">
-                  <span className="text-ink/70 dark:text-neutral-300">agent-2</span> retried 3× —
+                  <span className="text-ink/70 dark:text-neutral-300">agent-2</span> retried 3×:
                   still nothing
                 </p>
                 <p className="text-red-400">
@@ -108,7 +108,7 @@ export default function ProofChapter() {
                   handler reads plan from a stale closure
                 </p>
                 <p className="text-emerald-400">
-                  ✓ fix ready — opening pull request
+                  ✓ fix ready: opening pull request
                 </p>
               </div>
             </div>
