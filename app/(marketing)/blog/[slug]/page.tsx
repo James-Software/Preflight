@@ -20,9 +20,9 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { slug } = await params;
   const post = await getPostBySlug(slug);
-  if (!post) return { title: "Not found — PreFlight" };
+  if (!post) return { title: "Not found | PreFlight" };
   return {
-    title: `${post.title} — PreFlight`,
+    title: `${post.title} | PreFlight`,
     description: post.description ?? undefined,
   };
 }
