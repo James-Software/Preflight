@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Terms of Service — PreFlight",
+  title: "Terms of Service | PreFlight",
   description:
     "The terms governing your use of PreFlight: testing, GitHub integration, credits, and payments.",
 };
@@ -16,7 +16,7 @@ const SECTIONS: { heading: string; body: string[] }[] = [
   {
     heading: "2. What PreFlight does",
     body: [
-      "PreFlight sends a swarm of AI agents to test your web application like real users: driving real browsers, reporting UI, frontend, and backend issues, diagnosing root causes from your repository code and test output, and proposing fixes as pull requests. A human merge gate always applies — PreFlight never merges code into your branches on its own.",
+      "PreFlight sends a swarm of AI agents to test your web application like real users: driving real browsers, reporting UI, frontend, and backend issues, diagnosing root causes from your repository code and test output, and proposing fixes as pull requests. A human merge gate always applies. PreFlight never merges code into your branches on its own.",
     ],
   },
   {
@@ -34,7 +34,7 @@ const SECTIONS: { heading: string; body: string[] }[] = [
   {
     heading: "5. GitHub integration",
     body: [
-      "If you install our GitHub App or connect a repository, you grant us the access scopes you approve so we can read the code needed for diagnosis and open fix pull requests. Every fix arrives as a pull request for your review — nothing is pushed directly to your branches, and nothing merges without a human approving it. You can revoke our access at any time from your GitHub settings, which immediately stops our access to your repositories.",
+      "If you install our GitHub App or connect a repository, you grant us the access scopes you approve so we can read the code needed for diagnosis and open fix pull requests. Every fix arrives as a pull request for your review. Nothing is pushed directly to your branches, and nothing merges without a human approving it. You can revoke our access at any time from your GitHub settings, which immediately stops our access to your repositories.",
     ],
   },
   {
@@ -64,13 +64,13 @@ const SECTIONS: { heading: string; body: string[] }[] = [
   {
     heading: "10. Disclaimers",
     body: [
-      "PreFlight is provided “as is” and “as available,” without warranties of any kind, express or implied — including that every bug will be found, that every diagnosis will be correct, or that the service will be uninterrupted or error-free. AI-generated findings and fixes are proposals: you are responsible for reviewing pull requests before merging, and for deciding what ships to your users.",
+      "PreFlight is provided “as is” and “as available,” without warranties of any kind, express or implied, including that every bug will be found, that every diagnosis will be correct, or that the service will be uninterrupted or error-free. AI-generated findings and fixes are proposals: you are responsible for reviewing pull requests before merging, and for deciding what ships to your users.",
     ],
   },
   {
     heading: "11. Limitation of liability",
     body: [
-      "To the maximum extent permitted by law, PreFlight and its operators will not be liable for indirect, incidental, consequential, or punitive damages, or for loss of profits, revenue, data, or goodwill. Our total liability for any claim relating to the service is limited to the amounts you paid us in the twelve months before the claim arose — or, if you used only the free tier, one hundred US dollars.",
+      "To the maximum extent permitted by law, PreFlight and its operators will not be liable for indirect, incidental, consequential, or punitive damages, or for loss of profits, revenue, data, or goodwill. Our total liability for any claim relating to the service is limited to the amounts you paid us in the twelve months before the claim arose, or one hundred US dollars if you used only the free tier.",
     ],
   },
   {
@@ -82,7 +82,7 @@ const SECTIONS: { heading: string; body: string[] }[] = [
   {
     heading: "13. Termination",
     body: [
-      "You may stop using PreFlight and delete your account at any time. We may suspend or terminate your access if you violate these terms or if we discontinue the service. Sections that by their nature should survive — including intellectual property, disclaimers, limitation of liability, and indemnification — survive termination.",
+      "You may stop using PreFlight and delete your account at any time. We may suspend or terminate your access if you violate these terms or if we discontinue the service. Sections that by their nature should survive, including intellectual property, disclaimers, limitation of liability, and indemnification, survive termination.",
     ],
   },
   {
@@ -120,9 +120,7 @@ export default function TermsPage() {
         </h1>
         <p className="mt-4 text-sm text-ink/50 dark:text-white/50">Effective October 12, 2026</p>
         <p className="mt-8 text-base leading-relaxed text-ink/70 dark:text-neutral-300">
-          These terms govern your use of PreFlight — the agent swarm that
-          tests your app like real users and proposes fixes as pull
-          requests. Please read them carefully.
+          These terms govern your use of PreFlight, the agent swarm that tests your app like real users and proposes fixes as pull requests. Please read them carefully.
         </p>
         <div className="mt-12 space-y-10">
           {SECTIONS.map((s) => (
