@@ -1,0 +1,67 @@
+# PreFlight (full reference)
+
+> PreFlight sends a swarm of AI agents to test your web app like real users. Every bug they find comes back with evidence and a fix pull request.
+
+## What PreFlight is
+
+PreFlight is automated quality assurance performed by a swarm of AI agents. Instead of executing hand-written test scripts, the agents open your application in real browsers and use it the way a first-time visitor would: clicking, typing, navigating, and reacting to what they see. When something breaks, you get the bug report plus the evidence and, when the system is confident, a proposed fix as a GitHub pull request.
+
+## Why it works
+
+- **Real browsers, not simulations.** Each agent drives its own real browser session. No mocked clicks, no scripted paths.
+- **Exploration, not scripts.** Scripts only check what you told them to check. Agents explore like someone seeing your app for the first time, which is how real users find the bugs your tests miss.
+- **Evidence with every bug.** Screenshots, console logs, and network traces are attached to each finding, so a report is reproducible on sight.
+- **Diagnosis from code, not just symptoms.** The system pairs runtime evidence with your repository source to explain why something broke, not just that it broke.
+- **Fixes, not just reports.** Confident repairs arrive as pull requests with diffs. You review and merge.
+- **Humans stay in charge.** A merge gate always applies. PreFlight never pushes directly to your branches and never merges code on its own.
+
+## How a run works
+
+1. **Connect.** Install the PreFlight QA GitHub App and pick one of your own repositories. Only repositories you own are accepted.
+2. **Target.** Point the swarm at a deployment of your app, or let PreFlight resolve your default branch's latest deployment automatically.
+3. **Plan.** A test-plan agent generates a plan for exploring the app based on its structure.
+4. **Swarm.** Multiple browser agents fan out, each driving a real browser through the app like a user.
+5. **Triage.** Findings are deduplicated and ranked. Each carries its evidence bundle.
+6. **Diagnose.** For each finding, the system combines what the agent observed with your source code to identify the root cause.
+7. **Fix.** When confidence in a repair is high, a pull request is opened with the fix and the full evidence trail. Otherwise the finding is reported with the evidence for you to act on.
+
+## GitHub integration
+
+- Delivered as the "PreFlight QA" GitHub App (https://github.com/apps/preflight-qa).
+- Repository access is strictly owner-only: you can run PreFlight only on repositories you personally own.
+- The app requests only the repository permissions it needs. Fixes arrive as pull requests so nothing merges without your approval.
+
+## Governance and safety
+
+- Human merge gate on every fix. No exceptions.
+- Owner-only repository scope, enforced server-side.
+- Sign-in is via GitHub. Access is invite-gated: denied sign-ins join a waitlist, and approved users receive a small number of invite codes to share.
+
+## Technology
+
+- Web app: Next.js (App Router) on Vercel.
+- Execution: real headless browsers driven over CDP; background agent orchestration for the swarm pipeline.
+- Data: Postgres for runs, findings, diagnoses, and pull request records; object storage for screenshots and evidence.
+
+## Access and pricing
+
+- PreFlight is currently invite-only. Join the waitlist by signing in with GitHub at https://www.trypreflight.dev/#early-access.
+- Pricing is not yet public. The planned model is usage credits plus team and enterprise plans.
+
+## What PreFlight is not
+
+- Not a script recorder or a test-script maintenance tool.
+- Not unit testing and not a replacement for it. PreFlight tests the running application the way users experience it.
+- Not a code merger. Every change it proposes waits for your review.
+
+## Links
+
+- [Website](https://www.trypreflight.dev/)
+- [Blog](https://www.trypreflight.dev/blog)
+- [Privacy Policy](https://www.trypreflight.dev/privacy)
+- [Terms of Service](https://www.trypreflight.dev/terms)
+- [PreFlight QA GitHub App](https://github.com/apps/preflight-qa)
+
+## Contact
+
+hello@trypreflight.dev
