@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "Privacy Policy — PreFlight",
+  title: "Privacy Policy | PreFlight",
   description:
     "How PreFlight collects, uses, and protects your data across waitlist, testing, GitHub integration, and payments.",
 };
@@ -10,22 +10,22 @@ const SECTIONS: { heading: string; body: string[] }[] = [
   {
     heading: "1. Information you give us",
     body: [
-      "Waitlist and contact. PreFlight is currently invite-only. When you sign in with GitHub to request access, we save your GitHub profile — your username, name, and avatar — so we can review your request. If you email us, we keep your message and address so we can reply.",
-      "Account. When you sign in with GitHub, we save your GitHub profile — your username, name, and avatar — so we can recognize you and control access. Login credentials are handled by our authentication provider; we never see your password.",
+      "Waitlist and contact. PreFlight is currently invite-only. When you sign in with GitHub to request access, we save your GitHub profile: your username, name, and avatar, so we can review your request. If you email us, we keep your message and address so we can reply.",
+      "Account. When you sign in with GitHub, we save your GitHub profile: your username, name, and avatar, so we can recognize you and control access. Login credentials are handled by our authentication provider; we never see your password.",
       "Projects. The URLs of the applications you ask us to test, along with your project settings and preferences.",
-      "Payment. Payments are processed directly by Stripe. We never see or store your card numbers — Stripe handles all payment details under its own privacy policy. We store only your plan, credit balance, and billing status.",
+      "Payment. Payments are processed directly by Stripe. We never see or store your card numbers. Stripe handles all payment details under its own privacy policy. We store only your plan, credit balance, and billing status.",
     ],
   },
   {
     heading: "2. Information from connected services",
     body: [
-      "GitHub. If you install our GitHub App or connect a repository, GitHub grants us the access scopes you approve — typically read access to the repositories you select, and permission to open pull requests. We access your source code solely to diagnose test failures and generate proposed fixes. We do not sell your code, use it for advertising, or share it beyond what is needed to operate the service. The exact scopes are shown by GitHub when you install the app, and you can review or revoke our access at any time in your GitHub settings.",
+      "GitHub. If you install our GitHub App or connect a repository, GitHub grants us the access scopes you approve: typically read access to the repositories you select, and permission to open pull requests. We access your source code solely to diagnose test failures and generate proposed fixes. We do not sell your code, use it for advertising, or share it beyond what is needed to operate the service. The exact scopes are shown by GitHub when you install the app, and you can review or revoke our access at any time in your GitHub settings.",
     ],
   },
   {
     heading: "3. Information from test runs",
     body: [
-      "When the agent swarm tests your application, it acts like a real user in a real browser. We collect what the test produces: the pages visited, screenshots, console output, network request metadata, and the findings it reports. The swarm only touches the URLs and environments you configure — nothing else.",
+      "When the agent swarm tests your application, it acts like a real user in a real browser. We collect what the test produces: the pages visited, screenshots, console output, network request metadata, and the findings it reports. The swarm only touches the URLs and environments you configure. Nothing else.",
       "To diagnose failures, relevant portions of your repository code and test output are transmitted to our AI service providers. They process this data only to perform the diagnosis; we do not permit them to use it for any other purpose.",
     ],
   },
@@ -57,7 +57,7 @@ const SECTIONS: { heading: string; body: string[] }[] = [
   {
     heading: "8. Security",
     body: [
-      "We use reasonable technical and organizational measures to protect your data, including encrypted connections and scoped access controls — for example, our GitHub App requests only the repository permissions it needs, and fixes are proposed as pull requests so nothing merges without your approval. No method of transmission or storage is completely secure, so we cannot guarantee absolute security.",
+      "We use reasonable technical and organizational measures to protect your data, including encrypted connections and scoped access controls. For example, our GitHub App requests only the repository permissions it needs, and fixes are proposed as pull requests so nothing merges without your approval. No method of transmission or storage is completely secure, so we cannot guarantee absolute security.",
     ],
   },
   {
@@ -106,9 +106,7 @@ export default function PrivacyPage() {
           PreFlight (&ldquo;we&rdquo;, &ldquo;us&rdquo;) sends a swarm of AI
           agents to test your application like real users, diagnoses what
           they find from your code, and proposes fixes as pull requests.
-          This policy explains what data we collect across the whole
-          product — waitlist, accounts, testing, GitHub integration, and
-          payments — why we collect it, and what we do with it.
+          This policy explains what data we collect across the whole product (waitlist, accounts, testing, GitHub integration, and payments), why we collect it, and what we do with it.
         </p>
         <div className="mt-12 space-y-10">
           {SECTIONS.map((s) => (
