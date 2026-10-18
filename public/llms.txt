@@ -1,0 +1,40 @@
+# PreFlight
+
+> PreFlight sends a swarm of AI agents to test your web app like real users. Every bug they find comes back with evidence and a fix pull request.
+
+## What it does
+
+- A swarm of AI agents explores your web application in real browsers, acting like first-time users instead of following scripts.
+- Every finding ships with evidence: screenshots, console logs, and network traces.
+- Root-cause diagnosis pairs what the agents observed in the browser with your repository source code.
+- When the swarm is confident in a repair, it opens a GitHub pull request with the fix. A human merge gate always applies. Nothing is ever pushed directly to your branches.
+
+## How it works
+
+1. Install the PreFlight QA GitHub App and connect a repository you own.
+2. Run a swarm against a deployment of your app.
+3. Review findings, each with attached evidence.
+4. Merge the fix pull requests you want.
+
+## Who it is for
+
+Developers and teams shipping web applications who want real-user testing without writing and maintaining end-to-end test scripts.
+
+## Access
+
+PreFlight is currently invite-only. Join the waitlist by signing in with GitHub at https://www.trypreflight.dev/#early-access.
+
+## Links
+
+- [Website](https://www.trypreflight.dev/)
+- [Blog](https://www.trypreflight.dev/blog)
+- [Privacy Policy](https://www.trypreflight.dev/privacy)
+- [Terms of Service](https://www.trypreflight.dev/terms)
+- [PreFlight QA GitHub App](https://github.com/apps/preflight-qa)
+
+## Contact
+
+hello@trypreflight.dev
+
+---
+Full detail: https://www.trypreflight.dev/llms-full.txt
