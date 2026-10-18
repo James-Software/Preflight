@@ -33,15 +33,15 @@ function useDarkMode() {
   return isDark;
 }
 
-/** px scrolled before the bar becomes the floating pill — effectively
+/** px scrolled before the glass bar appears — effectively
     immediate, with just enough buffer to ignore sub-pixel scroll noise */
 const SCROLL_AFTER = 8;
 
 // James's motion spec: 100-300ms, cubic-bezier(0.16,1,0.3,1). Never
 // transition-all. The bar is two layers:
 // - Outer: morphs width only (subtle 6xl -> 1060px, like OpenWhispr).
-// - Glass background: ALWAYS rounded with blur applied — rounded-2xl bar
-//   on mobile, rounded-full pill on desktop. It only fades in via opacity.
+// - Glass background: ALWAYS rounded with blur applied — a rounded-2xl
+//   bar at every breakpoint. It only fades in via opacity.
 //   Nothing ever toggles backdrop-filter or border-radius at a given
 //   breakpoint, so there's no instant pop that can flash as a rectangle.
 // Padding and margin-top are constant across scroll states, so the vertical
@@ -54,8 +54,8 @@ const GLASS_FADE =
 
 // Soft white halo behind nav content while the bar is transparent (top of
 // page), so dark text stays readable over light artwork. Only active in
-// the non-pill state on light backgrounds — the pill carries its own
-// white background, and dark mode needs no halo.
+// the transparent state on light backgrounds — the glass bar carries its
+// own background, and dark mode needs no halo.
 const GLOW_TEXT =
   "[text-shadow:0_0_14px_rgba(255,255,255,0.95),0_0_34px_rgba(255,255,255,0.85)]";
 const GLOW_SPRITE = "[filter:drop-shadow(0_0_7px_rgba(255,255,255,0.95))]";
@@ -137,11 +137,9 @@ export default function Nav({ user }: { user: NavUser | null }) {
   const wt = reduced ? "" : WIDTH_TRANSITION;
   const ft = reduced ? "" : GLASS_FADE;
 
-  // The pill narrows only slightly (like OpenWhispr) — it stays a bar, not
-  // a tiny capsule.
-  // Mobile gets a rounded bar with tighter margins (no pill) — the pill
-  // only makes sense with room to breathe. Desktop keeps the
-  // OpenWhispr-style subtle width morph into the floating pill.
+  // The bar narrows only slightly on scroll (like OpenWhispr) — it stays a
+  // bar, not a tiny capsule. Mobile gets tighter margins; desktop keeps the
+  // subtle width morph.
   const barWidth = scrolled
     ? "w-[calc(100%-1.5rem)] md:w-[calc(100%-2.5rem)] max-w-[1060px]"
     : "w-[calc(100%-1.5rem)] md:w-full md:max-w-6xl";
@@ -159,11 +157,11 @@ export default function Nav({ user }: { user: NavUser | null }) {
   return (
     <nav className="fixed inset-x-0 top-0 z-50" suppressHydrationWarning>
       <div className={`relative mx-auto mt-3 ${wt} ${barWidth}`}>
-        {/* Glass background — rounded bar on mobile, pill on desktop.
+        {/* Glass background — rounded bar at every breakpoint.
             Always rounded, only fades in. Never flashes. */}
         <div
           aria-hidden="true"
-          className={`absolute inset-0 rounded-2xl md:rounded-full ${
+          className={`absolute inset-0 rounded-2xl ${
             dark ? GLASS_DARK : GLASS_LIGHT
           } ${ft} ${scrolled ? "opacity-100" : "opacity-0"}`}
         />
@@ -174,8 +172,8 @@ export default function Nav({ user }: { user: NavUser | null }) {
             className={`flex items-center gap-2.5 ${spriteGlow}`}
             aria-label="PreFlight home"
           >
-            {/* Crossfade: gradient plane at top, white plane once the dark
-                pill appears. In light mode the pill is light glass, so the
+            {/* Crossfade: gradient plane at top, white plane once the dark glass
+                bar appears. In light mode the bar is light glass, so the
                 gradient plane stays (a white plane would vanish). */}
             <span
               className="relative block h-[26px] w-[92px] md:h-[30px] md:w-[106px]"
