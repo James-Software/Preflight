@@ -1,17 +1,15 @@
 "use client";
 
 import Nav, { type NavUser } from "./Nav";
+import PlasmaSquare from "./PlasmaSquare";
 
 /* ------------------------------------------------------------------ */
-/* Hero — Cloudflare-style: one big purplish-blue gradient square      */
-/* filling ~96% of the viewport. The square is identical in both       */
-/* themes (white headline stays on the gradient); only the page        */
-/* behind it flips (#fafafa light, #05060a dark). Bright light across  */
-/* the top edge, soft light on both sides, bloom along the bottom.     */
+/* Hero — one big square filling ~96% of the viewport, rendered as     */
+/* living plasma in the classic gradient's blues (#4e2fd8 → #6a6df5   */
+/* → #8aa5ff, diagonal to top-right). The square is identical in both  */
+/* themes (white headline stays on the plasma); only the page behind   */
+/* it flips (#fafafa light, #05060a dark).                             */
 /* ------------------------------------------------------------------ */
-
-const BUBBLE_GRADIENT =
-  "linear-gradient(to top right, #4e2fd8 0%, #6a6df5 48%, #8aa5ff 100%)";
 
 export default function Hero({ user }: { user: NavUser | null }) {
   return (
@@ -23,33 +21,15 @@ export default function Hero({ user }: { user: NavUser | null }) {
 
       <div className="flex flex-1 px-[2vw] pb-[2vh] pt-[84px]">
         <div
-          className="relative flex w-full flex-1 items-center justify-center overflow-hidden rounded-[1.75rem] md:rounded-[2.5rem]"
+          className="relative flex w-full flex-1 items-center justify-center rounded-[1.75rem] md:rounded-[2.5rem]"
           style={{
             boxShadow: "0 30px 80px -20px rgba(90,80,250,0.45)",
           }}
         >
-          {/* gradient square — static */}
-          <div
-            aria-hidden="true"
-            className="absolute inset-0"
-            style={{ backgroundImage: BUBBLE_GRADIENT }}
-          />
-          {/* bright light band across the top, no circular blobs */}
-          <div
-            aria-hidden="true"
-            className="absolute inset-x-0 top-0 h-44 bg-gradient-to-b from-white/30 to-transparent"
-          />
-          {/* inner edge light — its own layer above the gradient so the
-              opaque layers can't cover it (inset shadows on the container
-              get buried under absolutely-positioned children) */}
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 rounded-[1.75rem] md:rounded-[2.5rem]"
-            style={{
-              boxShadow:
-                "inset 0 0 0 1px rgba(255,255,255,0.45), inset 0 0 45px rgba(255,255,255,0.42), inset 0 2px 1px rgba(255,255,255,0.6), inset 0 -1px 0 rgba(255,255,255,0.2)",
-            }}
-          />
+          {/* The square itself: living plasma in the classic gradient's
+              blues. The canvas is exactly this box; all fluid bleed lives
+              in-shader, so nothing escapes past the viewport or the copy. */}
+          <PlasmaSquare />
 
           <div className="relative px-6 py-16 text-center md:py-20">
             <h1
