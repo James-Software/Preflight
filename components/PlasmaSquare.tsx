@@ -83,6 +83,8 @@ float sdRoundBox(vec2 p, vec2 b, float r) {
 #define CLOUD_COVER 0.55  /* 0..1, how much of the sky is clouds */
 #define CLOUD_SOFT 0.15   /* softness of cloud edges */
 #define CLOUD_ERODE 0.35  /* fine-detail erosion of cloud edges */
+#define CLOUD_RISE_SPEED 0.07 /* canvas heights per second, upward */
+#define CLOUD_EVOLVE_SPEED 0.35 /* slow shape changes relative to drift */
 
 void main() {
   vec2 px = gl_FragCoord.xy;
@@ -92,14 +94,16 @@ void main() {
   vec2 halfSize = (u_bubble.zw - u_bubble.xy) * 0.5;
   vec2 q0 = px - center;
 
-  /* Fluid fields: multi-scale domain-warped fBm, advected upward. */
-  float flowMod = 0.6 + 0.8 * vnoise(vec2(px.x * 0.0009 + 3.7, t * 0.05));
-  vec2 p1 = vec2(px.x * 0.0016, px.y * 0.0016 - t * 0.030);
-  vec2 p2 = vec2(px.x * 0.0038, px.y * 0.0038 - t * 0.075 * flowMod);
+  /* Carry both texture scales upward together, so cloud banks drift
+     instead of churning in place. WebGL's positive Y points upward. */
+  vec2 cloudPx = px - vec2(0.0, t * u_res.y * CLOUD_RISE_SPEED);
+  vec2 p1 = cloudPx * 0.0016;
+  vec2 p2 = cloudPx * 0.0038;
+  float evolve = t * CLOUD_EVOLVE_SPEED;
 
   vec2 w1 = vec2(
-    fbm(p1 + vec2(0.0, t * 0.020)),
-    fbm(p1 + vec2(5.2, 1.3) - vec2(0.0, t * 0.016))
+    fbm(p1 + vec2(0.0, evolve * 0.020)),
+    fbm(p1 + vec2(5.2, 1.3) - vec2(0.0, evolve * 0.016))
   );
   vec2 w2 = vec2(
     fbm(p2 + vec2(1.7, 9.2) + 1.5 * w1),
