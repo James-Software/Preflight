@@ -15,16 +15,13 @@ export default function Hero({ user }: { user: NavUser | null }) {
   return (
     <section
       id="top"
-      className="relative flex min-h-svh flex-col overflow-x-clip bg-[#fafafa] dark:bg-[#05060a]"
+      className="relative flex min-h-svh flex-col overflow-x-clip dark:bg-[#05060a]"
     >
       <Nav user={user} />
 
       <div className="flex min-w-0 flex-1 px-[2vw] pb-[2vh] pt-[84px]">
         <div
-          className="relative flex min-w-0 w-full flex-1 items-center justify-center overflow-hidden rounded-[1.75rem] md:rounded-[2.5rem]"
-          style={{
-            boxShadow: "0 30px 80px -20px rgba(90,80,250,0.45)",
-          }}
+          className="relative flex min-w-0 w-full flex-1 items-center justify-center overflow-hidden rounded-[1.75rem] dark:[box-shadow:0_30px_80px_-20px_rgba(90,80,250,0.45)] md:rounded-[2.5rem]"
         >
           {/* The square itself: living plasma in the classic gradient's
               blues, clipped to the rounded box. */}
