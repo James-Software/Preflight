@@ -5,15 +5,12 @@ import PlasmaSquare from "./PlasmaSquare";
 
 /* ------------------------------------------------------------------ */
 /* Hero — one big purplish-blue square filling ~96% of the viewport,   */
-/* rendered as living plasma by PlasmaSquare (the square's own colors, */
+/* rendered as living plasma by PlasmaSquare (neon blue and purple     */
 /* fluid energy rising through it, wisps dissolving off the top edge). */
 /* The square is identical in both themes (white headline stays on the */
 /* plasma); only the page behind it flips (#fafafa light, #05060a      */
-/* dark). The dot layer rises unless prefers-reduced-motion freezes it.*/
+/* dark).                                                              */
 /* ------------------------------------------------------------------ */
-
-const DOT_TEXTURE =
-  "radial-gradient(rgba(255,255,255,0.20) 1.2px, transparent 1.3px)";
 
 export default function Hero({ user }: { user: NavUser | null }) {
   return (
@@ -30,36 +27,9 @@ export default function Hero({ user }: { user: NavUser | null }) {
             boxShadow: "0 30px 80px -20px rgba(90,80,250,0.45)",
           }}
         >
-          {/* The square itself: living plasma. The canvas bleeds past the
-              box so the fluid edges and wisps are never hard-clipped. */}
+          {/* The square itself: living plasma. The canvas bleeds just past
+              the box so the fluid edges and wisps never hard-clip. */}
           <PlasmaSquare />
-          {/* dotted texture, clipped to the rounded square */}
-          <div
-            aria-hidden="true"
-            className="absolute inset-0 overflow-hidden rounded-[1.75rem] md:rounded-[2.5rem]"
-          >
-            <div
-              aria-hidden="true"
-              className="absolute inset-0"
-              style={{
-                WebkitMaskImage:
-                  "linear-gradient(to bottom, transparent, black 16%), linear-gradient(to top, transparent, black 16%), linear-gradient(to right, transparent, black 10%), linear-gradient(to left, transparent, black 10%)",
-                WebkitMaskComposite: "source-in",
-                maskImage:
-                  "linear-gradient(to bottom, transparent, black 16%), linear-gradient(to top, transparent, black 16%), linear-gradient(to right, transparent, black 10%), linear-gradient(to left, transparent, black 10%)",
-                maskComposite: "intersect",
-              }}
-            >
-              <div
-                aria-hidden="true"
-                className="animate-dot-rise absolute inset-0"
-                style={{
-                  backgroundImage: DOT_TEXTURE,
-                  backgroundSize: "12px 12px",
-                }}
-              />
-            </div>
-          </div>
 
           <div className="relative px-6 py-16 text-center md:py-20">
             <h1
