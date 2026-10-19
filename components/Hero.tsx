@@ -21,7 +21,7 @@ export default function Hero({ user }: { user: NavUser | null }) {
 
       <div className="flex min-w-0 flex-1 px-[2vw] pb-[2vh] pt-[84px]">
         <div
-          className="relative flex min-w-0 w-full flex-1 items-center justify-center overflow-hidden rounded-[1.75rem] dark:[box-shadow:0_30px_80px_-20px_rgba(90,80,250,0.45)] md:rounded-[2.5rem]"
+          className="relative flex min-w-0 w-full flex-1 items-center justify-center overflow-hidden rounded-[1.75rem] md:rounded-[2.5rem]"
         >
           {/* The square itself: living plasma in the classic gradient's
               blues, clipped to the rounded box. */}
