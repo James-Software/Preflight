@@ -1,6 +1,5 @@
 import { auth } from "@/auth";
 import Hero from "@/components/Hero";
-import PixelRain from "@/components/PixelRain";
 import ProofChapter from "@/components/ProofChapter";
 import Capabilities from "@/components/Capabilities";
 import EarlyAccess from "@/components/EarlyAccess";
@@ -13,13 +12,10 @@ export default async function Home() {
   return (
     <main className="bg-[#fafafa] dark:bg-[#05060a]">
       <Hero user={session?.user ?? null} />
-      <div className="relative">
-        <PixelRain />
-        <ProofChapter />
-        <Capabilities />
-        <EarlyAccess />
-        <Footer />
-      </div>
+      <ProofChapter />
+      <Capabilities />
+      <EarlyAccess />
+      <Footer />
     </main>
   );
 }
