@@ -7,11 +7,13 @@ import { useEffect, useRef, useState } from "react";
 /* and purple. Multi-scale domain-warped fBm advected upward (large    */
 /* structures drift slowly, fine detail moves faster, flow speed       */
 /* varies spatially). The silhouette is a fluid-distorted rounded      */
-/* square: dramatic waves roll along the sides, the top edge boils     */
+/* square: dramatic waves roll along the sides, the top edge boils    */
 /* with wisps that stretch upward and dissolve, the bottom stays calm. */
-/* The canvas bleeds just past the box so edges never hard-clip, and   */
-/* tight sizing keeps the effect inside the viewport and off the copy  */
-/* below the hero.                                                     */
+/*                                                                     */
+/* Sizing is bulletproof by construction: the canvas is exactly the    */
+/* bubble's box (absolute inset-0), and the fluid bleed lives INSIDE   */
+/* the shader as fixed insets — the energy can never escape the box,   */
+/* spill past the viewport, or wash over the copy below.               */
 /*                                                                     */
 /* Perf: 3-octave fBm, resolution capped (~1.8M px, DPR <= 1.25),      */
 /* pauses off-screen / when hidden. No WebGL -> static gradient.       */
@@ -24,6 +26,11 @@ void main() {
   gl_Position = vec4(a_pos, 0.0, 1.0);
 }
 `;
+
+/* In-shader bleed (css px): room for waves/wisps inside the canvas. */
+const SIDE_BLEED = 26;
+const TOP_BLEED = 46;
+const BOTTOM_BLEED = 12;
 
 const FRAG = `
 precision highp float;
@@ -142,8 +149,9 @@ void main() {
   float wispA = clamp(wisps * wGate * hEnv, 0.0, 1.0);
   vec3 wcol = mix(accent, bright, clamp(rise * 1.6, 0.0, 1.0));
 
-  /* Tight outer glow. */
-  float glow = exp(-max(d, 0.0) * 0.05);
+  /* Tight outer glow, forced to zero at the canvas edge. */
+  float glow = exp(-max(d, 0.0) * 0.09);
+  glow *= 1.0 - smoothstep(20.0, 26.0, max(d, 0.0));
 
   /* Composite (premultiplied, normal blending). */
   vec3 acc = icol * body;
@@ -221,32 +229,23 @@ export default function PlasmaSquare() {
       const uRadius = gl.getUniformLocation(prog, "u_radius");
       const uSideAmp = gl.getUniformLocation(prog, "u_sideAmp");
 
-      // Bubble rect, corner radius and side-wave travel in device px,
-      // derived from the canvas's own insets so they track breakpoints.
-      const updateUniforms = (sx: number) => {
+      // The canvas IS the bubble's box; the SDF rect is inset by the
+      // fixed bleed amounts, so the energy can never leave the box.
+      const updateUniforms = (s: number) => {
         const r = canvas.getBoundingClientRect();
-        const cs = getComputedStyle(canvas);
-        const padL = Math.max(0, -parseFloat(cs.left));
-        const padT = Math.max(0, -parseFloat(cs.top));
-        const padR = Math.max(0, -parseFloat(cs.right));
-        const padB = Math.max(0, -parseFloat(cs.bottom));
         gl.uniform4f(
           uBubble,
-          padL * sx,
-          padB * sx,
-          (r.width - padR) * sx,
-          (r.height - padT) * sx,
+          SIDE_BLEED * s,
+          BOTTOM_BLEED * s,
+          (r.width - SIDE_BLEED) * s,
+          (r.height - TOP_BLEED) * s,
         );
         const parent = canvas.parentElement;
         const rad = parent
           ? parseFloat(getComputedStyle(parent).borderTopLeftRadius) || 0
           : 0;
-        gl.uniform1f(uRadius, rad * sx);
-        // Side waves get whatever bleed room exists, minus a margin.
-        gl.uniform1f(
-          uSideAmp,
-          Math.max(8, Math.min(30, (Math.min(padL, padR) - 4) * sx)),
-        );
+        gl.uniform1f(uRadius, Math.max(rad - SIDE_BLEED, 0) * s);
+        gl.uniform1f(uSideAmp, Math.min(20, SIDE_BLEED - 6) * s);
       };
 
       const resize = () => {
@@ -324,7 +323,7 @@ export default function PlasmaSquare() {
     <canvas
       ref={canvasRef}
       aria-hidden="true"
-      className="pointer-events-none absolute -bottom-2 -left-6 -right-6 -top-24 md:-left-8 md:-right-8"
+      className="pointer-events-none absolute inset-0"
     />
   );
 }
