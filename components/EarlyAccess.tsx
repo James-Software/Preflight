@@ -1,20 +1,20 @@
 export default function EarlyAccess() {
   return (
-    <section id="early-access" className="bg-[#fafafa] py-24 md:py-32 dark:bg-[#05060a]">
-      <div className="mx-auto max-w-xl px-6 text-center">
-        <p className="text-xs font-semibold tracking-[0.22em] text-primary">
+    <section id="early-access" className="scroll-mt-20 bg-[#fafafa] px-[2vw] pb-16 dark:bg-[#05060a]">
+      <div className="mx-auto max-w-6xl rounded-[1.75rem] bg-[linear-gradient(to_top_right,#4e2fd8_0%,#6a6df5_48%,#8aa5ff_100%)] px-6 py-20 text-center md:rounded-[2.5rem] md:py-24">
+        <p className="text-xs font-semibold tracking-[0.22em] text-white/75">
           EARLY ACCESS
         </p>
-        <h2 className="font-display mt-4 text-3xl font-bold tracking-tight text-ink md:text-4xl dark:text-white">
-          Be first in line for takeoff.
+        <h2 className="mx-auto mt-4 max-w-2xl text-balance text-4xl font-semibold tracking-tight text-white md:text-5xl">
+          Find the bugs before your users do.
         </h2>
-        <p className="mt-4 text-base leading-relaxed text-ink/60 dark:text-white/60">
-          PreFlight is in final approach. Join the waitlist with GitHub. Every
-          request is reviewed by hand.
+        <p className="mx-auto mt-5 max-w-lg text-base leading-relaxed text-white/80 md:text-lg">
+          A fresh set of eyes on every journey. Join the early-access waitlist
+          with GitHub. Every request is reviewed by hand.
         </p>
         <a
           href="/login"
-          className="pressable btn-gradient mt-8 inline-flex items-center gap-2.5 rounded-full px-7 py-3.5 text-sm font-medium text-white"
+          className="pressable mt-8 inline-flex items-center justify-center gap-2.5 rounded-full bg-white px-7 py-3.5 text-sm font-semibold text-ink shadow-[0_10px_30px_-8px_rgba(20,16,80,0.3)] transition-colors hover:bg-white/90"
         >
           <svg
             width="18"
@@ -27,18 +27,18 @@ export default function EarlyAccess() {
           </svg>
           Join the waitlist with GitHub
         </a>
-        <p className="mx-auto mt-4 max-w-md text-xs leading-relaxed text-ink/40 dark:text-white/40">
+        <p className="mx-auto mt-4 max-w-md text-xs leading-relaxed text-white/75">
           By joining the waitlist, you agree to our{" "}
           <a
             href="/terms"
-            className="underline underline-offset-2 transition-colors duration-150 hover:text-ink dark:hover:text-white"
+            className="underline underline-offset-2 transition-colors duration-150 hover:text-white"
           >
             Terms of Service
           </a>{" "}
           and{" "}
           <a
             href="/privacy"
-            className="underline underline-offset-2 transition-colors duration-150 hover:text-ink dark:hover:text-white"
+            className="underline underline-offset-2 transition-colors duration-150 hover:text-white"
           >
             Privacy Policy
           </a>
