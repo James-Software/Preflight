@@ -165,21 +165,13 @@ void main() {
   float wispA = clamp(wisps * wGate * hEnv, 0.0, 1.0);
   vec3 wcol = mix(accent, light, clamp(rise * 1.6, 0.0, 1.0));
 
-  /* Tight outer glow, forced to zero at the canvas edge. */
-  float glow = exp(-max(d, 0.0) * 0.09);
-  glow *= 1.0 - smoothstep(20.0, 26.0, max(d, 0.0));
-
-  /* Composite (premultiplied, normal blending). */
-  vec3 acc = icol * body;
-  float accA = body;
-  float wOut = wispA * (1.0 - body);
-  acc += wcol * wOut;
-  accA += wOut;
-  float gOut = glow * 0.28 * (1.0 - body);
-  acc += mid * gOut;
-  accA += gOut;
-  accA = clamp(accA, 0.0, 1.0);
-  gl_FragColor = vec4(acc / max(accA, 0.001), accA);
+  /* Composite: the canvas IS the sky — opaque everywhere, so the page
+     background can never show through around the fluid. Calm sky at
+     the margins, dramatic clouds inside. */
+  vec3 skybg = base * 0.92;
+  vec3 acc = mix(skybg, icol, body);
+  acc = mix(acc, wcol, clamp(wispA, 0.0, 1.0));
+  gl_FragColor = vec4(acc, 1.0);
 }
 `;
 
