@@ -24,9 +24,9 @@ export default async function InvitePage({
 
   if (!invite) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-white px-6 dark:bg-[#05060a]">
+      <main className="flex min-h-svh items-center justify-center pb-16 pt-28 px-6 bg-page">
         <div className="max-w-sm text-center">
-          <h1 className="font-display text-2xl font-bold tracking-tight text-ink dark:text-white">
+          <h1 className="font-sans text-2xl font-semibold tracking-tight text-ink dark:text-white">
             This invite link is not valid
           </h1>
           <p className="mt-3 text-sm leading-relaxed text-ink/60 dark:text-white/60">
@@ -45,12 +45,12 @@ export default async function InvitePage({
   }
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-white px-6 dark:bg-[#05060a]">
+    <main className="flex min-h-svh items-center justify-center pb-16 pt-28 px-6 bg-page">
       <div className="max-w-sm text-center">
         <p className="text-xs font-semibold tracking-[0.22em] text-primary">
           INVITATION
         </p>
-        <h1 className="font-display mt-4 text-2xl font-bold tracking-tight text-ink dark:text-white">
+        <h1 className="font-sans mt-4 text-2xl font-semibold tracking-tight text-ink dark:text-white">
           You are invited to PreFlight
         </h1>
         <p className="mt-3 text-sm leading-relaxed text-ink/60 dark:text-white/60">

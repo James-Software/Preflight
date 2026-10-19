@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { isAdminLogin } from "@/lib/access";
 import { listAllPosts, deletePost } from "@/lib/blog";
-import DashboardHeader from "@/components/DashboardHeader";
 
 async function remove(formData: FormData) {
   "use server";
@@ -30,12 +29,11 @@ export default async function AdminBlogPage() {
   const posts = await listAllPosts();
 
   return (
-    <main className="min-h-screen bg-white dark:bg-[#05060a]">
-      <DashboardHeader user={session.user} />
+    <main className="min-h-[calc(100svh-5rem)] bg-page">
       <div className="mx-auto max-w-6xl px-6 py-14">
         <div className="flex flex-wrap items-start justify-between gap-4">
           <div>
-            <h1 className="font-display text-3xl font-bold tracking-tight text-ink dark:text-white">
+            <h1 className="font-sans text-3xl font-semibold tracking-tight text-ink dark:text-white">
               Blog posts
             </h1>
             <p className="mt-2 text-sm text-ink/60 dark:text-white/60">
@@ -52,11 +50,11 @@ export default async function AdminBlogPage() {
         </div>
 
         {posts.length === 0 ? (
-          <p className="mt-8 rounded-2xl border border-mist p-8 text-center text-sm text-ink/50 dark:border-white/10 dark:text-white/50">
+          <p className="mt-8 rounded-2xl border p-8 text-center text-sm text-ink/50 dark:text-white/50 border-line">
             No posts yet. Write the first one.
           </p>
         ) : (
-          <ul className="mt-8 divide-y divide-mist rounded-2xl border border-mist dark:divide-white/10 dark:border-white/10">
+          <ul className="mt-8 divide-y divide-mist rounded-2xl border dark:divide-white/10 border-line">
             {posts.map((post) => (
               <li
                 key={post.id}
@@ -81,7 +79,7 @@ export default async function AdminBlogPage() {
                 </span>
                 <a
                   href={`/dashboard/admin/blog/${post.id}`}
-                  className="rounded-full border border-mist px-4 py-2 text-sm font-medium text-ink transition-colors duration-150 hover:bg-lavender dark:border-white/10 dark:text-white dark:hover:bg-white/10"
+                  className="rounded-full border px-4 py-2 text-sm font-medium text-ink transition-colors duration-150 hover:bg-lavender dark:text-white dark:hover:bg-white/10 border-line"
                 >
                   Edit
                 </a>

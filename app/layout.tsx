@@ -50,7 +50,7 @@ export const viewport: Viewport = {
 // Runs before first paint: picks the theme from the saved choice, else the
 // OS setting, else dark (the brand default). Setting the class this early
 // means no flash of the wrong theme.
-const THEME_SCRIPT = `(function(){try{var s=localStorage.getItem("preflight-theme");var dark=s==="dark"||(!s&&!window.matchMedia("(prefers-color-scheme: light)").matches);document.documentElement.classList.toggle("dark",dark)}catch(e){document.documentElement.classList.add("dark")}})();`;
+const THEME_SCRIPT = `(function(){var el=document.documentElement;try{var s=localStorage.getItem("preflight-theme");var theme=s==="light"||s==="dark"?s:window.matchMedia("(prefers-color-scheme: light)").matches?"light":"dark";el.classList.toggle("dark",theme==="dark");el.style.colorScheme=theme}catch(e){var dark=!window.matchMedia("(prefers-color-scheme: light)").matches;el.classList.toggle("dark",dark);el.style.colorScheme=dark?"dark":"light"}})();`;
 
 export default function RootLayout({
   children,
@@ -63,7 +63,7 @@ export default function RootLayout({
         <script dangerouslySetInnerHTML={{ __html: THEME_SCRIPT }} />
       </head>
       <body
-        className={`${display.variable} ${sans.variable} font-sans bg-[#fafafa] text-ink antialiased dark:bg-[#05060a] dark:text-white`}
+        className={`${display.variable} ${sans.variable} font-sans bg-page text-ink antialiased dark:text-white`}
       >
         <Providers>{children}</Providers>
       </body>

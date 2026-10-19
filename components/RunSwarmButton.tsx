@@ -36,7 +36,7 @@ export default function RunSwarmButton({ projectId }: { projectId: number }) {
       >
         {busy ? "Starting…" : "Run swarm"}
       </button>
-      {error && <p className="text-xs font-medium text-red-600">{error}</p>}
+      {error && <p className="text-xs font-medium text-red-600 dark:text-red-400">{error}</p>}
     </div>
   );
 }

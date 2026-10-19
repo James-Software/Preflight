@@ -1,3 +1,4 @@
+import Avatar from "@/components/Avatar";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
@@ -7,7 +8,6 @@ import {
   isAdminLogin,
   ADMIN_LOGIN,
 } from "@/lib/access";
-import DashboardHeader from "@/components/DashboardHeader";
 
 async function approve(formData: FormData) {
   "use server";
@@ -26,10 +26,9 @@ export default async function AdminPage() {
   const waitlist = await listWaitlist();
 
   return (
-    <main className="min-h-screen bg-white dark:bg-[#05060a]">
-      <DashboardHeader user={session.user} />
+    <main className="min-h-[calc(100svh-5rem)] bg-page">
       <div className="mx-auto max-w-6xl px-6 py-14">
-        <h1 className="font-display text-3xl font-bold tracking-tight text-ink dark:text-white">
+        <h1 className="font-sans text-3xl font-semibold tracking-tight text-ink dark:text-white">
           Waitlist
         </h1>
         <p className="mt-2 text-sm text-ink/60 dark:text-white/60">
@@ -40,22 +39,13 @@ export default async function AdminPage() {
         </p>
 
         {waitlist.length > 0 && (
-          <ul className="mt-8 divide-y divide-mist rounded-2xl border border-mist dark:divide-white/10 dark:border-white/10">
+          <ul className="mt-8 divide-y divide-mist rounded-2xl border dark:divide-white/10 border-line">
             {waitlist.map((entry) => (
               <li
                 key={entry.github_login}
                 className="flex items-center gap-4 px-5 py-4"
               >
-                {entry.avatar_url ? (
-                  // eslint-disable-next-line @next/next/no-img-element
-                  <img
-                    src={entry.avatar_url}
-                    alt=""
-                    className="h-10 w-10 rounded-full ring-1 ring-ink/10 dark:ring-white/10"
-                  />
-                ) : (
-                  <div className="h-10 w-10 rounded-full bg-lavender dark:bg-white/10" />
-                )}
+                <Avatar user={{ name: entry.name ?? entry.github_login, image: entry.avatar_url }} className="h-10 w-10" />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-ink dark:text-white">
                     {entry.name ?? entry.github_login}

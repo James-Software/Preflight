@@ -69,7 +69,7 @@ export default function RunsList({
 
   if (runs.length === 0) {
     return (
-      <div className="mt-4 rounded-2xl border border-mist bg-lavender/50 px-8 py-14 text-center dark:border-white/10 dark:bg-white/5">
+      <div className="mt-4 rounded-2xl border px-8 py-14 text-center border-line bg-panel">
         <p className="font-display text-lg font-bold text-ink dark:text-white">No runs yet</p>
         <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-ink/60 dark:text-white/60">
           Launch your first swarm. Three agents will test your app like real
@@ -84,7 +84,7 @@ export default function RunsList({
       {runs.map((run) => (
         <li
           key={run.id}
-          className="flex items-center justify-between rounded-xl border border-mist bg-white px-5 py-4 dark:border-white/10 dark:bg-[#0a0c14]"
+          className="flex items-center justify-between rounded-xl border px-5 py-4 bg-surface border-line"
         >
           <div>
             <p className="text-sm font-medium text-ink dark:text-white">Run #{run.id}</p>
@@ -105,7 +105,7 @@ export default function RunsList({
                 type="button"
                 onClick={() => void cancelRun(run.id)}
                 disabled={cancelling === run.id}
-                className="pressable cursor-pointer rounded-full border border-mist px-3 py-1 text-xs font-medium text-ink/60 transition-colors duration-150 hover:border-ink/30 hover:text-ink disabled:cursor-wait disabled:opacity-60 dark:border-white/10 dark:text-white/60 dark:hover:border-white/30 dark:hover:text-white"
+                className="pressable cursor-pointer rounded-full border px-3 py-1 text-xs font-medium text-ink/60 transition-colors duration-150 hover:border-ink/30 hover:text-ink disabled:cursor-wait disabled:opacity-60 dark:text-white/60 dark:hover:border-white/30 dark:hover:text-white border-line"
               >
                 {cancelling === run.id ? "Stopping…" : "Stop"}
               </button>

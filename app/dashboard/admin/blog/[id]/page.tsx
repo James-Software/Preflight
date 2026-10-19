@@ -3,7 +3,6 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { isAdminLogin } from "@/lib/access";
 import { getPostById, updatePost, deletePost } from "@/lib/blog";
-import DashboardHeader from "@/components/DashboardHeader";
 import BlogEditor, {
   type BlogEditorAction,
 } from "@/components/BlogEditor";
@@ -56,8 +55,7 @@ export default async function EditBlogPostPage({
   if (!post) redirect("/dashboard/admin/blog");
 
   return (
-    <main className="min-h-screen bg-white dark:bg-[#05060a]">
-      <DashboardHeader user={session.user} />
+    <main className="min-h-[calc(100svh-5rem)] bg-page">
       <div className="mx-auto max-w-3xl px-6 py-14">
         <div className="flex items-center justify-between">
           <a
@@ -76,7 +74,7 @@ export default async function EditBlogPostPage({
             </button>
           </form>
         </div>
-        <h1 className="font-display mt-6 text-3xl font-bold tracking-tight text-ink dark:text-white">
+        <h1 className="font-sans mt-6 text-3xl font-semibold tracking-tight text-ink dark:text-white">
           Edit post
         </h1>
         <BlogEditor

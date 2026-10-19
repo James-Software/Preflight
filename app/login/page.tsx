@@ -9,7 +9,7 @@ export default function Login() {
   }, []);
 
   return (
-    <main className="flex min-h-screen items-center justify-center bg-white dark:bg-[#05060a]">
+    <main className="flex min-h-svh items-center justify-center pb-16 pt-28 bg-page">
       <p className="text-sm text-ink/60 dark:text-white/60">Redirecting to GitHub&hellip;</p>
     </main>
   );

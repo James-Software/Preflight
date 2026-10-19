@@ -46,3 +46,9 @@ cp .env.example .env.local   # then fill in your Supabase values
 npm install
 npm run dev
 ```
+
+## Shared UI
+
+Headers, profile menus, and appearance controls are shared across public and
+dashboard routes. See [UI structure and theme conventions](docs/ui.md) before
+adding page-specific navigation or theme handling.

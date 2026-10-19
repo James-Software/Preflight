@@ -1,21 +1,15 @@
-import { auth } from "@/auth";
 import Hero from "@/components/Hero";
 import ProofChapter from "@/components/ProofChapter";
 import Capabilities from "@/components/Capabilities";
 import EarlyAccess from "@/components/EarlyAccess";
-import Footer from "@/components/Footer";
 
-export default async function Home() {
-  // Session is resolved server-side so the nav renders the right buttons
-  // in the first paint — no client-side session fetch, no empty nav.
-  const session = await auth();
+export default function Home() {
   return (
-    <main className="bg-[#fafafa] dark:bg-[#05060a]">
-      <Hero user={session?.user ?? null} />
+    <main className="bg-page">
+      <Hero />
       <ProofChapter />
       <Capabilities />
       <EarlyAccess />
-      <Footer />
     </main>
   );
 }

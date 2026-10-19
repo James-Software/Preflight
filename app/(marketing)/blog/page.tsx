@@ -21,15 +21,15 @@ export default async function BlogIndexPage() {
   const posts = await listPublishedPosts();
 
   return (
-    <main className="min-h-screen bg-[#fafafa] dark:bg-[#05060a]">
-      <div className="mx-auto max-w-3xl px-6 py-20 md:py-28">
+    <main className="min-h-screen bg-page">
+      <div className="mx-auto max-w-3xl px-6 pb-20 pt-32 md:pb-28 md:pt-36">
         <a
           href="/"
           className="text-sm font-medium text-ink/50 transition-colors duration-150 hover:text-ink dark:text-white/50 dark:hover:text-white"
         >
           &larr; Back to PreFlight
         </a>
-        <h1 className="font-display mt-8 text-4xl font-bold tracking-tight text-ink md:text-5xl dark:text-white">
+        <h1 className="font-sans mt-8 text-4xl font-semibold tracking-tight text-ink md:text-5xl dark:text-white">
           Blog
         </h1>
         <p className="mt-4 text-base leading-relaxed text-ink/60 dark:text-white/60">

@@ -1,12 +1,7 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import {
-  applyTheme,
-  currentTheme,
-  THEME_STORAGE_KEY,
-  type Theme,
-} from "./theme";
+import { applyTheme } from "./theme";
+import useTheme from "./useTheme";
 
 export function MoonIcon({ className = "" }: { className?: string }) {
   return (
@@ -43,67 +38,20 @@ export function SunIcon({ className = "" }: { className?: string }) {
   );
 }
 
-/**
- * Sun/moon theme switch. Binary toggle: tapping saves an explicit
- * "light" | "dark" choice to localStorage. With no saved choice the site
- * follows the OS setting (see the blocking script in layout.tsx), including
- * live OS changes while the page is open.
- */
-export default function ThemeToggle({
-  className = "",
-}: {
-  className?: string;
-}) {
-  // Initialized from the DOM — the blocking theme script already ran, so
-  // this matches first paint (no flash, no hydration mismatch).
-  const [theme, setTheme] = useState<Theme>(() => currentTheme());
-
-  // Stay in sync if something else (another tab, the profile menu) flips it.
-  useEffect(() => {
-    const el = document.documentElement;
-    const obs = new MutationObserver(() => setTheme(currentTheme()));
-    obs.observe(el, { attributes: true, attributeFilter: ["class"] });
-    return () => obs.disconnect();
-  }, []);
-
-  // With no saved choice, keep following the OS live.
-  useEffect(() => {
-    const mq = window.matchMedia("(prefers-color-scheme: light)");
-    const onChange = () => {
-      try {
-        if (localStorage.getItem(THEME_STORAGE_KEY)) return;
-      } catch {
-        return;
-      }
-      const next: Theme = mq.matches ? "light" : "dark";
-      applyTheme(next, false);
-      setTheme(next);
-    };
-    mq.addEventListener("change", onChange);
-    return () => mq.removeEventListener("change", onChange);
-  }, []);
-
-  const toggle = () => {
-    const next: Theme = theme === "dark" ? "light" : "dark";
-    applyTheme(next);
-    setTheme(next);
-  };
-
+/** Uses the same root theme state as the profile menu on every route. */
+export default function ThemeToggle({ className = "" }: { className?: string }) {
+  const theme = useTheme();
+  const label = theme === "dark" ? "Switch to light mode" : "Switch to dark mode";
   return (
     <button
       type="button"
-      onClick={toggle}
-      aria-label={
-        theme === "dark" ? "Switch to light mode" : "Switch to dark mode"
-      }
-      title={theme === "dark" ? "Switch to light mode" : "Switch to dark mode"}
+      onClick={() => applyTheme(theme === "dark" ? "light" : "dark")}
+      aria-label={label}
+      title={label}
       className={`pressable flex h-9 w-9 shrink-0 items-center justify-center rounded-full text-ink/70 transition-colors duration-150 hover:bg-ink/5 hover:text-ink dark:text-white/70 dark:hover:bg-white/10 dark:hover:text-white ${className}`}
     >
-      {theme === "dark" ? (
-        <SunIcon className="h-[18px] w-[18px]" />
-      ) : (
-        <MoonIcon className="h-[18px] w-[18px]" />
-      )}
+      <SunIcon className="hidden h-[18px] w-[18px] dark:block" />
+      <MoonIcon className="h-[18px] w-[18px] dark:hidden" />
     </button>
   );
 }

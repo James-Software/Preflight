@@ -37,8 +37,8 @@ export default async function BlogPostPage({
   if (!post) notFound();
 
   return (
-    <main className="min-h-screen bg-[#fafafa] dark:bg-[#05060a]">
-      <article className="mx-auto max-w-3xl px-6 py-20 md:py-28">
+    <main className="min-h-screen bg-page">
+      <article className="mx-auto max-w-3xl px-6 pb-20 pt-32 md:pb-28 md:pt-36">
         <a
           href="/blog"
           className="text-sm font-medium text-ink/50 transition-colors duration-150 hover:text-ink dark:text-white/50 dark:hover:text-white"
@@ -48,7 +48,7 @@ export default async function BlogPostPage({
         <p className="mt-8 font-mono text-xs text-ink/40 dark:text-white/40">
           {formatDate(post.created_at)}
         </p>
-        <h1 className="font-display mt-3 text-balance text-4xl font-bold tracking-tight text-ink md:text-5xl dark:text-white">
+        <h1 className="font-sans mt-3 text-balance text-4xl font-semibold tracking-tight text-ink md:text-5xl dark:text-white">
           {post.title}
         </h1>
         {post.description ? (

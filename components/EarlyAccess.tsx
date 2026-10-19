@@ -1,6 +1,6 @@
 export default function EarlyAccess() {
   return (
-    <section id="early-access" className="bg-[#fafafa] py-24 md:py-32 dark:bg-[#05060a]">
+    <section id="early-access" className="py-24 md:py-32 bg-page">
       <div className="mx-auto max-w-xl px-6 text-center">
         <p className="text-xs font-semibold tracking-[0.22em] text-primary">
           EARLY ACCESS

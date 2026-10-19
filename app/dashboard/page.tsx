@@ -1,7 +1,6 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { listProjects } from "@/lib/schema";
-import DashboardHeader from "@/components/DashboardHeader";
 import InviteCard from "@/components/InviteCard";
 
 function formatDate(iso: string): string {
@@ -22,13 +21,12 @@ export default async function Dashboard() {
   const user = session.user;
 
   return (
-    <main className="min-h-screen bg-white dark:bg-[#05060a]">
-      <DashboardHeader user={user} />
+    <main className="min-h-[calc(100svh-5rem)] bg-page">
 
       <div className="mx-auto max-w-6xl px-6 py-14">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-5">
           <div>
-            <h1 className="font-display text-3xl font-bold tracking-tight text-ink dark:text-white">
+            <h1 className="font-sans text-3xl font-semibold tracking-tight text-ink dark:text-white">
               Projects
             </h1>
             <p className="mt-2 text-sm text-ink/60 dark:text-white/60">
@@ -45,7 +43,7 @@ export default async function Dashboard() {
         <InviteCard />
 
         {projects.length === 0 ? (
-          <div className="mt-10 rounded-2xl border border-mist bg-lavender/50 px-8 py-14 text-center dark:border-white/10 dark:bg-white/5">
+          <div className="mt-10 rounded-2xl border px-8 py-14 text-center border-line bg-panel">
             <p className="font-display text-lg font-bold text-ink dark:text-white">
               No projects yet
             </p>
@@ -66,7 +64,7 @@ export default async function Dashboard() {
               <a
                 key={project.id}
                 href={`/dashboard/projects/${project.id}`}
-                className="group rounded-2xl border border-mist bg-white px-6 py-5 transition-colors duration-200 hover:border-ink/25 dark:border-white/10 dark:bg-[#0a0c14] dark:hover:border-white/25"
+                className="group rounded-2xl border px-6 py-5 transition-colors duration-200 hover:border-ink/25 dark:hover:border-white/25 bg-surface border-line"
               >
                 <p className="font-display text-base font-bold tracking-tight text-ink dark:text-white">
                   {project.repo_full_name}

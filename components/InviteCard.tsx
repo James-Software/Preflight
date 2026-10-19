@@ -56,7 +56,7 @@ export default function InviteCard() {
   };
 
   return (
-    <div className="mt-8 flex flex-wrap items-center justify-between gap-4 rounded-2xl border border-mist bg-lavender/50 px-6 py-5 dark:border-white/10 dark:bg-white/5">
+    <div className="mt-8 flex flex-wrap items-center justify-between gap-4 rounded-2xl border px-6 py-5 border-line bg-panel">
       <div className="min-w-0">
         <p className="font-display text-base font-bold tracking-tight text-ink dark:text-white">
           Invite to PreFlight
@@ -66,13 +66,13 @@ export default function InviteCard() {
         </p>
         {status.link && (
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <code className="min-w-0 break-all rounded-lg border border-mist bg-white px-3 py-2 text-xs text-ink/70 dark:border-white/10 dark:bg-black/40 dark:text-white/70">
+            <code className="min-w-0 break-all rounded-lg border bg-white px-3 py-2 text-xs text-ink/70 dark:bg-black/40 dark:text-white/70 border-line">
               {status.link}
             </code>
             <button
               type="button"
               onClick={() => void copy()}
-              className="pressable shrink-0 cursor-pointer rounded-full border border-mist bg-white px-4 py-2 text-xs font-medium text-ink transition-colors duration-150 hover:bg-lavender dark:border-white/10 dark:bg-white/5 dark:text-white dark:hover:bg-white/10"
+              className="pressable shrink-0 cursor-pointer rounded-full border bg-white px-4 py-2 text-xs font-medium text-ink transition-colors duration-150 hover:bg-lavender dark:bg-white/5 dark:text-white dark:hover:bg-white/10 border-line"
             >
               {copied ? "Copied" : "Copy"}
             </button>

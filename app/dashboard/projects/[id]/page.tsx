@@ -1,7 +1,6 @@
 import { auth } from "@/auth";
 import { redirect, notFound } from "next/navigation";
 import { getProject, listRuns } from "@/lib/schema";
-import DashboardHeader from "@/components/DashboardHeader";
 import RunSwarmButton from "@/components/RunSwarmButton";
 import RunsList from "@/components/RunsList";
 
@@ -24,8 +23,7 @@ export default async function ProjectPage({
   const runs = await listRuns(project.id);
 
   return (
-    <main className="min-h-screen bg-white dark:bg-[#05060a]">
-      <DashboardHeader user={session.user} />
+    <main className="min-h-[calc(100svh-5rem)] bg-page">
       <div className="mx-auto max-w-6xl px-6 py-14">
         <a
           href="/dashboard"
@@ -33,7 +31,7 @@ export default async function ProjectPage({
         >
           &larr; All projects
         </a>
-        <h1 className="font-display mt-4 text-3xl font-bold tracking-tight text-ink dark:text-white">
+        <h1 className="font-sans mt-4 text-3xl font-semibold tracking-tight text-ink dark:text-white">
           {project.repo_full_name}
         </h1>
         <p className="mt-2 text-sm text-ink/60 dark:text-white/60">
@@ -43,7 +41,7 @@ export default async function ProjectPage({
 
         <div className="mt-10">
           <div className="flex items-center justify-between">
-            <h2 className="font-display text-xl font-bold tracking-tight text-ink dark:text-white">
+            <h2 className="font-sans text-xl font-semibold tracking-tight text-ink dark:text-white">
               Runs
             </h2>
             <RunSwarmButton projectId={project.id} />

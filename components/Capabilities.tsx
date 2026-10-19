@@ -27,7 +27,7 @@ const CAPABILITIES = [
 
 export default function Capabilities() {
   return (
-    <section className="bg-[#fafafa] py-24 md:py-32 dark:bg-[#05060a]">
+    <section className="py-24 md:py-32 bg-page">
       <div className="mx-auto max-w-6xl px-6">
         <h2 className="max-w-2xl text-balance text-4xl font-semibold tracking-tight text-ink md:text-5xl dark:text-white">
           Built like a tester, not a script.
@@ -39,7 +39,7 @@ export default function Capabilities() {
 
         <div className="mt-12 grid gap-px overflow-hidden rounded-xl border border-ink/10 bg-ink/10 md:grid-cols-2 dark:border-white/10 dark:bg-white/10">
           {CAPABILITIES.map((c) => (
-            <div key={c.n} className="bg-[#fafafa] p-8 dark:bg-[#05060a]">
+            <div key={c.n} className="p-8 bg-page">
               <p className="font-mono text-sm text-ink/40 dark:text-neutral-600">{c.n}</p>
               <h3 className="mt-3 text-xl font-semibold tracking-tight text-ink dark:text-white">
                 {c.title}

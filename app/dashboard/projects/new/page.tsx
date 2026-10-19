@@ -1,7 +1,6 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { createProject } from "@/lib/schema";
-import DashboardHeader from "@/components/DashboardHeader";
 import NewProjectForm from "@/components/NewProjectForm";
 
 async function create(formData: FormData) {
@@ -57,8 +56,7 @@ export default async function NewProject({
   const { error } = await searchParams;
 
   return (
-    <main className="min-h-screen bg-white dark:bg-[#05060a]">
-      <DashboardHeader user={session.user} />
+    <main className="min-h-[calc(100svh-5rem)] bg-page">
       <div className="mx-auto max-w-xl px-6 py-14">
         <a
           href="/dashboard"
@@ -66,7 +64,7 @@ export default async function NewProject({
         >
           &larr; All projects
         </a>
-        <h1 className="font-display mt-4 text-3xl font-bold tracking-tight text-ink dark:text-white">
+        <h1 className="font-sans mt-4 text-3xl font-semibold tracking-tight text-ink dark:text-white">
           New project
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-ink/60 dark:text-white/60">

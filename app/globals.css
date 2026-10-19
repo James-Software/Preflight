@@ -5,8 +5,12 @@
 @custom-variant dark (&:where(.dark, .dark *));
 
 @theme {
+  --color-page: var(--page);
+  --color-surface: var(--surface);
+  --color-panel: var(--panel);
+  --color-line: var(--line);
   --color-ink: #1e1b4b;
-  --color-primary: #6366f1;
+  --color-primary: var(--accent);
   --color-deep: #4338ca;
   --color-mist: #e0e7ff;
   --color-lavender: #f6f6ff;
@@ -18,20 +22,32 @@
 }
 
 html {
+  --accent: #6366f1;
+  --page: #fafafa;
+  --surface: #ffffff;
+  --panel: #f1f0f9;
+  --line: #1e1b4b1a;
+  color-scheme: light;
   scroll-behavior: smooth;
-  background-color: #fafafa;
+  background-color: var(--page);
 }
 
 html.dark {
-  background-color: #05060a;
+  --accent: #a6adff;
+  --page: #05060a;
+  --surface: #0a0c14;
+  --panel: #ffffff0d;
+  --line: #ffffff1a;
+  color-scheme: dark;
+  background-color: var(--page);
 }
 
 body {
-  background-color: #fafafa;
+  background-color: var(--page);
 }
 
 .dark body {
-  background-color: #05060a;
+  background-color: var(--page);
 }
 
 ::selection {

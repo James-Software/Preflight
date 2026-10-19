@@ -2,7 +2,6 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { isAdminLogin } from "@/lib/access";
 import { createPost } from "@/lib/blog";
-import DashboardHeader from "@/components/DashboardHeader";
 import BlogEditor, {
   type BlogEditorAction,
 } from "@/components/BlogEditor";
@@ -34,8 +33,7 @@ export default async function NewBlogPostPage() {
   if (!isAdminLogin(session.user.githubLogin)) redirect("/dashboard");
 
   return (
-    <main className="min-h-screen bg-white dark:bg-[#05060a]">
-      <DashboardHeader user={session.user} />
+    <main className="min-h-[calc(100svh-5rem)] bg-page">
       <div className="mx-auto max-w-3xl px-6 py-14">
         <a
           href="/dashboard/admin/blog"
@@ -43,7 +41,7 @@ export default async function NewBlogPostPage() {
         >
           &larr; All posts
         </a>
-        <h1 className="font-display mt-6 text-3xl font-bold tracking-tight text-ink dark:text-white">
+        <h1 className="font-sans mt-6 text-3xl font-semibold tracking-tight text-ink dark:text-white">
           New post
         </h1>
         <BlogEditor

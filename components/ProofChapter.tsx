@@ -5,7 +5,7 @@
  */
 export default function ProofChapter() {
   return (
-    <section id="how-it-works" className="bg-[#fafafa] py-24 md:py-32 scroll-mt-20 dark:bg-[#05060a]">
+    <section id="how-it-works" className="py-24 md:py-32 scroll-mt-20 bg-page">
       <div className="mx-auto max-w-6xl px-6">
         <div className="flex items-center justify-between gap-10">
           <div className="max-w-2xl">
@@ -32,7 +32,7 @@ export default function ProofChapter() {
         </div>
 
         {/* Sample run artifact */}
-        <div className="mt-12 overflow-hidden rounded-xl border border-ink/10 bg-white shadow-[0_8px_30px_rgba(30,27,75,0.08)] dark:border-white/10 dark:bg-[#0a0c14] dark:shadow-none">
+        <div className="mt-12 overflow-hidden rounded-xl border border-ink/10 shadow-[0_8px_30px_rgba(30,27,75,0.08)] dark:border-white/10 dark:shadow-none bg-surface">
           {/* Run header */}
           <div className="flex items-center justify-between border-b border-ink/10 px-5 py-3.5 dark:border-white/10">
             <div className="flex items-center gap-3">

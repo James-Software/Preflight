@@ -38,11 +38,12 @@ export default function BlogEditor({
 
   return (
     <form action={formAction} className="mt-8 space-y-6">
+      <input type="hidden" name="markdown" value={markdown} />
       {typeof hiddenId === "number" ? (
         <input type="hidden" name="id" value={hiddenId} />
       ) : null}
       {state?.error ? (
-        <p className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-600">
+        <p role="alert" className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">
           {state.error}
         </p>
       ) : null}
@@ -61,7 +62,7 @@ export default function BlogEditor({
           required
           defaultValue={initial.title}
           placeholder="Why your staging environment lies to you"
-          className="mt-2 w-full rounded-xl border border-mist bg-white px-4 py-3 text-[15px] text-ink outline-none transition-colors duration-150 placeholder:text-ink/30 focus:border-primary dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-white/30"
+          className="mt-2 w-full rounded-xl border bg-white px-4 py-3 text-[15px] text-ink outline-none transition-colors duration-150 placeholder:text-ink/30 focus:border-primary dark:bg-white/5 dark:text-white dark:placeholder:text-white/30 border-line"
         />
       </div>
 
@@ -76,7 +77,7 @@ export default function BlogEditor({
             type="text"
             defaultValue={initial.slug}
             placeholder="auto-generated from the title"
-            className="mt-2 w-full rounded-xl border border-mist bg-white px-4 py-3 font-mono text-sm text-ink outline-none transition-colors duration-150 placeholder:text-ink/30 focus:border-primary dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-white/30"
+            className="mt-2 w-full rounded-xl border bg-white px-4 py-3 font-mono text-sm text-ink outline-none transition-colors duration-150 placeholder:text-ink/30 focus:border-primary dark:bg-white/5 dark:text-white dark:placeholder:text-white/30 border-line"
           />
           <p className="mt-1.5 text-xs text-ink/50 dark:text-white/50">
             Leave blank to generate from the title. Lives at
@@ -96,7 +97,7 @@ export default function BlogEditor({
             type="text"
             defaultValue={initial.description}
             placeholder="One or two sentences for previews and SEO."
-            className="mt-2 w-full rounded-xl border border-mist bg-white px-4 py-3 text-[15px] text-ink outline-none transition-colors duration-150 placeholder:text-ink/30 focus:border-primary dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-white/30"
+            className="mt-2 w-full rounded-xl border bg-white px-4 py-3 text-[15px] text-ink outline-none transition-colors duration-150 placeholder:text-ink/30 focus:border-primary dark:bg-white/5 dark:text-white dark:placeholder:text-white/30 border-line"
           />
         </div>
       </div>
@@ -109,12 +110,13 @@ export default function BlogEditor({
           >
             Content
           </label>
-          <div className="flex rounded-full border border-mist p-0.5 dark:border-white/10">
+          <div className="flex rounded-full border p-0.5 border-line">
             {(["write", "preview"] as const).map((t) => (
               <button
                 key={t}
                 type="button"
                 onClick={() => setTab(t)}
+                aria-pressed={tab === t}
                 className={`rounded-full px-4 py-1.5 text-sm font-medium capitalize transition-colors duration-150 ${
                   tab === t
                     ? "bg-ink text-white dark:bg-white dark:text-ink"
@@ -129,14 +131,13 @@ export default function BlogEditor({
         {tab === "write" ? (
           <textarea
             id="blog-markdown"
-            name="markdown"
             value={markdown}
             onChange={(e) => setMarkdown(e.target.value)}
             placeholder={"# Your headline\n\nWrite in Markdown. **Bold**, `code`, lists, and fenced code blocks all work."}
-            className="mt-2 min-h-[50vh] w-full rounded-xl border border-mist bg-white px-4 py-3 font-mono text-sm leading-relaxed text-ink outline-none transition-colors duration-150 placeholder:text-ink/30 focus:border-primary dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-white/30"
+            className="mt-2 min-h-[50vh] w-full rounded-xl border bg-white px-4 py-3 font-mono text-sm leading-relaxed text-ink outline-none transition-colors duration-150 placeholder:text-ink/30 focus:border-primary dark:bg-white/5 dark:text-white dark:placeholder:text-white/30 border-line"
           />
         ) : (
-          <div className="mt-2 min-h-[50vh] rounded-xl border border-ink/10 bg-white p-6 md:p-8 dark:border-white/10 dark:bg-[#05060a]">
+          <div className="mt-2 min-h-[50vh] rounded-xl border border-ink/10 p-6 md:p-8 dark:border-white/10 bg-page">
             {markdown.trim() ? (
               <Markdown content={markdown} />
             ) : (

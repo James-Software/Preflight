@@ -145,8 +145,7 @@ export default function RepoPicker({
     }
   };
 
-  const submitPaste = (e: React.FormEvent) => {
-    e.preventDefault();
+  const submitPaste = () => {
     const fullName = parsePaste(paste);
     if (!fullName) {
       setVerifyError("Paste a github.com/owner/repo link or owner/name.");
@@ -163,7 +162,7 @@ export default function RepoPicker({
       <input type="hidden" name={name} value={selected} />
 
       {needsLogin ? (
-        <div className="rounded-xl border border-mist bg-lavender px-4 py-3 text-sm text-ink/70 dark:border-white/10 dark:bg-white/5 dark:text-white/70">
+        <div className="rounded-xl border px-4 py-3 text-sm text-ink/70 dark:text-white/70 border-line bg-panel">
           Your GitHub session expired.{" "}
           <a href="/login" className="font-medium text-ink underline underline-offset-2 dark:text-white">
             Log in again
@@ -171,17 +170,17 @@ export default function RepoPicker({
           to pick a repository.
         </div>
       ) : repos === null ? (
-        <div className="rounded-xl border border-mist px-4 py-3 text-sm text-ink/40 dark:border-white/10 dark:text-white/40">
+        <div className="rounded-xl border px-4 py-3 text-sm text-ink/40 dark:text-white/40 border-line">
           Loading your repositories…
         </div>
       ) : loadError ? (
-        <div className="rounded-xl border border-mist bg-lavender px-4 py-3 text-sm text-ink/70 dark:border-white/10 dark:bg-white/5 dark:text-white/70">
+        <div className="rounded-xl border px-4 py-3 text-sm text-ink/70 dark:text-white/70 border-line bg-panel">
           {loadError}
         </div>
       ) : (
         <>
           {appMissing && (
-            <div className="mb-3 rounded-xl border border-mist bg-lavender px-4 py-3 dark:border-white/10 dark:bg-white/5">
+            <div className="mb-3 rounded-xl border px-4 py-3 border-line bg-panel">
               <p className="text-sm font-medium text-ink dark:text-white">
                 Want your private repositories here?
               </p>
@@ -198,7 +197,7 @@ export default function RepoPicker({
             </div>
           )}
           {repos.length === 0 ? (
-            <div className="rounded-xl border border-mist px-4 py-3 text-sm text-ink/60 dark:border-white/10 dark:text-white/60">
+            <div className="rounded-xl border px-4 py-3 text-sm text-ink/60 dark:text-white/60 border-line">
               No repositories found on your GitHub account.
             </div>
           ) : (
@@ -209,9 +208,9 @@ export default function RepoPicker({
             onChange={(e) => setQuery(e.target.value)}
             placeholder="Search your repositories…"
             aria-label="Search your repositories"
-            className="w-full rounded-xl border border-mist bg-white px-4 py-3 text-sm text-ink placeholder:text-ink/40 focus:border-ink/30 focus:outline-none dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-white/40 dark:focus:border-white/30"
+            className="w-full rounded-xl border bg-white px-4 py-3 text-sm text-ink placeholder:text-ink/40 focus:border-ink/30 focus:outline-none dark:bg-white/5 dark:text-white dark:placeholder:text-white/40 dark:focus:border-white/30 border-line"
           />
-          <ul className="mt-2 max-h-56 overflow-y-auto rounded-xl border border-mist dark:border-white/10">
+          <ul className="mt-2 max-h-56 overflow-y-auto rounded-xl border border-line">
             {filtered.map((r) => {
               const active = selected === r.fullName;
               return (
@@ -261,27 +260,34 @@ export default function RepoPicker({
         </>
       )}
 
-      <form onSubmit={submitPaste} className="mt-3 flex gap-2">
+      <div role="group" aria-label="Verify a repository link" className="mt-3 flex gap-2">
         <input
           type="text"
           value={paste}
           onChange={(e) => setPaste(e.target.value)}
           placeholder="Or paste a github.com link…"
           aria-label="Paste a GitHub repository link"
+          onKeyDown={(event) => {
+            if (event.key === "Enter") {
+              event.preventDefault();
+              if (!verifying) submitPaste();
+            }
+          }}
           disabled={verifying}
-          className="flex-1 rounded-xl border border-mist bg-white px-4 py-3 text-sm text-ink placeholder:text-ink/40 focus:border-ink/30 focus:outline-none disabled:opacity-60 dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-white/40 dark:focus:border-white/30"
+          className="min-w-0 flex-1 rounded-xl border bg-white px-4 py-3 text-sm text-ink placeholder:text-ink/40 focus:border-ink/30 focus:outline-none disabled:opacity-60 dark:bg-white/5 dark:text-white dark:placeholder:text-white/40 dark:focus:border-white/30 border-line"
         />
         <button
-          type="submit"
+          type="button"
+          onClick={submitPaste}
           disabled={verifying}
-          className="pressable shrink-0 cursor-pointer rounded-full border border-mist px-5 py-3 text-sm font-medium text-ink transition-colors duration-150 hover:bg-lavender disabled:cursor-wait disabled:opacity-60 dark:border-white/10 dark:text-white dark:hover:bg-white/10"
+          className="pressable shrink-0 cursor-pointer rounded-full border px-5 py-3 text-sm font-medium text-ink transition-colors duration-150 hover:bg-lavender disabled:cursor-wait disabled:opacity-60 dark:text-white dark:hover:bg-white/10 border-line"
         >
           {verifying ? "Checking…" : "Check"}
         </button>
-      </form>
+      </div>
 
       {selected && (
-        <div className="mt-3 rounded-xl border border-mist bg-lavender px-4 py-3 dark:border-white/10 dark:bg-white/5">
+        <div className="mt-3 rounded-xl border px-4 py-3 border-line bg-panel">
           <p className="text-sm font-medium text-ink dark:text-white">
             {selected}{" "}
             <span className="font-normal text-ink/50 dark:text-white/50">
@@ -306,7 +312,7 @@ export default function RepoPicker({
         </div>
       )}
       {verifyError && (
-        <p className="mt-2 text-sm font-medium text-red-600">{verifyError}</p>
+        <p className="mt-2 text-sm font-medium text-red-600 dark:text-red-400">{verifyError}</p>
       )}
       <p className="mt-1.5 text-xs text-ink/40 dark:text-white/40">
         Only repositories you own can be connected.

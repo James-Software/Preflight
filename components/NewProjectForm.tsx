@@ -51,7 +51,7 @@ export default function NewProjectForm({
             setAppUrl(e.target.value);
             setUrlTouched(e.target.value.trim() !== "");
           }}
-          className="w-full rounded-xl border border-mist bg-white px-4 py-3 text-sm text-ink placeholder:text-ink/40 focus:border-ink/30 focus:outline-none dark:border-white/10 dark:bg-white/5 dark:text-white dark:placeholder:text-white/40 dark:focus:border-white/30"
+          className="w-full rounded-xl border bg-white px-4 py-3 text-sm text-ink placeholder:text-ink/40 focus:border-ink/30 focus:outline-none dark:bg-white/5 dark:text-white dark:placeholder:text-white/40 dark:focus:border-white/30 border-line"
         />
         <p className="mt-1.5 text-xs text-ink/40 dark:text-white/40">
           Optional. Fills in automatically from the repository&apos;s website
@@ -62,7 +62,7 @@ export default function NewProjectForm({
       <RepoPicker name="repo" onHomepage={handleHomepage} />
 
       {error && ERRORS[error] ? (
-        <p className="text-sm font-medium text-red-600">{ERRORS[error]}</p>
+        <p className="text-sm font-medium text-red-600 dark:text-red-400">{ERRORS[error]}</p>
       ) : null}
 
       <button

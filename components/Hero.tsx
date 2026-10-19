@@ -1,6 +1,3 @@
-"use client";
-
-import Nav, { type NavUser } from "./Nav";
 import PlasmaSquare from "./PlasmaSquare";
 
 /* ------------------------------------------------------------------ */
@@ -11,14 +8,12 @@ import PlasmaSquare from "./PlasmaSquare";
 /* it flips (#fafafa light, #05060a dark).                             */
 /* ------------------------------------------------------------------ */
 
-export default function Hero({ user }: { user: NavUser | null }) {
+export default function Hero() {
   return (
     <section
       id="top"
       className="relative flex min-h-svh flex-col overflow-x-clip dark:bg-[#05060a]"
     >
-      <Nav user={user} />
-
       <div className="flex min-w-0 flex-1 px-[2vw] pb-[2vh] pt-[84px]">
         <div
           className="relative flex min-w-0 w-full flex-1 items-center justify-center rounded-[1.75rem] md:rounded-[2.5rem]"
