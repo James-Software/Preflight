@@ -61,12 +61,13 @@ const GLOW_TEXT =
 const GLOW_SPRITE = "[filter:drop-shadow(0_0_7px_rgba(255,255,255,0.95))]";
 
 // Liquid glass: saturated blur, translucent fill, and inset edge highlights
-// so light catches the rounded rim like real glass. On dark, the pill is
-// dark glass (a white pill reads as solid, not glass).
-const GLASS_DARK =
-  "border border-white/20 bg-[#0b0d16]/60 shadow-[inset_0_1px_1px_rgba(255,255,255,0.15),0_8px_30px_rgba(0,0,0,0.45)] backdrop-blur-xl";
-const GLASS_LIGHT =
-  "border border-ink/10 bg-white/70 shadow-[inset_0_1px_1px_rgba(255,255,255,0.6),0_8px_30px_rgba(30,27,75,0.12)] backdrop-blur-xl";
+// so light catches the rounded rim like real glass. The theme dimension is
+// CSS-driven (dark: variants), never JS state — the blocking theme script
+// sets <html class="dark"> before first paint, so a fresh light-mode load
+// can never flash the dark glass before hydration. (A white pill would read
+// as solid, not glass, hence the dark tint in dark mode.)
+const GLASS =
+  "border border-ink/10 bg-white/70 shadow-[inset_0_1px_1px_rgba(255,255,255,0.6),0_8px_30px_rgba(30,27,75,0.12)] backdrop-blur-xl dark:border-white/20 dark:bg-[#0b0d16]/60 dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.15),0_8px_30px_rgba(0,0,0,0.45)]";
 
 export default function Nav({ user }: { user: NavUser | null }) {
   const dark = useDarkMode();
@@ -144,15 +145,16 @@ export default function Nav({ user }: { user: NavUser | null }) {
     ? "w-[calc(100%-1.5rem)] md:w-[calc(100%-2.5rem)] max-w-[1060px]"
     : "w-[calc(100%-1.5rem)] md:w-full md:max-w-6xl";
 
-  // Top-of-page colors: white on dark hero, ink on light.
-  const topSolid = dark ? "text-white" : "text-ink";
-  const topMuted = dark
-    ? "text-white/70 hover:text-white"
-    : scrolled
-      ? "text-ink/70 hover:text-ink"
-      : "text-ink/60 hover:text-ink";
-  const glow = scrolled || dark ? "" : GLOW_TEXT;
-  const spriteGlow = scrolled || dark ? "" : GLOW_SPRITE;
+  // Top-of-page colors are CSS-driven (dark: variants), not JS state: the
+  // blocking theme script sets the class before first paint, so the server
+  // render can never flash the wrong text color in light mode. Only the
+  // scrolled dimension needs JS.
+  const topSolid = "text-ink dark:text-white";
+  const topMuted = scrolled
+    ? "text-ink/70 hover:text-ink dark:text-white/70 dark:hover:text-white"
+    : "text-ink/60 hover:text-ink dark:text-white/70 dark:hover:text-white";
+  const glow = scrolled ? "" : `${GLOW_TEXT} dark:[text-shadow:none]`;
+  const spriteGlow = scrolled ? "" : `${GLOW_SPRITE} dark:[filter:none]`;
 
   return (
     <nav className="fixed inset-x-0 top-0 z-50" suppressHydrationWarning>
@@ -161,9 +163,7 @@ export default function Nav({ user }: { user: NavUser | null }) {
             Always rounded, only fades in. Never flashes. */}
         <div
           aria-hidden="true"
-          className={`absolute inset-0 rounded-2xl ${
-            dark ? GLASS_DARK : GLASS_LIGHT
-          } ${ft} ${scrolled ? "opacity-100" : "opacity-0"}`}
+          className={`absolute inset-0 rounded-2xl ${GLASS} ${ft} ${scrolled ? "opacity-100" : "opacity-0"}`}
         />
         {/* Content — stable layout, never moves */}
         <div className="relative flex w-full items-center justify-between px-4 py-3 md:px-6 md:py-4">
@@ -226,18 +226,14 @@ export default function Nav({ user }: { user: NavUser | null }) {
                     aria-expanded={menuOpen}
                     aria-haspopup="menu"
                     aria-label="Profile menu"
-                    className={`flex items-center gap-2 rounded-full py-1 pl-1 pr-2.5 transition-colors duration-150 ${
-                      dark ? "hover:bg-white/10" : "hover:bg-ink/5"
-                    }`}
+                    className={`flex items-center gap-2 rounded-full py-1 pl-1 pr-2.5 transition-colors duration-150 hover:bg-ink/5 dark:hover:bg-white/10`}
                   >
                     {user.image ? (
                       // eslint-disable-next-line @next/next/no-img-element
                       <img
                         src={user.image}
                         alt=""
-                        className={`h-8 w-8 rounded-full ring-1 ${
-                          dark ? "ring-white/20" : "ring-ink/10"
-                        }`}
+                        className="h-8 w-8 rounded-full ring-1 ring-ink/10 dark:ring-white/20"
                       />
                     ) : null}
                     <span
