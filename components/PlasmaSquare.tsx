@@ -8,8 +8,7 @@ import { useEffect, useRef, useState } from "react";
 /* upward (large structures drift slowly, fine detail moves faster,    */
 /* flow speed varies spatially). The silhouette is a fluid-distorted  */
 /* rounded square: dramatic waves roll along the sides, the top edge  */
-/* boils with wisps that stretch upward and dissolve, the bottom      */
-/* stays calm.                                                        */
+/* boils gently, and the bottom stays calm.                           */
 /*                                                                     */
 /* Sizing is bulletproof by construction: the canvas is exactly the    */
 /* bubble's box (absolute inset-0), and the fluid bleed lives INSIDE   */
@@ -154,32 +153,9 @@ void main() {
   icol += light * 0.10 * smoothstep(u_bubble.y, u_bubble.w, px.y);
   icol += light * exp(-abs(d) * 0.10) * 0.15; // rim light on the fluid edge
 
-  /* Wisps stretching above the top edge, dissolving as they rise. */
-  float aboveH = max(u_res.y - u_bubble.w, 1.0);
-  float rise = clamp((px.y - u_bubble.w) / aboveH, 0.0, 1.0);
-  vec2 wp = vec2(px.x * 0.010, px.y * 0.0045 - t * 0.11);
-  float wf = fbm(wp + 2.0 * w2) - rise * 0.55;
-  float wisps = pow(smoothstep(0.40, 0.85, wf), 1.6) * (1.0 - smoothstep(0.10, 1.0, rise));
-  float wGate = smoothstep(-14.0, 6.0, d);
-  float hEnv = smoothstep(0.0, 0.06, px.x / u_res.x) * (1.0 - smoothstep(0.94, 1.0, px.x / u_res.x));
-  float wispA = clamp(wisps * wGate * hEnv, 0.0, 1.0);
-  vec3 wcol = mix(accent, light, clamp(rise * 1.6, 0.0, 1.0));
-
-  /* Tight outer glow, forced to zero at the canvas edge. */
-  float glow = exp(-max(d, 0.0) * 0.09);
-  glow *= 1.0 - smoothstep(20.0, 26.0, max(d, 0.0));
-
-  /* Composite (premultiplied, normal blending). */
-  vec3 acc = icol * body;
-  float accA = body;
-  float wOut = wispA * (1.0 - body);
-  acc += wcol * wOut;
-  accA += wOut;
-  float gOut = glow * 0.28 * (1.0 - body);
-  acc += mid * gOut;
-  accA += gOut;
-  accA = clamp(accA, 0.0, 1.0);
-  gl_FragColor = vec4(acc / max(accA, 0.001), accA);
+  /* Only paint the animated window. The surrounding canvas is layout
+     space, so it must stay fully transparent rather than form a halo. */
+  gl_FragColor = vec4(icol, body);
 }
 `;
 
@@ -350,7 +326,8 @@ export default function PlasmaSquare() {
     <canvas
       ref={canvasRef}
       aria-hidden="true"
-      className="pointer-events-none absolute inset-0 block h-full w-full rounded-[inherit]"
+      className="pointer-events-none absolute inset-0 block h-full w-full bg-transparent"
+      style={{ background: "none", border: 0, boxShadow: "none" }}
     />
   );
 }
