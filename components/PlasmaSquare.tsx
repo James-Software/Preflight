@@ -244,7 +244,17 @@ export default function PlasmaSquare() {
         const rad = parent
           ? parseFloat(getComputedStyle(parent).borderTopLeftRadius) || 0
           : 0;
-        gl.uniform1f(uRadius, Math.max(rad - SIDE_BLEED, 0) * s);
+        gl.uniform1f(
+          uRadius,
+          Math.max(
+            0,
+            Math.min(
+              rad,
+              (r.width - SIDE_BLEED * 2) / 2,
+              (r.height - TOP_BLEED - BOTTOM_BLEED) / 2,
+            ),
+          ) * s,
+        );
         gl.uniform1f(uSideAmp, Math.min(20, SIDE_BLEED - 6) * s);
       };
 
@@ -314,16 +324,17 @@ export default function PlasmaSquare() {
     return (
       <div
         aria-hidden="true"
-        className="absolute inset-0 rounded-[1.75rem] md:rounded-[2.5rem]"
+        className="pointer-events-none absolute inset-0 rounded-[inherit]"
         style={{ backgroundImage: FALLBACK_GRADIENT }}
       />
     );
   }
+  // CSS dimensions must stay independent of the drawing-buffer resolution.
   return (
     <canvas
       ref={canvasRef}
       aria-hidden="true"
-      className="pointer-events-none absolute inset-0"
+      className="pointer-events-none absolute inset-0 block h-full w-full rounded-[inherit]"
     />
   );
 }
