@@ -71,9 +71,9 @@ const GLASS =
 
 export default function Nav({ user }: { user: NavUser | null }) {
   const dark = useDarkMode();
-  const [scrolled, setScrolled] = useState(
-    () => typeof window !== "undefined" && window.scrollY > SCROLL_AFTER,
-  );
+  // Match the server render during hydration, then read the restored position
+  // in the effect so React applies the glass styles as a real state update.
+  const [scrolled, setScrolled] = useState(false);
   const [reduced, setReduced] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
   const menuRef = useRef<HTMLDivElement>(null);
@@ -100,15 +100,10 @@ export default function Nav({ user }: { user: NavUser | null }) {
   useEffect(() => {
     setReduced(window.matchMedia("(prefers-reduced-motion: reduce)").matches);
     let raf = 0;
-    let last = window.scrollY > SCROLL_AFTER;
-    setScrolled(last);
     const sync = () => {
-      const s = window.scrollY > SCROLL_AFTER;
-      if (s !== last) {
-        last = s;
-        setScrolled(s);
-      }
+      setScrolled(window.scrollY > SCROLL_AFTER);
     };
+    sync();
     const onScroll = () => {
       cancelAnimationFrame(raf);
       raf = requestAnimationFrame(sync);
