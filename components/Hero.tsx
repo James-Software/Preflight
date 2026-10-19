@@ -1,36 +1,57 @@
 "use client";
 
 import Nav, { type NavUser } from "./Nav";
-import PlasmaSquare from "./PlasmaSquare";
 
 /* ------------------------------------------------------------------ */
-/* Hero — one big purplish-blue square filling ~96% of the viewport,   */
-/* rendered as living plasma by PlasmaSquare (neon blue and purple     */
-/* fluid energy rising through it, wisps dissolving off the top edge). */
-/* The square is identical in both themes (white headline stays on the */
-/* plasma); only the page behind it flips (#fafafa light, #05060a      */
-/* dark).                                                              */
+/* Hero — Cloudflare-style: one big purplish-blue gradient square      */
+/* filling ~96% of the viewport. The square is identical in both       */
+/* themes (white headline stays on the gradient); only the page        */
+/* behind it flips (#fafafa light, #05060a dark). Bright light across  */
+/* the top edge, soft light on both sides, bloom along the bottom.     */
 /* ------------------------------------------------------------------ */
+
+const BUBBLE_GRADIENT =
+  "linear-gradient(to top right, #4e2fd8 0%, #6a6df5 48%, #8aa5ff 100%)";
 
 export default function Hero({ user }: { user: NavUser | null }) {
   return (
     <section
       id="top"
-      className="relative flex min-h-svh flex-col overflow-x-clip bg-[#fafafa] dark:bg-[#05060a]"
+      className="relative flex min-h-svh flex-col bg-[#fafafa] dark:bg-[#05060a]"
     >
       <Nav user={user} />
 
-      <div className="flex min-w-0 flex-1 px-[2vw] pb-[2vh] pt-[84px]">
+      <div className="flex flex-1 px-[2vw] pb-[2vh] pt-[84px]">
         <div
-          className="relative flex min-w-0 w-full flex-1 items-center justify-center overflow-hidden rounded-[1.75rem] md:rounded-[2.5rem]"
+          className="relative flex w-full flex-1 items-center justify-center overflow-hidden rounded-[1.75rem] md:rounded-[2.5rem]"
           style={{
             boxShadow: "0 30px 80px -20px rgba(90,80,250,0.45)",
           }}
         >
-          {/* Keep the plasma and its wisps inside the rounded hero box. */}
-          <PlasmaSquare />
+          {/* gradient square — static */}
+          <div
+            aria-hidden="true"
+            className="absolute inset-0"
+            style={{ backgroundImage: BUBBLE_GRADIENT }}
+          />
+          {/* bright light band across the top, no circular blobs */}
+          <div
+            aria-hidden="true"
+            className="absolute inset-x-0 top-0 h-44 bg-gradient-to-b from-white/30 to-transparent"
+          />
+          {/* inner edge light — its own layer above the gradient so the
+              opaque layers can't cover it (inset shadows on the container
+              get buried under absolutely-positioned children) */}
+          <div
+            aria-hidden="true"
+            className="pointer-events-none absolute inset-0 rounded-[1.75rem] md:rounded-[2.5rem]"
+            style={{
+              boxShadow:
+                "inset 0 0 0 1px rgba(255,255,255,0.45), inset 0 0 45px rgba(255,255,255,0.42), inset 0 2px 1px rgba(255,255,255,0.6), inset 0 -1px 0 rgba(255,255,255,0.2)",
+            }}
+          />
 
-          <div className="relative min-w-0 w-full px-6 py-16 text-center md:py-20">
+          <div className="relative px-6 py-16 text-center md:py-20">
             <h1
               className="animate-hero-rise mx-auto max-w-4xl font-sans text-5xl font-semibold tracking-[-0.035em] text-white md:text-8xl"
               style={{ textShadow: "0 2px 24px rgba(30,20,120,0.35)" }}
