@@ -80,6 +80,11 @@ float sdRoundBox(vec2 p, vec2 b, float r) {
   return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
 }
 
+/* Cloud config — how the white clumps form and gather. */
+#define CLOUD_COVER 0.55  /* 0..1, how much of the sky is clouds */
+#define CLOUD_SOFT 0.15   /* softness of cloud edges */
+#define CLOUD_ERODE 0.35  /* fine-detail erosion of cloud edges */
+
 void main() {
   vec2 px = gl_FragCoord.xy;
   float t = u_time;
@@ -129,12 +134,23 @@ void main() {
   vec3 base = mix(deep, mid, smoothstep(0.0, 0.48, sdiag));
   base = mix(base, light, smoothstep(0.48, 1.0, sdiag));
 
-  /* Interior: gaseous energy, no static regions, no flat white. */
+  /* Interior: blue sky with clouds gathering out of the flow. */
   float aa = 1.5;
   float body = 1.0 - smoothstep(-aa, aa, d);
   vec3 icol = base * (0.70 + 0.60 * energy);
   icol *= 0.85 + 0.30 * large;
-  icol += accent * smoothstep(0.78, 0.97, fil) * 0.55;
+
+  /* Clouds: billowy white clumps gathered from the large-scale field,
+     edges eroded by fine detail so they form and dissolve softly. */
+  float cdens = large - fine * CLOUD_ERODE;
+  float clo = 1.0 - CLOUD_COVER - CLOUD_SOFT;
+  float cmask = smoothstep(clo, clo + 2.0 * CLOUD_SOFT, cdens);
+  float cshade = smoothstep(clo, clo + 2.0 * CLOUD_SOFT + 0.22, cdens);
+  vec3 cloudCol = mix(vec3(0.79, 0.83, 1.0), vec3(1.0), cshade);
+  icol = mix(icol, cloudCol, cmask * 0.94);
+
+  /* Faint bright filaments — kept subtle so the clouds own the whites. */
+  icol += accent * smoothstep(0.78, 0.97, fil) * 0.18;
   icol += light * 0.10 * smoothstep(u_bubble.y, u_bubble.w, px.y);
   icol += light * exp(-abs(d) * 0.10) * 0.15; // rim light on the fluid edge
 
