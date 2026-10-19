@@ -1,6 +1,7 @@
 "use client";
 
 import Nav, { type NavUser } from "./Nav";
+import SteamShader from "./SteamShader";
 
 /* ------------------------------------------------------------------ */
 /* Hero — Cloudflare-style: one big purplish-blue gradient bubble      */
@@ -114,6 +115,9 @@ export default function Hero({ user }: { user: NavUser | null }) {
           </div>
         </div>
       </div>
+      {/* Vapor plume rising off the square's top edge. Paints above the
+          bubble (later in DOM), below the fixed nav. */}
+      <SteamShader />
     </section>
   );
 }
