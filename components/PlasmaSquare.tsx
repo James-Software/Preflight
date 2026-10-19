@@ -3,12 +3,18 @@
 import { useEffect, useRef, useState } from "react";
 
 /* ------------------------------------------------------------------ */
-/* PlasmaSquare — the hero "cloud window": living cloudy sky in the    */
-/* classic gradient's blues. Multi-scale domain-warped fBm advected    */
-/* upward; billowy white clumps gather and dissolve (tunable          */
-/* CLOUD_COVER / CLOUD_SOFT / CLOUD_ERODE). The fluid fills the       */
-/* bubble's box edge-to-edge — no bleed margin, no background band.    */
-/* The container's rounded corners and overflow-hidden shape it.       */
+/* PlasmaSquare — the hero square as living fluid energy in the        */
+/* classic gradient's blues. Multi-scale domain-warped fBm advected   */
+/* upward (large structures drift slowly, fine detail moves faster,    */
+/* flow speed varies spatially). The silhouette is a fluid-distorted  */
+/* rounded square: dramatic waves roll along the sides, the top edge  */
+/* boils with wisps that stretch upward and dissolve, the bottom      */
+/* stays calm.                                                        */
+/*                                                                     */
+/* Sizing is bulletproof by construction: the canvas is exactly the    */
+/* bubble's box (absolute inset-0), and the fluid bleed lives INSIDE   */
+/* the shader as fixed insets — the energy can never escape the box,   */
+/* spill past the viewport, or wash over the copy below.               */
 /*                                                                     */
 /* Perf: 3-octave fBm, resolution capped (~1.8M px, DPR <= 1.25),      */
 /* pauses off-screen / when hidden. No WebGL -> static gradient.       */
@@ -22,12 +28,10 @@ void main() {
 }
 `;
 
-/* No bleed margin: the fluid fills the bubble's box edge-to-edge, so
-   there is no band around it at all. The container's rounded corners
-   and overflow-hidden shape it. */
-const SIDE_BLEED = 0;
-const TOP_BLEED = 0;
-const BOTTOM_BLEED = 0;
+/* In-shader bleed (css px): room for waves/wisps inside the canvas. */
+const SIDE_BLEED = 26;
+const TOP_BLEED = 46;
+const BOTTOM_BLEED = 12;
 
 const FRAG = `
 precision highp float;
@@ -110,9 +114,15 @@ void main() {
 
   float energy = large * 0.55 + fine * 0.30 + fil * 0.45;
 
-  /* Silhouette: the fluid fills the box edge-to-edge. The SDF marks
-     the rounded box so the rim light hugs it; the container clips. */
-  float d = sdRoundBox(q0, halfSize, u_radius);
+  /* Silhouette: top boils, sides roll in dramatic waves, bottom calm. */
+  float topness = smoothstep(center.y, u_bubble.w, px.y);
+  float vertCalm = smoothstep(u_bubble.y - 30.0, u_bubble.y + 140.0, px.y);
+  float wobTop = (fbm(vec2(px.x * 0.006, px.y * 0.004 - t * 0.07)) - 0.5)
+    * mix(8.0, 34.0, topness) * mix(0.25, 1.0, vertCalm);
+  float sideWave = vnoise(vec2(2.7, px.y * 0.0055 - t * 0.10)) - 0.5;
+  sideWave += 0.45 * (vnoise(vec2(9.1, px.y * 0.016 - t * 0.23)) - 0.5);
+  float wobSide = sideWave * 2.0 * u_sideAmp * (1.0 - topness) * vertCalm;
+  float d = sdRoundBox(q0, halfSize, u_radius) + wobTop + wobSide;
 
   /* Palette: the classic square gradient — diagonal to top-right,
      more blue. Luminosity comes from energy, not whiteness. */
@@ -124,6 +134,9 @@ void main() {
   vec3 base = mix(deep, mid, smoothstep(0.0, 0.48, sdiag));
   base = mix(base, light, smoothstep(0.48, 1.0, sdiag));
 
+  /* Interior: blue sky with clouds gathering out of the flow. */
+  float aa = 1.5;
+  float body = 1.0 - smoothstep(-aa, aa, d);
   vec3 icol = base * (0.70 + 0.60 * energy);
   icol *= 0.85 + 0.30 * large;
 
@@ -141,11 +154,32 @@ void main() {
   icol += light * 0.10 * smoothstep(u_bubble.y, u_bubble.w, px.y);
   icol += light * exp(-abs(d) * 0.10) * 0.15; // rim light on the fluid edge
 
-  /* Composite: the canvas IS the sky — opaque everywhere, so the page
-     background can never show through. The fluid fills the box
-     edge-to-edge; the container's rounded corners shape it. */
-  vec3 acc = icol;
-  gl_FragColor = vec4(acc, 1.0);
+  /* Wisps stretching above the top edge, dissolving as they rise. */
+  float aboveH = max(u_res.y - u_bubble.w, 1.0);
+  float rise = clamp((px.y - u_bubble.w) / aboveH, 0.0, 1.0);
+  vec2 wp = vec2(px.x * 0.010, px.y * 0.0045 - t * 0.11);
+  float wf = fbm(wp + 2.0 * w2) - rise * 0.55;
+  float wisps = pow(smoothstep(0.40, 0.85, wf), 1.6) * (1.0 - smoothstep(0.10, 1.0, rise));
+  float wGate = smoothstep(-14.0, 6.0, d);
+  float hEnv = smoothstep(0.0, 0.06, px.x / u_res.x) * (1.0 - smoothstep(0.94, 1.0, px.x / u_res.x));
+  float wispA = clamp(wisps * wGate * hEnv, 0.0, 1.0);
+  vec3 wcol = mix(accent, light, clamp(rise * 1.6, 0.0, 1.0));
+
+  /* Tight outer glow, forced to zero at the canvas edge. */
+  float glow = exp(-max(d, 0.0) * 0.09);
+  glow *= 1.0 - smoothstep(20.0, 26.0, max(d, 0.0));
+
+  /* Composite (premultiplied, normal blending). */
+  vec3 acc = icol * body;
+  float accA = body;
+  float wOut = wispA * (1.0 - body);
+  acc += wcol * wOut;
+  accA += wOut;
+  float gOut = glow * 0.28 * (1.0 - body);
+  acc += mid * gOut;
+  accA += gOut;
+  accA = clamp(accA, 0.0, 1.0);
+  gl_FragColor = vec4(acc / max(accA, 0.001), accA);
 }
 `;
 
@@ -237,7 +271,7 @@ export default function PlasmaSquare() {
             ),
           ) * s,
         );
-        gl.uniform1f(uSideAmp, 0); // edge waves disabled: fluid fills the box
+        gl.uniform1f(uSideAmp, Math.min(20, SIDE_BLEED - 6) * s);
       };
 
       const resize = () => {
