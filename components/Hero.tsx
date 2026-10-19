@@ -20,18 +20,17 @@ export default function Hero({ user }: { user: NavUser | null }) {
     >
       <Nav user={user} />
 
-      <div className="flex flex-1 px-[2vw] pb-[2vh] pt-[84px]">
+      <div className="flex min-w-0 flex-1 px-[2vw] pb-[2vh] pt-[84px]">
         <div
-          className="relative flex w-full flex-1 items-center justify-center rounded-[1.75rem] md:rounded-[2.5rem]"
+          className="relative flex min-w-0 w-full flex-1 items-center justify-center overflow-hidden rounded-[1.75rem] md:rounded-[2.5rem]"
           style={{
             boxShadow: "0 30px 80px -20px rgba(90,80,250,0.45)",
           }}
         >
-          {/* The square itself: living plasma. The canvas bleeds just past
-              the box so the fluid edges and wisps never hard-clip. */}
+          {/* Keep the plasma and its wisps inside the rounded hero box. */}
           <PlasmaSquare />
 
-          <div className="relative px-6 py-16 text-center md:py-20">
+          <div className="relative min-w-0 w-full px-6 py-16 text-center md:py-20">
             <h1
               className="animate-hero-rise mx-auto max-w-4xl font-sans text-5xl font-semibold tracking-[-0.035em] text-white md:text-8xl"
               style={{ textShadow: "0 2px 24px rgba(30,20,120,0.35)" }}
