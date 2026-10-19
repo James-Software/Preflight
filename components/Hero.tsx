@@ -1,20 +1,16 @@
 "use client";
 
 import Nav, { type NavUser } from "./Nav";
-import SteamShader from "./SteamShader";
+import PlasmaSquare from "./PlasmaSquare";
 
 /* ------------------------------------------------------------------ */
-/* Hero — Cloudflare-style: one big purplish-blue gradient bubble      */
-/* filling ~96% of the viewport. The bubble is identical in both       */
-/* themes (white headline stays on the gradient); only the page        */
-/* behind it flips (#fafafa light, #05060a dark). Bright bubble light  */
-/* across the top edge (dots fade out up there), soft light on both    */
-/* sides, bloom along the bottom. Everything is static; the dot layer  */
-/* rises unless prefers-reduced-motion freezes it.                     */
+/* Hero — one big purplish-blue square filling ~96% of the viewport,   */
+/* rendered as living plasma by PlasmaSquare (the square's own colors, */
+/* fluid energy rising through it, wisps dissolving off the top edge). */
+/* The square is identical in both themes (white headline stays on the */
+/* plasma); only the page behind it flips (#fafafa light, #05060a      */
+/* dark). The dot layer rises unless prefers-reduced-motion freezes it.*/
 /* ------------------------------------------------------------------ */
-
-const BUBBLE_GRADIENT =
-  "linear-gradient(to top right, #4e2fd8 0%, #6a6df5 48%, #8aa5ff 100%)";
 
 const DOT_TEXTURE =
   "radial-gradient(rgba(255,255,255,0.20) 1.2px, transparent 1.3px)";
@@ -23,63 +19,47 @@ export default function Hero({ user }: { user: NavUser | null }) {
   return (
     <section
       id="top"
-      className="relative flex min-h-svh flex-col bg-[#fafafa] dark:bg-[#05060a]"
+      className="relative flex min-h-svh flex-col overflow-x-clip bg-[#fafafa] dark:bg-[#05060a]"
     >
       <Nav user={user} />
 
       <div className="flex flex-1 px-[2vw] pb-[2vh] pt-[84px]">
         <div
-          className="relative flex w-full flex-1 items-center justify-center overflow-hidden rounded-[1.75rem] md:rounded-[2.5rem]"
+          className="relative flex w-full flex-1 items-center justify-center rounded-[1.75rem] md:rounded-[2.5rem]"
           style={{
             boxShadow: "0 30px 80px -20px rgba(90,80,250,0.45)",
           }}
         >
-          {/* gradient bubble — static, no drift */}
+          {/* The square itself: living plasma. The canvas bleeds past the
+              box so the fluid edges and wisps are never hard-clipped. */}
+          <PlasmaSquare />
+          {/* dotted texture, clipped to the rounded square */}
           <div
             aria-hidden="true"
-            className="absolute inset-0"
-            style={{ backgroundImage: BUBBLE_GRADIENT }}
-          />
-          {/* dotted texture: inner-glow shaped fade — four straight edge
-              fades composited (like an inset box-shadow), so dots dissolve
-              near every edge instead of in an ellipse */}
-          <div
-            aria-hidden="true"
-            className="absolute inset-0"
-            style={{
-              WebkitMaskImage:
-                "linear-gradient(to bottom, transparent, black 16%), linear-gradient(to top, transparent, black 16%), linear-gradient(to right, transparent, black 10%), linear-gradient(to left, transparent, black 10%)",
-              WebkitMaskComposite: "source-in",
-              maskImage:
-                "linear-gradient(to bottom, transparent, black 16%), linear-gradient(to top, transparent, black 16%), linear-gradient(to right, transparent, black 10%), linear-gradient(to left, transparent, black 10%)",
-              maskComposite: "intersect",
-            }}
+            className="absolute inset-0 overflow-hidden rounded-[1.75rem] md:rounded-[2.5rem]"
           >
             <div
               aria-hidden="true"
-              className="animate-dot-rise absolute inset-0"
+              className="absolute inset-0"
               style={{
-                backgroundImage: DOT_TEXTURE,
-                backgroundSize: "12px 12px",
+                WebkitMaskImage:
+                  "linear-gradient(to bottom, transparent, black 16%), linear-gradient(to top, transparent, black 16%), linear-gradient(to right, transparent, black 10%), linear-gradient(to left, transparent, black 10%)",
+                WebkitMaskComposite: "source-in",
+                maskImage:
+                  "linear-gradient(to bottom, transparent, black 16%), linear-gradient(to top, transparent, black 16%), linear-gradient(to right, transparent, black 10%), linear-gradient(to left, transparent, black 10%)",
+                maskComposite: "intersect",
               }}
-            />
+            >
+              <div
+                aria-hidden="true"
+                className="animate-dot-rise absolute inset-0"
+                style={{
+                  backgroundImage: DOT_TEXTURE,
+                  backgroundSize: "12px 12px",
+                }}
+              />
+            </div>
           </div>
-          {/* bright light band across the top, no circular blobs */}
-          <div
-            aria-hidden="true"
-            className="absolute inset-x-0 top-0 h-44 bg-gradient-to-b from-white/30 to-transparent"
-          />
-          {/* inner edge light — its own layer above the gradient so the
-              opaque layers can't cover it (inset shadows on the container
-              get buried under absolutely-positioned children) */}
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 rounded-[1.75rem] md:rounded-[2.5rem]"
-            style={{
-              boxShadow:
-                "inset 0 0 0 1px rgba(255,255,255,0.45), inset 0 0 45px rgba(255,255,255,0.42), inset 0 2px 1px rgba(255,255,255,0.6), inset 0 -1px 0 rgba(255,255,255,0.2)",
-            }}
-          />
 
           <div className="relative px-6 py-16 text-center md:py-20">
             <h1
@@ -115,9 +95,6 @@ export default function Hero({ user }: { user: NavUser | null }) {
           </div>
         </div>
       </div>
-      {/* Vapor plume rising off the square's top edge. Paints above the
-          bubble (later in DOM), below the fixed nav. */}
-      <SteamShader />
     </section>
   );
 }
