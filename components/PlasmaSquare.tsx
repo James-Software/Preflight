@@ -81,9 +81,9 @@ float sdRoundBox(vec2 p, vec2 b, float r) {
 }
 
 /* Cloud config — how the white clumps form and gather. */
-#define CLOUD_COVER 0.60  /* 0..1, how much of the sky is clouds */
-#define CLOUD_SOFT 0.10   /* softness of cloud edges */
-#define CLOUD_ERODE 0.22  /* fine-detail erosion of cloud edges */
+#define CLOUD_COVER 0.55  /* 0..1, how much of the sky is clouds */
+#define CLOUD_SOFT 0.15   /* softness of cloud edges */
+#define CLOUD_ERODE 0.35  /* fine-detail erosion of cloud edges */
 
 void main() {
   vec2 px = gl_FragCoord.xy;
