@@ -114,24 +114,33 @@ export default function Nav({ user }: { user: NavUser | null }) {
       raf = requestAnimationFrame(sync);
     };
     // Browsers restore the scroll position asynchronously after load,
-    // sometimes seconds later, without firing a scroll event. Poll briefly
-    // after mount so a refreshed mid-page load gets the pill instead of
-    // being stuck transparent. Cheap: one scrollY read per frame, stops
-    // after 3s.
+    // sometimes seconds later (slower on mobile), without firing a scroll
+    // event. Poll after mount so a refreshed mid-page load gets the bar
+    // instead of being stuck transparent. Cheap: one scrollY read per
+    // frame. Re-check on load/pageshow too, for restores that land after
+    // the first paint burst (or come from the bfcache).
     const pollStart = performance.now();
     let pollRaf = 0;
     const poll = () => {
       sync();
-      if (performance.now() - pollStart < 3000) {
+      const elapsed = performance.now() - pollStart;
+      const settled =
+        (elapsed > 3000 && document.readyState === "complete") ||
+        elapsed > 10000;
+      if (!settled) {
         pollRaf = requestAnimationFrame(poll);
       }
     };
     pollRaf = requestAnimationFrame(poll);
     window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("load", sync);
+    window.addEventListener("pageshow", sync);
     return () => {
       cancelAnimationFrame(raf);
       cancelAnimationFrame(pollRaf);
       window.removeEventListener("scroll", onScroll);
+      window.removeEventListener("load", sync);
+      window.removeEventListener("pageshow", sync);
     };
   }, []);
 
