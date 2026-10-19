@@ -3,12 +3,13 @@
 import { useEffect, useRef, useState } from "react";
 
 /* ------------------------------------------------------------------ */
-/* PlasmaSquare — the hero square as living fluid energy, in neon blue */
-/* and purple. Multi-scale domain-warped fBm advected upward (large    */
-/* structures drift slowly, fine detail moves faster, flow speed       */
-/* varies spatially). The silhouette is a fluid-distorted rounded      */
-/* square: dramatic waves roll along the sides, the top edge boils    */
-/* with wisps that stretch upward and dissolve, the bottom stays calm. */
+/* PlasmaSquare — the hero square as living fluid energy in the        */
+/* classic gradient's blues. Multi-scale domain-warped fBm advected   */
+/* upward (large structures drift slowly, fine detail moves faster,    */
+/* flow speed varies spatially). The silhouette is a fluid-distorted  */
+/* rounded square: dramatic waves roll along the sides, the top edge  */
+/* boils with wisps that stretch upward and dissolve, the bottom      */
+/* stays calm.                                                        */
 /*                                                                     */
 /* Sizing is bulletproof by construction: the canvas is exactly the    */
 /* bubble's box (absolute inset-0), and the fluid bleed lives INSIDE   */
@@ -118,16 +119,15 @@ void main() {
   float wobSide = sideWave * 2.0 * u_sideAmp * (1.0 - topness) * vertCalm;
   float d = sdRoundBox(q0, halfSize, u_radius) + wobTop + wobSide;
 
-  /* Palette: neon blue and purple — barely any white. */
-  vec3 deep = vec3(0.278, 0.122, 0.780); // #471fc7 neon purple
-  vec3 purple = vec3(0.416, 0.176, 0.941); // #6a2df0
-  vec3 blue = vec3(0.180, 0.390, 1.000); // #2e63ff electric blue
-  vec3 bright = vec3(0.373, 0.545, 1.000); // #5f8bff bright blue
-  vec3 accent = vec3(0.616, 0.722, 1.000); // #9db8ff icy accent, sparse
+  /* Palette: the classic square gradient — diagonal to top-right,
+     more blue. Luminosity comes from energy, not whiteness. */
+  vec3 deep = vec3(0.306, 0.184, 0.847); // #4e2fd8
+  vec3 mid = vec3(0.416, 0.427, 0.961); // #6a6df5
+  vec3 light = vec3(0.541, 0.647, 1.000); // #8aa5ff
+  vec3 accent = vec3(0.660, 0.730, 1.000); // bright classic blue, sparse
   float sdiag = clamp((px.x / u_res.x + (1.0 - px.y / u_res.y)) * 0.5, 0.0, 1.0);
-  vec3 base = mix(deep, purple, smoothstep(0.0, 0.45, sdiag));
-  base = mix(base, blue, smoothstep(0.35, 0.8, sdiag));
-  base = mix(base, bright, smoothstep(0.75, 1.0, sdiag));
+  vec3 base = mix(deep, mid, smoothstep(0.0, 0.48, sdiag));
+  base = mix(base, light, smoothstep(0.48, 1.0, sdiag));
 
   /* Interior: gaseous energy, no static regions, no flat white. */
   float aa = 1.5;
@@ -135,8 +135,8 @@ void main() {
   vec3 icol = base * (0.70 + 0.60 * energy);
   icol *= 0.85 + 0.30 * large;
   icol += accent * smoothstep(0.78, 0.97, fil) * 0.55;
-  icol += bright * 0.10 * smoothstep(u_bubble.y, u_bubble.w, px.y);
-  icol += bright * exp(-abs(d) * 0.10) * 0.15; // rim light on the fluid edge
+  icol += light * 0.10 * smoothstep(u_bubble.y, u_bubble.w, px.y);
+  icol += light * exp(-abs(d) * 0.10) * 0.15; // rim light on the fluid edge
 
   /* Wisps stretching above the top edge, dissolving as they rise. */
   float aboveH = max(u_res.y - u_bubble.w, 1.0);
@@ -147,7 +147,7 @@ void main() {
   float wGate = smoothstep(-14.0, 6.0, d);
   float hEnv = smoothstep(0.0, 0.06, px.x / u_res.x) * (1.0 - smoothstep(0.94, 1.0, px.x / u_res.x));
   float wispA = clamp(wisps * wGate * hEnv, 0.0, 1.0);
-  vec3 wcol = mix(accent, bright, clamp(rise * 1.6, 0.0, 1.0));
+  vec3 wcol = mix(accent, light, clamp(rise * 1.6, 0.0, 1.0));
 
   /* Tight outer glow, forced to zero at the canvas edge. */
   float glow = exp(-max(d, 0.0) * 0.09);
@@ -160,7 +160,7 @@ void main() {
   acc += wcol * wOut;
   accA += wOut;
   float gOut = glow * 0.28 * (1.0 - body);
-  acc += blue * gOut;
+  acc += mid * gOut;
   accA += gOut;
   accA = clamp(accA, 0.0, 1.0);
   gl_FragColor = vec4(acc / max(accA, 0.001), accA);
@@ -244,17 +244,7 @@ export default function PlasmaSquare() {
         const rad = parent
           ? parseFloat(getComputedStyle(parent).borderTopLeftRadius) || 0
           : 0;
-        gl.uniform1f(
-          uRadius,
-          Math.max(
-            0,
-            Math.min(
-              rad,
-              (r.width - SIDE_BLEED * 2) / 2,
-              (r.height - TOP_BLEED - BOTTOM_BLEED) / 2,
-            ),
-          ) * s,
-        );
+        gl.uniform1f(uRadius, Math.max(rad - SIDE_BLEED, 0) * s);
         gl.uniform1f(uSideAmp, Math.min(20, SIDE_BLEED - 6) * s);
       };
 
@@ -324,17 +314,16 @@ export default function PlasmaSquare() {
     return (
       <div
         aria-hidden="true"
-        className="pointer-events-none absolute inset-0 rounded-[inherit]"
+        className="absolute inset-0 rounded-[1.75rem] md:rounded-[2.5rem]"
         style={{ backgroundImage: FALLBACK_GRADIENT }}
       />
     );
   }
-  // CSS dimensions must stay independent of the drawing-buffer resolution.
   return (
     <canvas
       ref={canvasRef}
       aria-hidden="true"
-      className="pointer-events-none absolute inset-0 block h-full w-full rounded-[inherit]"
+      className="pointer-events-none absolute inset-0"
     />
   );
 }
