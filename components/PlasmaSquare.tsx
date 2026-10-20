@@ -80,9 +80,9 @@ float sdRoundBox(vec2 p, vec2 b, float r) {
 }
 
 /* Cloud config — how the white clumps form and gather. */
-#define CLOUD_COVER 0.55  /* 0..1, how much of the sky is clouds */
+#define CLOUD_COVER 0.57  /* 0..1, how much of the sky is clouds */
 #define CLOUD_SOFT 0.15   /* softness of cloud edges */
-#define CLOUD_ERODE 0.35  /* fine-detail erosion of cloud edges */
+#define CLOUD_ERODE 0.30  /* fine-detail erosion of cloud edges */
 #define CLOUD_RISE_SPEED 0.07 /* canvas heights per second, upward */
 #define CLOUD_EVOLVE_SPEED 0.35 /* slow shape changes relative to drift */
 
