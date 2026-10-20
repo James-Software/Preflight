@@ -60,6 +60,7 @@ body {
   content: "";
   position: absolute;
   inset: -60% -10%;
+  translate: 0 var(--plasma-scroll-y, 0px);
   background-image:
     radial-gradient(ellipse at 28% 28%, #ffffff55 0%, #ffffff15 18%, transparent 38%),
     radial-gradient(ellipse at 72% 58%, #ffffff44 0%, #ffffff12 20%, transparent 40%);

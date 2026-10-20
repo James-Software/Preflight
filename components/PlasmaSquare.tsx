@@ -31,12 +31,14 @@ void main() {
 const SIDE_BLEED = 26;
 const TOP_BLEED = 46;
 const BOTTOM_BLEED = 12;
+const SCROLL_STRENGTH = 0.5;
 
 const FRAG = `
 precision highp float;
 
 uniform vec2 u_res;
 uniform float u_time;
+uniform float u_scroll; // upward texture travel in drawing-buffer pixels
 uniform vec4 u_bubble; // min.xy, max.xy in px (y-up)
 uniform float u_radius;
 uniform float u_sideAmp; // px of side-wave travel
@@ -96,7 +98,7 @@ void main() {
 
   /* Carry both texture scales upward together, so cloud banks drift
      instead of churning in place. WebGL's positive Y points upward. */
-  vec2 cloudPx = px - vec2(0.0, t * u_res.y * CLOUD_RISE_SPEED);
+  vec2 cloudPx = px - vec2(0.0, t * u_res.y * CLOUD_RISE_SPEED + u_scroll);
   vec2 p1 = cloudPx * 0.0016;
   vec2 p2 = cloudPx * 0.0038;
   float evolve = t * CLOUD_EVOLVE_SPEED;
@@ -221,11 +223,12 @@ function createRenderer(canvas: HTMLCanvasElement) {
 
     const uRes = gl.getUniformLocation(program, "u_res");
     const uTime = gl.getUniformLocation(program, "u_time");
+    const uScroll = gl.getUniformLocation(program, "u_scroll");
     const uBubble = gl.getUniformLocation(program, "u_bubble");
     const uRadius = gl.getUniformLocation(program, "u_radius");
     const uSideAmp = gl.getUniformLocation(program, "u_sideAmp");
 
-    const draw = (time: number) => {
+    const draw = (time: number, scroll = 0) => {
       const rect = canvas.getBoundingClientRect();
       if (!rect.width || !rect.height) return;
       // A smaller drawing buffer keeps the same shader usable on mobile GPUs.
@@ -244,6 +247,7 @@ function createRenderer(canvas: HTMLCanvasElement) {
       gl.viewport(0, 0, width, height);
       gl.uniform2f(uRes, width, height);
       gl.uniform1f(uTime, time);
+      gl.uniform1f(uScroll, scroll * scale);
       gl.uniform4f(uBubble, SIDE_BLEED * scale, BOTTOM_BLEED * scale,
         (rect.width - SIDE_BLEED) * scale, (rect.height - TOP_BLEED) * scale);
       const radius = canvas.parentElement
@@ -286,15 +290,27 @@ export default function PlasmaSquare() {
     const start = performance.now();
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
     const compact = window.matchMedia("(max-width: 767px)");
+    const host = canvas.parentElement;
+    const scrollPosition = () => reduced.matches ? 0 : Math.min(
+      Math.max(window.scrollY, 0), host?.offsetHeight ?? window.innerHeight,
+    ) * SCROLL_STRENGTH;
+    let targetScroll = scrollPosition();
+    let scroll = targetScroll;
+    let lastScrollFrame = performance.now();
     const stop = () => {
       cancelAnimationFrame(raf);
       raf = 0;
     };
     const draw = () => {
-      renderer?.draw(reduced.matches ? 12 : (performance.now() - start) / 1000);
+      const now = performance.now();
+      const delta = Math.min(now - lastScrollFrame, 100);
+      lastScrollFrame = now;
+      scroll += (targetScroll - scroll) * (1 - Math.exp(-delta / 80));
+      host?.style.setProperty("--plasma-scroll-y", `${-scroll}px`);
+      renderer?.draw(reduced.matches ? 12 : (now - start) / 1000, scroll);
     };
     const loop = (now: number) => {
-      if (!renderer || !inView || document.hidden || reduced.matches) {
+      if (!inView || document.hidden || reduced.matches) {
         raf = 0;
         return;
       }
@@ -302,13 +318,19 @@ export default function PlasmaSquare() {
         draw();
         lastFrame = now;
       }
-      raf = requestAnimationFrame(loop);
+      raf = renderer || Math.abs(targetScroll - scroll) > 0.05 ? requestAnimationFrame(loop) : 0;
     };
     const sync = () => {
       stop();
-      if (!renderer || !inView || document.hidden) return;
+      targetScroll = scrollPosition();
+      if (reduced.matches) scroll = 0;
+      if (!inView || document.hidden) return;
       draw();
-      if (!reduced.matches) raf = requestAnimationFrame(loop);
+      if (!reduced.matches && (renderer || Math.abs(targetScroll - scroll) > 0.05)) raf = requestAnimationFrame(loop);
+    };
+    const onScroll = () => {
+      targetScroll = scrollPosition();
+      if (!raf && inView && !document.hidden && !reduced.matches) raf = requestAnimationFrame(loop);
     };
     const initialize = () => {
       stop();
@@ -338,6 +360,7 @@ export default function PlasmaSquare() {
     const resize = new ResizeObserver(sync);
     resize.observe(canvas);
     document.addEventListener("visibilitychange", sync);
+    window.addEventListener("scroll", onScroll, { passive: true });
     window.addEventListener("pageshow", sync);
     reduced.addEventListener("change", sync);
     compact.addEventListener("change", sync);
@@ -348,11 +371,13 @@ export default function PlasmaSquare() {
       observer.disconnect();
       resize.disconnect();
       document.removeEventListener("visibilitychange", sync);
+      window.removeEventListener("scroll", onScroll);
       window.removeEventListener("pageshow", sync);
       reduced.removeEventListener("change", sync);
       compact.removeEventListener("change", sync);
       canvas.removeEventListener("webglcontextlost", onLost);
       canvas.removeEventListener("webglcontextrestored", initialize);
+      host?.style.removeProperty("--plasma-scroll-y");
       // Delete our resources without forcibly losing a context React may reuse.
       renderer?.dispose();
     };
