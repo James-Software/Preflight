@@ -157,9 +157,9 @@ void main() {
   icol += light * 0.10 * smoothstep(u_bubble.y, u_bubble.w, px.y);
   icol += light * exp(-abs(d) * 0.10) * 0.15; // rim light on the fluid edge
 
-  /* Only paint the animated window. The surrounding canvas is layout
-     space, so it must stay fully transparent rather than form a halo. */
-  gl_FragColor = vec4(icol, body);
+  /* Premultiply explicitly: transparent pixels must also have zero RGB.
+     This keeps the canvas margin invisible in mobile WebKit compositors. */
+  gl_FragColor = vec4(clamp(icol, 0.0, 1.0) * body, body);
 }
 `;
 
@@ -185,7 +185,7 @@ function createRenderer(canvas: HTMLCanvasElement) {
   const gl = canvas.getContext("webgl", {
     alpha: true,
     antialias: false,
-    premultipliedAlpha: false,
+    premultipliedAlpha: true,
   });
   if (!gl) throw new Error("WebGL unavailable");
 
