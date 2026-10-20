@@ -28,3 +28,14 @@ Shared Tailwind colors are defined in `app/globals.css`:
 
 Keep the existing rounded panels, pill buttons, `btn-gradient` primary actions,
 and short color transitions. Native controls inherit the document's color scheme.
+
+## Compact feedback animations
+
+For icon changes such as copy → check, follow the requested Emil Kowalski-inspired
+pattern: a short opacity/scale crossfade with `filter: blur(3px)` on the outgoing
+icon, easing out over 180ms. Reuse `IconSwap` so future controls stay consistent.
+Use `.pressable` for a `scale(0.97)` press response. Animate explicit properties,
+not `transition: all`, and switch icons immediately under reduced motion.
+
+Use `CopyButton` for clipboard actions. It owns the copy/check icons, accessible
+labels and status, success reset, repeat-click timing, and timeout cleanup.

@@ -95,7 +95,8 @@ body {
   border-radius: 4px;
 }
 
-/* Motion house rules: press to 0.97, 100-300ms, transform + opacity only */
+/* Motion house rules: press to 0.97, 100-300ms, explicit properties.
+   Compact icon swaps also use a short ease-out blur. */
 .pressable {
   transition:
     transform 160ms cubic-bezier(0.16, 1, 0.3, 1),
@@ -107,6 +108,28 @@ body {
 
 .pressable:active {
   transform: scale(0.97);
+}
+
+.copy-button {
+  transition-timing-function: ease-out;
+}
+
+.icon-swap__icon {
+  grid-area: 1 / 1;
+  display: inline-flex;
+  transition: opacity 180ms ease-out, filter 180ms ease-out, transform 180ms ease-out;
+}
+
+.icon-swap__icon[data-visible="true"] {
+  opacity: 1;
+  filter: blur(0);
+  transform: scale(1);
+}
+
+.icon-swap__icon[data-visible="false"] {
+  opacity: 0;
+  filter: blur(3px);
+  transform: scale(0.75);
 }
 
 /* Codex-style bluish-purple gradient accents. Used sparingly:
@@ -148,6 +171,11 @@ body {
   }
   .pressable {
     transition: none;
+  }
+  .icon-swap .icon-swap__icon {
+    transition: none;
+    filter: none;
+    transform: none;
   }
 }
 

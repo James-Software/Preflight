@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import CopyButton from "./CopyButton";
 
 type InviteStatus = {
   canInvite: boolean;
@@ -13,7 +14,6 @@ type InviteStatus = {
 export default function InviteCard() {
   const [status, setStatus] = useState<InviteStatus | null>(null);
   const [busy, setBusy] = useState(false);
-  const [copied, setCopied] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
@@ -44,17 +44,6 @@ export default function InviteCard() {
     }
   };
 
-  const copy = async () => {
-    if (!status.link) return;
-    try {
-      await navigator.clipboard.writeText(status.link);
-      setCopied(true);
-      setTimeout(() => setCopied(false), 2000);
-    } catch {
-      // Clipboard unavailable; the link is still visible to copy manually.
-    }
-  };
-
   return (
     <div className="mt-8 flex flex-wrap items-center justify-between gap-4 rounded-2xl border px-6 py-5 border-line bg-panel">
       <div className="min-w-0">
@@ -69,13 +58,7 @@ export default function InviteCard() {
             <code className="min-w-0 break-all rounded-lg border bg-white px-3 py-2 text-xs text-ink/70 dark:bg-black/40 dark:text-white/70 border-line">
               {status.link}
             </code>
-            <button
-              type="button"
-              onClick={() => void copy()}
-              className="pressable shrink-0 cursor-pointer rounded-full border bg-white px-4 py-2 text-xs font-medium text-ink transition-colors duration-150 hover:bg-lavender dark:bg-white/5 dark:text-white dark:hover:bg-white/10 border-line"
-            >
-              {copied ? "Copied" : "Copy"}
-            </button>
+            <CopyButton text={status.link} label="Copy invite link" />
           </div>
         )}
       </div>
