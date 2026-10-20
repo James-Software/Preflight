@@ -16,7 +16,7 @@ import { useEffect, useRef, useState } from "react";
 /* spill past the viewport, or wash over the copy below.               */
 /*                                                                     */
 /* Perf: 3-octave fBm, resolution capped (~1.8M px, DPR <= 1.25),      */
-/* pauses off-screen / when hidden. No WebGL -> static gradient.       */
+/* pauses off-screen / when hidden. No WebGL -> animated CSS fallback. */
 /* Static frame under prefers-reduced-motion.                          */
 /* ------------------------------------------------------------------ */
 
@@ -163,7 +163,7 @@ void main() {
 }
 `;
 
-// Static gradient fallback (the square's original look) if WebGL fails.
+// Preserve the same filled gradient when a device cannot run WebGL.
 const FALLBACK_GRADIENT =
   "linear-gradient(to top right, #4e2fd8 0%, #6a6df5 48%, #8aa5ff 100%)";
 
@@ -180,158 +180,199 @@ function compile(gl: WebGLRenderingContext, type: number, src: string) {
   return sh;
 }
 
+/** Recreate GPU resources after context restoration without replacing the canvas. */
+function createRenderer(canvas: HTMLCanvasElement) {
+  const gl = canvas.getContext("webgl", {
+    alpha: true,
+    antialias: false,
+    premultipliedAlpha: false,
+  });
+  if (!gl) throw new Error("WebGL unavailable");
+
+  const shaders: WebGLShader[] = [];
+  let program: WebGLProgram | null = null;
+  let buffer: WebGLBuffer | null = null;
+  const dispose = () => {
+    if (gl.isContextLost()) return;
+    if (buffer) gl.deleteBuffer(buffer);
+    if (program) gl.deleteProgram(program);
+    shaders.forEach((shader) => gl.deleteShader(shader));
+  };
+
+  try {
+    const precision = gl.getShaderPrecisionFormat(gl.FRAGMENT_SHADER, gl.HIGH_FLOAT);
+    const fragment = precision?.precision ? FRAG : FRAG.replace("precision highp float;", "precision mediump float;");
+    shaders.push(compile(gl, gl.VERTEX_SHADER, VERT));
+    shaders.push(compile(gl, gl.FRAGMENT_SHADER, fragment));
+    program = gl.createProgram();
+    if (!program) throw new Error("program alloc failed");
+    shaders.forEach((shader) => gl.attachShader(program!, shader));
+    gl.linkProgram(program);
+    if (!gl.getProgramParameter(program, gl.LINK_STATUS)) throw new Error("program link failed");
+    gl.useProgram(program);
+
+    buffer = gl.createBuffer();
+    if (!buffer) throw new Error("buffer alloc failed");
+    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
+    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([-1, -1, 3, -1, -1, 3]), gl.STATIC_DRAW);
+    const position = gl.getAttribLocation(program, "a_pos");
+    gl.enableVertexAttribArray(position);
+    gl.vertexAttribPointer(position, 2, gl.FLOAT, false, 0, 0);
+
+    const uRes = gl.getUniformLocation(program, "u_res");
+    const uTime = gl.getUniformLocation(program, "u_time");
+    const uBubble = gl.getUniformLocation(program, "u_bubble");
+    const uRadius = gl.getUniformLocation(program, "u_radius");
+    const uSideAmp = gl.getUniformLocation(program, "u_sideAmp");
+
+    const draw = (time: number) => {
+      const rect = canvas.getBoundingClientRect();
+      if (!rect.width || !rect.height) return;
+      // A smaller drawing buffer keeps the same shader usable on mobile GPUs.
+      const compact = window.matchMedia("(max-width: 767px)").matches;
+      let scale = Math.min(window.devicePixelRatio || 1, compact ? 1 : 1.25);
+      const maxPixels = compact ? 900000 : 1800000;
+      if (rect.width * rect.height * scale * scale > maxPixels) {
+        scale = Math.sqrt(maxPixels / (rect.width * rect.height));
+      }
+      const width = Math.max(1, Math.floor(rect.width * scale));
+      const height = Math.max(1, Math.floor(rect.height * scale));
+      if (canvas.width !== width || canvas.height !== height) {
+        canvas.width = width;
+        canvas.height = height;
+      }
+      gl.viewport(0, 0, width, height);
+      gl.uniform2f(uRes, width, height);
+      gl.uniform1f(uTime, time);
+      gl.uniform4f(uBubble, SIDE_BLEED * scale, BOTTOM_BLEED * scale,
+        (rect.width - SIDE_BLEED) * scale, (rect.height - TOP_BLEED) * scale);
+      const radius = canvas.parentElement
+        ? parseFloat(getComputedStyle(canvas.parentElement).borderTopLeftRadius) || 0
+        : 0;
+      gl.uniform1f(uRadius, Math.max(0, Math.min(radius,
+        (rect.width - SIDE_BLEED * 2) / 2,
+        (rect.height - TOP_BLEED - BOTTOM_BLEED) / 2)) * scale);
+      gl.uniform1f(uSideAmp, Math.min(20, SIDE_BLEED - 6) * scale);
+      gl.drawArrays(gl.TRIANGLES, 0, 3);
+    };
+
+    draw(0);
+    // Some mobile drivers fail to fill the canvas without throwing. Verify
+    // an interior pixel once before replacing the filled CSS fallback.
+    const pixel = new Uint8Array(4);
+    gl.readPixels(Math.floor(canvas.width / 2), Math.floor(canvas.height / 2),
+      1, 1, gl.RGBA, gl.UNSIGNED_BYTE, pixel);
+    if (gl.isContextLost() || gl.getError() !== gl.NO_ERROR || pixel[3] < 128) {
+      throw new Error("initial WebGL draw failed");
+    }
+    return { draw, dispose };
+  } catch (error) {
+    dispose();
+    throw error;
+  }
+}
+
 export default function PlasmaSquare() {
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const [fallback, setFallback] = useState(false);
+  const [fallback, setFallback] = useState(true);
 
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
-    try {
-      const gl = canvas.getContext("webgl", {
-        alpha: true,
-        antialias: false,
-        premultipliedAlpha: false,
-      });
-      if (!gl) {
-        setFallback(true);
+    let renderer: ReturnType<typeof createRenderer> | null = null;
+    let raf = 0;
+    let inView = true;
+    let lastFrame = -Infinity;
+    const start = performance.now();
+    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
+    const compact = window.matchMedia("(max-width: 767px)");
+    const stop = () => {
+      cancelAnimationFrame(raf);
+      raf = 0;
+    };
+    const draw = () => {
+      renderer?.draw(reduced.matches ? 12 : (performance.now() - start) / 1000);
+    };
+    const loop = (now: number) => {
+      if (!renderer || !inView || document.hidden || reduced.matches) {
+        raf = 0;
         return;
       }
-
-      const prog = gl.createProgram();
-      if (!prog) throw new Error("program alloc failed");
-      gl.attachShader(prog, compile(gl, gl.VERTEX_SHADER, VERT));
-      gl.attachShader(prog, compile(gl, gl.FRAGMENT_SHADER, FRAG));
-      gl.linkProgram(prog);
-      if (!gl.getProgramParameter(prog, gl.LINK_STATUS)) {
-        throw new Error("program link failed");
+      if (now - lastFrame >= (compact.matches ? 1000 / 30 : 1000 / 60)) {
+        draw();
+        lastFrame = now;
       }
-      gl.useProgram(prog);
-
-      const buf = gl.createBuffer();
-      gl.bindBuffer(gl.ARRAY_BUFFER, buf);
-      gl.bufferData(
-        gl.ARRAY_BUFFER,
-        new Float32Array([-1, -1, 3, -1, -1, 3]),
-        gl.STATIC_DRAW,
-      );
-      const loc = gl.getAttribLocation(prog, "a_pos");
-      gl.enableVertexAttribArray(loc);
-      gl.vertexAttribPointer(loc, 2, gl.FLOAT, false, 0, 0);
-
-      const uRes = gl.getUniformLocation(prog, "u_res");
-      const uTime = gl.getUniformLocation(prog, "u_time");
-      const uBubble = gl.getUniformLocation(prog, "u_bubble");
-      const uRadius = gl.getUniformLocation(prog, "u_radius");
-      const uSideAmp = gl.getUniformLocation(prog, "u_sideAmp");
-
-      // The canvas IS the bubble's box; the SDF rect is inset by the
-      // fixed bleed amounts, so the energy can never leave the box.
-      const updateUniforms = (s: number) => {
-        const r = canvas.getBoundingClientRect();
-        gl.uniform4f(
-          uBubble,
-          SIDE_BLEED * s,
-          BOTTOM_BLEED * s,
-          (r.width - SIDE_BLEED) * s,
-          (r.height - TOP_BLEED) * s,
-        );
-        const parent = canvas.parentElement;
-        const rad = parent
-          ? parseFloat(getComputedStyle(parent).borderTopLeftRadius) || 0
-          : 0;
-        gl.uniform1f(
-          uRadius,
-          Math.max(
-            0,
-            Math.min(
-              rad,
-              (r.width - SIDE_BLEED * 2) / 2,
-              (r.height - TOP_BLEED - BOTTOM_BLEED) / 2,
-            ),
-          ) * s,
-        );
-        gl.uniform1f(uSideAmp, Math.min(20, SIDE_BLEED - 6) * s);
-      };
-
-      const resize = () => {
-        const r = canvas.getBoundingClientRect();
-        let scale = Math.min(window.devicePixelRatio || 1, 1.25);
-        const MAX_PX = 1800000;
-        if (r.width * r.height * scale * scale > MAX_PX) {
-          scale = Math.sqrt(MAX_PX / (r.width * r.height));
-        }
-        const w = Math.max(1, Math.floor(r.width * scale));
-        const h = Math.max(1, Math.floor(r.height * scale));
-        if (canvas.width !== w || canvas.height !== h) {
-          canvas.width = w;
-          canvas.height = h;
-          gl.viewport(0, 0, w, h);
-        }
-        updateUniforms(scale);
-      };
-      resize();
-
-      const draw = (t: number) => {
-        resize();
-        gl.uniform2f(uRes, canvas.width, canvas.height);
-        gl.uniform1f(uTime, t);
-        gl.drawArrays(gl.TRIANGLES, 0, 3);
-      };
-
-      if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
-        draw(12.0); // one static, developed frame — no loop
-        return;
-      }
-
-      let raf = 0;
-      let inView = true;
-      const t0 = performance.now();
-      const loop = () => {
-        raf = requestAnimationFrame(loop);
-        if (!inView || document.hidden) return;
-        draw((performance.now() - t0) / 1000);
-      };
-
-      const io = new IntersectionObserver(
-        ([entry]) => {
-          inView = entry.isIntersecting;
-        },
-        { threshold: 0 },
-      );
-      io.observe(canvas);
-      const ro = new ResizeObserver(resize);
-      ro.observe(canvas);
-
       raf = requestAnimationFrame(loop);
-      return () => {
-        cancelAnimationFrame(raf);
-        io.disconnect();
-        ro.disconnect();
-        gl.getExtension("WEBGL_lose_context")?.loseContext();
-      };
-    } catch {
-      // Never break the page over decoration.
+    };
+    const sync = () => {
+      stop();
+      if (!renderer || !inView || document.hidden) return;
+      draw();
+      if (!reduced.matches) raf = requestAnimationFrame(loop);
+    };
+    const initialize = () => {
+      stop();
+      renderer?.dispose();
+      renderer = null;
+      try {
+        renderer = createRenderer(canvas);
+        sync();
+        setFallback(false);
+      } catch {
+        setFallback(true);
+      }
+    };
+    const onLost = (event: Event) => {
+      event.preventDefault(); // Allow browsers to restore the context.
+      stop();
+      renderer = null; // The lost context has already discarded its resources.
       setFallback(true);
-    }
+    };
+    canvas.addEventListener("webglcontextlost", onLost);
+    canvas.addEventListener("webglcontextrestored", initialize);
+    const observer = new IntersectionObserver(([entry]) => {
+      inView = entry.isIntersecting;
+      sync();
+    });
+    observer.observe(canvas);
+    const resize = new ResizeObserver(sync);
+    resize.observe(canvas);
+    document.addEventListener("visibilitychange", sync);
+    window.addEventListener("pageshow", sync);
+    reduced.addEventListener("change", sync);
+    compact.addEventListener("change", sync);
+    initialize();
+
+    return () => {
+      stop();
+      observer.disconnect();
+      resize.disconnect();
+      document.removeEventListener("visibilitychange", sync);
+      window.removeEventListener("pageshow", sync);
+      reduced.removeEventListener("change", sync);
+      compact.removeEventListener("change", sync);
+      canvas.removeEventListener("webglcontextlost", onLost);
+      canvas.removeEventListener("webglcontextrestored", initialize);
+      // Delete our resources without forcibly losing a context React may reuse.
+      renderer?.dispose();
+    };
   }, []);
 
-  if (fallback) {
-    return (
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 rounded-[inherit]"
-        style={{ backgroundImage: FALLBACK_GRADIENT }}
-      />
-    );
-  }
-  // CSS dimensions must stay independent of the drawing-buffer resolution.
   return (
-    <canvas
-      ref={canvasRef}
-      aria-hidden="true"
-      className="pointer-events-none absolute inset-0 block h-full w-full bg-transparent"
-      style={{ background: "none", border: 0, boxShadow: "none" }}
-    />
+    <>
+      <canvas
+        ref={canvasRef}
+        aria-hidden="true"
+        className="pointer-events-none absolute inset-0 block h-full w-full bg-transparent"
+        style={{ background: "none", border: 0, boxShadow: "none", visibility: fallback ? "hidden" : "visible" }}
+      />
+      {fallback && (
+        <div
+          aria-hidden="true"
+          className="plasma-fallback pointer-events-none absolute overflow-hidden"
+          style={{ inset: `${TOP_BLEED}px ${SIDE_BLEED}px ${BOTTOM_BLEED}px`, backgroundImage: FALLBACK_GRADIENT }}
+        />
+      )}
+    </>
   );
 }

@@ -50,6 +50,39 @@ body {
   background-color: var(--page);
 }
 
+/* A filled, moving window for devices that cannot keep a WebGL context. */
+.plasma-fallback {
+  border-radius: 7% 9% 6% 8% / 6% 7% 8% 6%;
+  animation: plasma-fallback-shape 7s ease-in-out infinite alternate;
+}
+
+.plasma-fallback::before {
+  content: "";
+  position: absolute;
+  inset: -60% -10%;
+  background-image:
+    radial-gradient(ellipse at 28% 28%, #ffffff55 0%, #ffffff15 18%, transparent 38%),
+    radial-gradient(ellipse at 72% 58%, #ffffff44 0%, #ffffff12 20%, transparent 40%);
+  animation: plasma-fallback-rise 12s linear infinite;
+}
+
+@keyframes plasma-fallback-shape {
+  to { border-radius: 9% 6% 8% 5% / 7% 9% 6% 8%; }
+}
+
+@keyframes plasma-fallback-rise {
+  0% { transform: translateY(15%); opacity: 0; }
+  15%, 85% { opacity: 1; }
+  100% { transform: translateY(-30%); opacity: 0; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .plasma-fallback,
+  .plasma-fallback::before {
+    animation: none;
+  }
+}
+
 ::selection {
   background: #e0e7ff;
   color: #1e1b4b;
