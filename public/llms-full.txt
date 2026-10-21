@@ -65,3 +65,21 @@ PreFlight is automated quality assurance performed by a swarm of AI agents. Inst
 ## Contact
 
 hello@trypreflight.dev
+
+## Machine-readable public content
+
+Public pages support `Accept: text/markdown`. Browser requests continue to receive HTML.
+
+- [Product overview in Markdown](https://www.trypreflight.dev/markdown)
+- [Published blog index in Markdown](https://www.trypreflight.dev/markdown/blog)
+- [Privacy Policy in Markdown](https://www.trypreflight.dev/markdown/privacy)
+- [Terms of Service in Markdown](https://www.trypreflight.dev/markdown/terms)
+- [API catalog](https://www.trypreflight.dev/.well-known/api-catalog)
+- [Public OpenAPI description](https://www.trypreflight.dev/openapi.json)
+- [Authentication instructions](https://www.trypreflight.dev/auth.md)
+- [Sitemap](https://www.trypreflight.dev/sitemap.xml)
+
+A published blog post at `/blog/{slug}` is also available at `/markdown/blog/{slug}`.
+Only public content is available through these representations. Accounts, projects,
+runs, invitations, and admin data are excluded. The API catalog describes actual
+read-only content endpoints; it does not advertise external agent execution or payments.

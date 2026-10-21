@@ -5,7 +5,7 @@ export default function robots(): MetadataRoute.Robots {
     rules: {
       userAgent: "*",
       allow: "/",
-      disallow: ["/dashboard/", "/api/"],
+      disallow: ["/dashboard", "/api", "/login", "/invite", "/access-denied"],
     },
     sitemap: "https://www.trypreflight.dev/sitemap.xml",
   };

@@ -1,10 +1,12 @@
 import type { Metadata } from "next";
+import { publicAlternates } from "@/lib/site";
 import { listPublishedPosts } from "@/lib/blog";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Blog | PreFlight",
+  title: "Blog",
+  alternates: publicAlternates("/blog"),
   description:
     "Notes on AI testing, agent swarms, and shipping software that is ready to fly.",
 };

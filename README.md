@@ -52,3 +52,9 @@ npm run dev
 Headers, profile menus, and appearance controls are shared across public and
 dashboard routes. See [UI structure and theme conventions](docs/ui.md) before
 adding page-specific navigation or theme handling.
+
+## Agent-readable public content
+
+Public pages support Markdown content negotiation and a read-only discovery
+catalog. See [agent discovery and Cloudflare settings](docs/agent-discovery.md)
+for endpoints, cache boundaries, and live-deployment checks.

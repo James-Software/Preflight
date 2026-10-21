@@ -1,4 +1,6 @@
+import { serializeJsonLd } from "@/lib/structured-data";
 import type { Metadata } from "next";
+import { publicAlternates, SITE_URL } from "@/lib/site";
 import { notFound } from "next/navigation";
 import { getPostBySlug } from "@/lib/blog";
 import Markdown from "@/components/Markdown";
@@ -22,7 +24,9 @@ export async function generateMetadata({
   const post = await getPostBySlug(slug);
   if (!post) return { title: "Not found | PreFlight" };
   return {
-    title: `${post.title} | PreFlight`,
+    title: post.title,
+    alternates: publicAlternates(`/blog/${encodeURIComponent(slug)}`),
+    openGraph: { type: "article", title: post.title, publishedTime: new Date(post.created_at).toISOString(), modifiedTime: new Date(post.updated_at).toISOString() },
     description: post.description ?? undefined,
   };
 }
@@ -38,6 +42,13 @@ export default async function BlogPostPage({
 
   return (
     <main className="min-h-screen bg-page">
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd({
+        "@context": "https://schema.org", "@type": "BlogPosting", headline: post.title,
+        ...(post.description ? { description: post.description } : {}),
+        datePublished: new Date(post.created_at).toISOString(), dateModified: new Date(post.updated_at).toISOString(),
+        mainEntityOfPage: `${SITE_URL}/blog/${encodeURIComponent(post.slug)}`,
+        publisher: { "@type": "Organization", name: "PreFlight", url: SITE_URL },
+      }) }} />
       <article className="mx-auto max-w-3xl px-6 pb-20 pt-32 md:pb-28 md:pt-36">
         <a
           href="/blog"

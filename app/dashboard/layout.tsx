@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import DashboardHeader from "@/components/DashboardHeader";
@@ -12,3 +13,5 @@ export default async function DashboardLayout({ children }: { children: React.Re
     </div>
   );
 }
+
+export const metadata: Metadata = { robots: { index: false, follow: false } };

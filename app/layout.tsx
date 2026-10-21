@@ -2,6 +2,7 @@ import type { Metadata, Viewport } from "next";
 import { Space_Grotesk, Inter } from "next/font/google";
 import "./globals.css";
 import Providers from "@/components/Providers";
+import { SITE_URL } from "@/lib/site";
 
 const display = Space_Grotesk({
   subsets: ["latin"],
@@ -16,7 +17,7 @@ const sans = Inter({
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://www.trypreflight.dev"),
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "PreFlight: AI Agents That Test Your App Like Real Users",
     template: "%s | PreFlight",
@@ -27,7 +28,7 @@ export const metadata: Metadata = {
     title: "PreFlight: AI Agents That Test Your App Like Real Users",
     description:
       "PreFlight sends a swarm of AI agents to test your app like real users. Every bug they find comes back as fix.",
-    url: "https://www.trypreflight.dev",
+    url: SITE_URL,
     siteName: "PreFlight",
     type: "website",
   },
