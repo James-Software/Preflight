@@ -1,7 +1,7 @@
 export const SITE_URL = "https://www.trypreflight.dev";
 export const SITE_DESCRIPTION = "PreFlight sends a swarm of AI agents to test your app like real users. Every bug they find comes back as fix.";
 // Keep robots.txt and public response headers aligned on content-use preferences.
-export const CONTENT_SIGNALS = "ai-train=no, search=yes, ai-input=yes";
+export const CONTENT_SIGNALS = "ai-train=yes, search=yes, ai-input=yes";
 
 export function markdownPath(path: string): string {
   return path === "/" ? "/markdown" : `/markdown${path}`;

@@ -18,8 +18,9 @@ cookies. No user-agent string grants extra access.
 
 - `/robots.txt`: allows public crawling, excludes dashboard, API, login, invitation,
   and access-denied paths, and points to the sitemap. Its wildcard user-agent block
-  declares `Content-Signal: ai-train=no, search=yes, ai-input=yes`: no model
-  training, with search indexing and AI input/retrieval allowed. This policy shares
+  declares `Content-Signal: ai-train=yes, search=yes, ai-input=yes`: model
+  training, search indexing, and AI input/retrieval are all allowed for public
+  content, including published blog posts. This policy shares
   a constant with the public HTML and Markdown response headers in `lib/site.ts`.
   Content Signals express preferences; they do not enforce access. Robots rules are advisory;
   existing session, ownership, and admin checks still enforce access.
@@ -46,7 +47,9 @@ or the deployment currently attached to the domain. After the deployment is live
    the actual resource with 200, not a challenge page, login redirect, 404, or SPA HTML.
    The canonical host is `https://www.trypreflight.dev`.
 2. In AI Crawl Control, review whether the desired search/retrieval crawlers are
-   blocked by the zone policy. Review Bot Preference Sync / managed robots too:
+   blocked by the zone policy, and allow verified AI training crawlers to access
+   public content in line with the site's opt-in training policy.
+   Review Bot Preference Sync / managed robots too:
    Cloudflare can prepend directives to the origin's robots file. Do not disable
    WAF, account protection, or authentication to make a score pass.
 3. Review cache rules so they do not ignore `Vary: Accept` or override origin
@@ -57,7 +60,7 @@ or the deployment currently attached to the domain. After the deployment is live
    is optional. If using it, scope conversion to public paths. Cloudflare documents
    Pro/Business/Enterprise availability; native origin delivery does not require
    upgrading the plan. Origin Content-Signal headers and `/robots.txt` explicitly
-   allow search and AI input and disallow model training. Keep any Cloudflare
+   allow search, AI input, and model training. Keep any Cloudflare
    managed Content Signals aligned with that policy; discovery is separate from
    model training.
 5. Re-run Cloudflare's scan against the canonical live URL after deployment.
