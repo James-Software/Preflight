@@ -1,4 +1,5 @@
 import type { MetadataRoute } from "next";
+import { CONTENT_SIGNALS, SITE_URL } from "@/lib/site";
 
 export default function robots(): MetadataRoute.Robots {
   return {
@@ -6,7 +7,8 @@ export default function robots(): MetadataRoute.Robots {
       userAgent: "*",
       allow: "/",
       disallow: ["/dashboard", "/api", "/login", "/invite", "/access-denied"],
+      other: { "Content-Signal": CONTENT_SIGNALS },
     },
-    sitemap: "https://www.trypreflight.dev/sitemap.xml",
+    sitemap: `${SITE_URL}/sitemap.xml`,
   };
 }

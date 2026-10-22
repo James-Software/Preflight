@@ -17,7 +17,11 @@ cookies. No user-agent string grants extra access.
 ## Discovery endpoints
 
 - `/robots.txt`: allows public crawling, excludes dashboard, API, login, invitation,
-  and access-denied paths, and points to the sitemap. Robots rules are advisory;
+  and access-denied paths, and points to the sitemap. Its wildcard user-agent block
+  declares `Content-Signal: ai-train=no, search=yes, ai-input=yes`: no model
+  training, with search indexing and AI input/retrieval allowed. This policy shares
+  a constant with the public HTML and Markdown response headers in `lib/site.ts`.
+  Content Signals express preferences; they do not enforce access. Robots rules are advisory;
   existing session, ownership, and admin checks still enforce access.
 - `/sitemap.xml`: public pages and published posts. Only real post modification
   timestamps are advertised, rather than pretending every page changes on each request.
@@ -52,9 +56,10 @@ or the deployment currently attached to the domain. After the deployment is live
 4. The origin already serves Markdown, so Cloudflare's Markdown for Agents toggle
    is optional. If using it, scope conversion to public paths. Cloudflare documents
    Pro/Business/Enterprise availability; native origin delivery does not require
-   upgrading the plan. Explicit origin Content-Signal headers allow search and
-   AI input without adding an `ai-train` declaration. Review zone settings for
-   the training policy you intend; discovery is separate from model training.
+   upgrading the plan. Origin Content-Signal headers and `/robots.txt` explicitly
+   allow search and AI input and disallow model training. Keep any Cloudflare
+   managed Content Signals aligned with that policy; discovery is separate from
+   model training.
 5. Re-run Cloudflare's scan against the canonical live URL after deployment.
    A local check or Git push cannot establish a new Cloudflare score or crawler traffic.
 

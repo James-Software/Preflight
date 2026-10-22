@@ -1,7 +1,7 @@
 import { getPostBySlug, listPublishedPosts } from "@/lib/blog";
 import { frontmatter, staticDocument, type PublicDocument } from "@/lib/content/public-markdown";
 import { isPublicContentPath } from "@/lib/content/paths";
-import { DISCOVERY_LINKS, SITE_URL } from "@/lib/site";
+import { CONTENT_SIGNALS, DISCOVERY_LINKS, SITE_URL } from "@/lib/site";
 
 export const dynamic = "force-dynamic";
 
@@ -33,7 +33,7 @@ export async function GET(_request: Request, { params }: { params: Promise<{ pat
     "Cache-Control": "no-store",
     "Vary": "Accept",
     "X-Content-Type-Options": "nosniff",
-    "Content-Signal": "search=yes, ai-input=yes",
+    "Content-Signal": CONTENT_SIGNALS,
     "Link": `${DISCOVERY_LINKS}, <${SITE_URL}${path}>; rel="canonical"`,
   } });
 }

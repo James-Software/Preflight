@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { isPublicContentPath } from "./lib/content/paths";
 import { prefersMarkdown } from "./lib/content/negotiation";
-import { DISCOVERY_LINKS, SITE_URL, markdownPath } from "./lib/site";
+import { CONTENT_SIGNALS, DISCOVERY_LINKS, SITE_URL, markdownPath } from "./lib/site";
 
 export function proxy(request: NextRequest) {
   const path = request.nextUrl.pathname;
@@ -16,7 +16,7 @@ export function proxy(request: NextRequest) {
   // may enter a shared cache, even if an intermediary ignores Accept.
   response.headers.set("Cache-Control", "private, no-store, max-age=0");
   response.headers.set("Link", `${DISCOVERY_LINKS}, <${SITE_URL}${path}>; rel="canonical", <${SITE_URL}${markdownPath(path)}>; rel="alternate"; type="text/markdown"`);
-  response.headers.set("Content-Signal", "search=yes, ai-input=yes");
+  response.headers.set("Content-Signal", CONTENT_SIGNALS);
   return response;
 }
 
