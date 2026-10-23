@@ -1,6 +1,6 @@
 # Annotated landing-page run
 
-The separate run demo and numbered feature grid now form one annotated sample run. Browser, evidence, diagnosis and diff panes demonstrate each claim; PR #436 ends with the human merge decision. Evidence tabs support click, Left/Right, Home/End and standard Tab navigation. Code wraps on narrow screens. The hero copy and mobile scale, early-access typography and scroll-stable nav are also corrected.
+The separate run demo and numbered feature grid now form one annotated sample run. Browser, evidence, diagnosis and diff panes demonstrate each claim; PR #436 ends with the human merge decision. Evidence tabs support click, Left/Right, Home/End and standard Tab navigation. Code wraps on narrow screens. The diff uses a file toolbar, line-number gutter and highlighted additions/removals; timestamped logs use terminal panes with severity labels. Checkout screenshots sit inside Chrome-style window tabs, navigation controls and an address bar. Network evidence has a matching inspector pane. The hero copy and mobile scale, early-access typography and scroll-stable nav are also corrected.
 
 Inter and Space Grotesk are self-hosted from Fontsource 5.3.0 with their OFL licenses in `app/fonts`. This preserves the existing font families without build-time Google Fonts requests, which this environment denies. No dependencies or lockfiles changed.
 

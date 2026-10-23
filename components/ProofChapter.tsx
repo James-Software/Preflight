@@ -1,9 +1,5 @@
 import RunEvidence, { CheckoutSnapshot } from "./RunEvidence";
-
-const trace = `agent-2 loaded /checkout
-agent-2 selected plan “Pro”
-agent-2 clicked “Pay now”: no response
-agent-2 retried 3×: still nothing`;
+import { FixCodeBlock, LogBlock } from "./SampleRunBlocks";
 
 export default function ProofChapter() {
   return (
@@ -60,20 +56,43 @@ export default function ProofChapter() {
               </p>
             </div>
             <div className="run-pane">
-              <p className="mb-4 font-semibold">Agent trace</p>
-              <pre>
-                <code>{trace}</code>
-              </pre>
-              <pre className="run-bug mt-3">
-                <code>BUG: checkout button dead after plan select</code>
-              </pre>
-              <pre className="mt-3">
-                <code>
+              <LogBlock
+                title="Agent trace"
+                entries={[
+                  { time: "00:01", level: "info", message: "Loaded /checkout" },
                   {
-                    "judge → root cause: handler reads plan from a stale closure"
-                  }
-                </code>
-              </pre>
+                    time: "00:03",
+                    level: "info",
+                    message: "Selected plan “Pro”",
+                  },
+                  {
+                    time: "00:05",
+                    level: "info",
+                    message: "Clicked “Pay now”: no response",
+                  },
+                  {
+                    time: "00:09",
+                    level: "info",
+                    message: "Retried 3×: still nothing",
+                  },
+                  {
+                    time: "00:10",
+                    level: "error",
+                    message: "BUG: checkout button dead after plan select",
+                  },
+                  {
+                    time: "00:12",
+                    level: "judge",
+                    message:
+                      "root cause: handler reads plan from a stale closure",
+                  },
+                  {
+                    time: "00:16",
+                    level: "fix",
+                    message: "Fix ready: opening PR #436",
+                  },
+                ]}
+              />
               <p className="mt-4 text-sm">
                 The empty dependency list below keeps the initial, null plan in
                 the handler.
@@ -89,27 +108,7 @@ export default function ProofChapter() {
               </p>
             </div>
             <div className="run-pane">
-              <p className="mb-4 break-words text-sm font-semibold">
-                app/checkout/page.tsx
-              </p>
-              <pre>
-                <code>
-                  {"  const handlePay = useCallback(() => {\n"}
-                  <span className="run-removed">{"-   pay(plan.id);\n"}</span>
-                  <span className="run-added">
-                    {
-                      "+   if (!plan || processing) return;\n+   pay(plan.id);\n"
-                    }
-                  </span>
-                  <span className="run-removed run-source">
-                    {"- }, []); // stale closure\n"}
-                  </span>
-                  <span className="run-added">
-                    {"+ }, [plan, processing]);\n"}
-                  </span>
-                  {"  <button onClick={handlePay}>Pay now</button>"}
-                </code>
-              </pre>
+              <FixCodeBlock />
               <p className="run-added mt-4 font-medium">Fix ready for review</p>
             </div>
           </div>
