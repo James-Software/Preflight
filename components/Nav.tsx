@@ -48,7 +48,7 @@ export default function Nav({ user }: { user: ProfileUser | null }) {
 
   return (
     <nav aria-label="Main navigation" className="fixed inset-x-0 top-0 z-50">
-      <div className={`relative mx-auto mt-3 w-[calc(100%-1.5rem)] transition-[max-width,width] duration-200 ease-[cubic-bezier(0.16,1,0.3,1)] motion-reduce:transition-none ${glass ? "max-w-[1060px] md:w-[calc(100%-2.5rem)]" : "max-w-6xl md:w-full"}`}>
+      <div className="relative mx-auto mt-3 w-[calc(100%-1.5rem)] max-w-6xl md:w-[calc(100%-2.5rem)]">
         <div aria-hidden="true" className={`absolute inset-0 rounded-2xl border border-line bg-surface/80 shadow-[inset_0_1px_1px_rgba(255,255,255,0.6),0_8px_30px_rgba(30,27,75,0.12)] backdrop-blur-xl transition-opacity duration-200 motion-reduce:transition-none dark:shadow-[inset_0_1px_1px_rgba(255,255,255,0.15),0_8px_30px_rgba(0,0,0,0.45)] ${glass ? "opacity-100" : "opacity-0"}`} />
         <div className="relative flex w-full items-center justify-between gap-2 px-3 py-3 sm:px-4 md:px-6 md:py-4">
           <Brand href="/" scrolled={glass} />

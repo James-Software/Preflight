@@ -218,3 +218,39 @@ body {
     animation: none;
   }
 }
+
+/* One annotated product fragment; all sample code wraps at narrow widths. */
+.annotated-run { padding-block: 88px; }
+.run-intro h2 { max-width: 760px; font-size: clamp(1.875rem, 4vw, 3rem); line-height: 1.12; }
+.run-artifact { border-radius: 20px; overflow: hidden; background: var(--surface); }
+.run-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 24px; background: var(--panel); }
+.run-row { display: grid; grid-template-columns: minmax(0, 1fr); }
+.run-annotation { padding: 28px 24px 16px; }
+.run-annotation h3 { font-size: 20px; font-weight: 600; letter-spacing: -.025em; }
+.run-annotation p { margin-top: 10px; line-height: 1.65; max-width: 34ch; }
+.run-pane { min-width: 0; padding: 24px; background: var(--panel); }
+.run-artifact pre { font-size: 14px; line-height: 1.8; white-space: pre-wrap; overflow-wrap: anywhere; }
+.sample-checkout { background: var(--surface); border-radius: 12px; overflow: hidden; }
+.sample-url { padding: 12px 20px; background: var(--page); font-size: 14px; }
+.sample-checkout-body { padding: 24px; }
+.sample-pay { margin-top: 24px; display: flex; justify-content: space-between; max-width: 300px; padding: 12px 18px; background: #1e1b4b; color: #fff; border-radius: 8px; font-weight: 600; }
+.dark .sample-pay { background: #e3e4ff; color: #1e1b4b; }
+.run-tabs { display: flex; flex-wrap: wrap; gap: 4px; margin-bottom: 20px; }
+.run-tabs button { padding: 10px 12px; border-radius: 6px; font-size: 14px; cursor: pointer; }
+.run-tabs button[aria-selected="true"] { background: #1e1b4b; color: #fff; }
+.dark .run-tabs button[aria-selected="true"] { background: #e3e4ff; color: #1e1b4b; }
+.run-evidence-panel { min-height: 225px; }
+.run-bug, .run-removed { color: #a51d2d; }
+.run-added { color: #17603b; }
+.dark .run-bug, .dark .run-removed { color: #ffa3ae; }
+.dark .run-added { color: #8ee4b0; }
+.run-source { background: #a51d2d12; text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 4px; }
+.dark .run-source { background: #ffa3ae12; }
+.run-pr { padding: 28px 24px; background: var(--panel); }
+@media (min-width: 768px) {
+  .annotated-run { padding-block: 128px; }
+  .run-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1.8fr); }
+  .run-annotation { padding: 36px; }
+  .run-pane { padding: 32px; }
+  .run-header, .run-pr { padding: 28px 36px; }
+}

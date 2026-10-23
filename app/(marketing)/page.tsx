@@ -3,7 +3,6 @@ import type { Metadata } from "next";
 import { publicAlternates, SITE_URL, SITE_DESCRIPTION } from "@/lib/site";
 import Hero from "@/components/Hero";
 import ProofChapter from "@/components/ProofChapter";
-import Capabilities from "@/components/Capabilities";
 import EarlyAccess from "@/components/EarlyAccess";
 
 export const metadata: Metadata = { alternates: publicAlternates("/") };
@@ -23,7 +22,6 @@ export default function Home() {
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(structuredData) }} />
       <Hero />
       <ProofChapter />
-      <Capabilities />
       <EarlyAccess />
     </main>
   );

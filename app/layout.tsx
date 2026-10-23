@@ -1,19 +1,27 @@
 import type { Metadata, Viewport } from "next";
-import { Space_Grotesk, Inter } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 import Providers from "@/components/Providers";
 import { SITE_URL } from "@/lib/site";
 
-const display = Space_Grotesk({
-  subsets: ["latin"],
-  weight: ["500", "600", "700"],
+const display = localFont({
+  src: [
+    { path: "./fonts/space-grotesk-latin-500-normal.woff2", weight: "500" },
+    { path: "./fonts/space-grotesk-latin-600-normal.woff2", weight: "600" },
+    { path: "./fonts/space-grotesk-latin-700-normal.woff2", weight: "700" },
+  ],
   variable: "--font-display",
+  display: "swap",
 });
 
-const sans = Inter({
-  subsets: ["latin"],
-  weight: ["400", "500", "600"],
+const sans = localFont({
+  src: [
+    { path: "./fonts/inter-latin-400-normal.woff2", weight: "400" },
+    { path: "./fonts/inter-latin-500-normal.woff2", weight: "500" },
+    { path: "./fonts/inter-latin-600-normal.woff2", weight: "600" },
+  ],
   variable: "--font-sans",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -23,11 +31,11 @@ export const metadata: Metadata = {
     template: "%s | PreFlight",
   },
   description:
-    "PreFlight sends a swarm of AI agents to test your app like real users. Every bug they find comes back as fix.",
+    "PreFlight sends a swarm of AI agents to test your app like real users. Every bug they find comes back as a fix.",
   openGraph: {
     title: "PreFlight: AI Agents That Test Your App Like Real Users",
     description:
-      "PreFlight sends a swarm of AI agents to test your app like real users. Every bug they find comes back as fix.",
+      "PreFlight sends a swarm of AI agents to test your app like real users. Every bug they find comes back as a fix.",
     url: SITE_URL,
     siteName: "PreFlight",
     type: "website",
@@ -36,7 +44,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "PreFlight: AI Agents That Test Your App Like Real Users",
     description:
-      "PreFlight sends a swarm of AI agents to test your app like real users. Every bug they find comes back as fix.",
+      "PreFlight sends a swarm of AI agents to test your app like real users. Every bug they find comes back as a fix.",
   },
   robots: {
     index: true,

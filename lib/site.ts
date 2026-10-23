@@ -1,5 +1,5 @@
 export const SITE_URL = "https://www.trypreflight.dev";
-export const SITE_DESCRIPTION = "PreFlight sends a swarm of AI agents to test your app like real users. Every bug they find comes back as fix.";
+export const SITE_DESCRIPTION = "PreFlight sends a swarm of AI agents to test your app like real users. Every bug they find comes back as a fix.";
 // Keep robots.txt and public response headers aligned on content-use preferences.
 export const CONTENT_SIGNALS = "ai-train=yes, search=yes, ai-input=yes";
 
