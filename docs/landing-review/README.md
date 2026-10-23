@@ -2,7 +2,9 @@
 
 Four minimal scenes share the center of the viewport: browser → evidence → diagnosis → fix. The scene stays pinned while scrolling through the sequence and releases after the PR. Scroll position selects the step; native page scrolling is preserved. The floating run toolbar is removed, and the site nav is hidden during the pinned sequence and restored on release.
 
-Each step has one short heading, one sentence and its product visual. The final diff is shorter, with the branch and human merge decision below it. Browser chrome, code blocks, logs, evidence tabs and both themes are retained. Reduced motion, JavaScript-disabled browsers and viewports too short for the visuals show all steps in natural document flow.
+Each step has one short heading, one sentence and its product visual. The final diff is shorter, with the branch and human merge decision below it. Browser chrome, code blocks, logs, evidence tabs and both themes are retained. Evidence tabs crossfade with an 8px blur and a small scale/skew warp. All three panels share a grid slot sized by the tallest content, so the caption, tabs and surrounding scene keep identical geometry when the selected evidence changes. Inactive panels are inert and hidden from assistive technology; reduced motion disables the transition.
+
+Reduced motion, JavaScript-disabled browsers and viewports too short for the visuals show all steps in natural document flow.
 
 ## Pinned scenes
 
@@ -32,6 +34,7 @@ These after images show the reduced-motion stacked fallback. Before images use t
 - Installation, typecheck, production build and diff checks pass. The repository has no lint or test scripts.
 - At 1440×900, 768×1024 and 390×844, both themes: each of the four scenes stays within 2px of the viewport's vertical center; exactly one scene is active; the sequence releases after its last scene; no document or code overflow; evidence tabs work by mouse and keyboard. The floating site nav stays hidden while pinned and returns afterward. See pinned-verification.jsonl.
 - Reduced motion and JavaScript-disabled checks verify all four steps remain visible without pinning. Short viewports use this same natural-flow fallback.
+- Evidence-transition checks at all three viewport sizes in both themes compare the exact caption, tab-strip and panel-area bounds before, during and after switching tabs. They also verify the blur effect, rapid keyboard selection, no overflow and the reduced-motion fallback. See evidence-transition.jsonl.
 - Axe WCAG A/AA checks, including normal-text contrast, cover every evidence tab and all scene visuals in both themes using the reduced-motion fallback. See accessibility.jsonl.
 - CTA destinations remain `#early-access`, `#how-it-works` and `/login`. Privacy, Terms and For agents return 200. Blog needs DATABASE_URL and returns 500 without it; the link is unchanged. OAuth and waitlist submission remain untested without credentials.
 

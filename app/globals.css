@@ -322,3 +322,14 @@ body {
 }
 
 html[data-run-pinned] nav[aria-label="Main navigation"] { visibility: hidden; pointer-events: none; }
+
+/* All evidence panels size one shared slot; only their contents transition. */
+.run-evidence-stack { display: grid; align-items: start; isolation: isolate; }
+.run-evidence-stack > .run-evidence-panel { grid-area: 1 / 1; min-width: 0; visibility: hidden; pointer-events: none; transition: visibility 400ms; }
+.run-evidence-content { opacity: 0; filter: blur(8px); transform: translateY(8px) scale(.97, 1.02) skewX(-1.5deg); transform-origin: 50% 35%; transition: opacity 260ms ease, filter 320ms ease, transform 400ms cubic-bezier(0.16, 1, 0.3, 1); }
+.run-evidence-stack > .run-evidence-panel[data-active] { visibility: visible; pointer-events: auto; z-index: 1; transition: visibility 0s; }
+.run-evidence-panel[data-active] > .run-evidence-content { opacity: 1; filter: blur(0); transform: translateY(0) scale(1) skewX(0deg); }
+@media (prefers-reduced-motion: reduce) {
+  .run-evidence-stack > .run-evidence-panel, .run-evidence-content { transition: none; }
+  .run-evidence-content { filter: none; transform: none; }
+}

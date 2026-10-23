@@ -126,73 +126,79 @@ export default function RunEvidence() {
           </button>
         ))}
       </div>
-      {TABS.map((tab, index) => (
-        <div
-          key={tab}
-          id={`${id}-panel-${index}`}
-          role="tabpanel"
-          aria-labelledby={`${id}-tab-${index}`}
-          hidden={active !== index}
-          tabIndex={0}
-          className="run-evidence-panel"
-        >
-          {index === 0 && (
-            <>
-              <CheckoutSnapshot />
-            </>
-          )}
-          {index === 1 && (
-            <LogBlock
-              title="Browser console"
-              entries={[
-                {
-                  time: "00:05",
-                  level: "error",
-                  message:
-                    "TypeError: plan is null\n  at handlePay (page.tsx:89)",
-                },
-                {
-                  time: "00:09",
-                  level: "info",
-                  message: "Pay now failed before sending a request.",
-                },
-              ]}
-            />
-          )}
-          {index === 2 && (
-            <figure className="run-network-block">
-              <figcaption className="run-block-header">
-                <span>Network</span>
-                <span className="run-block-meta">agent-2 · /checkout</span>
-              </figcaption>
-              <div className="run-network-summary">
-                3 clicks · 0 checkout requests
-              </div>
-              <dl className="run-network-request">
-                <div>
-                  <dt>Request</dt>
-                  <dd>
-                    <code>POST /api/checkout</code>
-                  </dd>
-                </div>
-                <div>
-                  <dt>Status</dt>
-                  <dd>Not sent</dd>
-                </div>
-                <div>
-                  <dt>Initiator</dt>
-                  <dd>
-                    <code>handlePay · page.tsx:89</code>
-                  </dd>
-                </div>
-              </dl>
-              <p className="run-network-note">
-                Handler threw before fetch. No request reached the server.
-              </p>
-            </figure>
-          )}
-        </div>
-      ))}
+      <div className="run-evidence-stack">
+        {TABS.map((tab, index) => (
+          <div
+            key={tab}
+            id={`${id}-panel-${index}`}
+            role="tabpanel"
+            aria-labelledby={`${id}-tab-${index}`}
+            data-active={active === index || undefined}
+            aria-hidden={active !== index ? true : undefined}
+            inert={active !== index}
+            tabIndex={active === index ? 0 : -1}
+            className="run-evidence-panel"
+          >
+            <div className="run-evidence-content">
+              {index === 0 && (
+                <>
+                  <CheckoutSnapshot />
+                </>
+              )}
+              {index === 1 && (
+                <LogBlock
+                  title="Browser console"
+                  entries={[
+                    {
+                      time: "00:05",
+                      level: "error",
+                      message:
+                        "TypeError: plan is null\n  at handlePay (page.tsx:89)",
+                    },
+                    {
+                      time: "00:09",
+                      level: "info",
+                      message: "Pay now failed before sending a request.",
+                    },
+                  ]}
+                />
+              )}
+              {index === 2 && (
+                <figure className="run-network-block">
+                  <figcaption className="run-block-header">
+                    <span>Network</span>
+                    <span className="run-block-meta">agent-2 · /checkout</span>
+                  </figcaption>
+                  <div className="run-network-summary">
+                    3 clicks · 0 checkout requests
+                  </div>
+                  <dl className="run-network-request">
+                    <div>
+                      <dt>Request</dt>
+                      <dd>
+                        <code>POST /api/checkout</code>
+                      </dd>
+                    </div>
+                    <div>
+                      <dt>Status</dt>
+                      <dd>Not sent</dd>
+                    </div>
+                    <div>
+                      <dt>Initiator</dt>
+                      <dd>
+                        <code>handlePay · page.tsx:89</code>
+                      </dd>
+                    </div>
+                  </dl>
+                  <p className="run-network-note">
+                    Handler threw before fetch. No request reached the server.
+                  </p>
+                </figure>
+              )}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
