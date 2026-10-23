@@ -18,8 +18,9 @@ Built for the Galuxium Nexus V2 hackathon (deadline Oct 31, 2026).
   `supabase/schema.sql`.
 - **Test swarm** — Playwright on cloud browsers (Browserbase). An LLM drives each
   browser agent as a real user through generated test plans.
-- **Decision layer** — Jev (TypeSafe's Decisions API): cheap, typed pass/fail and
-  routing judgments on every test step, keeping inference costs near zero.
+- **Decision layer** — an OpenRouter chat judge evaluates step pass/fail and bug
+  severity. An optional Jev/TypeSafe Decisions adapter exists but is disabled and
+  has not been verified against the live service.
 - **Fix agent** — a GitHub App (least privilege: contents + PRs on repos you pick).
   Diagnoses root cause from repo code plus captured console/network output, fixes in
   a sandbox, and opens a PR. Humans merge — never direct pushes.
@@ -42,10 +43,15 @@ Built for the Galuxium Nexus V2 hackathon (deadline Oct 31, 2026).
 ## Getting started
 
 ```bash
-cp .env.example .env.local   # then fill in your Supabase values
+cp .env.example .env.local   # then fill in your web app values
 npm install
 npm run dev
 ```
+
+Swarm workers also need their own credentials and deployment in Trigger.dev.
+See [swarm setup and model credentials](docs/swarm-setup.md) for Production versus
+Preview routing, “No matching branch env” recovery, and the optional Decisions
+adapter. The current swarm does not require a separate Decisions key.
 
 ## Shared UI
 

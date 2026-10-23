@@ -156,3 +156,206 @@ test("updating an app URL remains scoped to its owner", async () => {
   assert.match(update.query, /owner_github_id = \?/);
   assert.deepEqual(update.values, ["https://example.com", 12, "other-owner"]);
 });
+
+const { getTriggerClientConfig, swarmStartError } = load(
+  "lib/trigger-client.ts",
+  {},
+);
+test("production rejects a Preview/Development Trigger key before queuing a swarm", () => {
+  for (const key of ["tr_preview_test", "tr_dev_test"]) {
+    assert.throws(
+      () =>
+        getTriggerClientConfig({
+          VERCEL_ENV: "production",
+          TRIGGER_SECRET_KEY: key,
+        }),
+      /Production TRIGGER_SECRET_KEY/,
+    );
+  }
+  assert.throws(
+    () => getTriggerClientConfig({}),
+    /TRIGGER_SECRET_KEY is missing/,
+  );
+  assert.throws(
+    () => getTriggerClientConfig({ TRIGGER_SECRET_KEY: "tr_preview_test" }),
+    /matching a deployed Trigger.dev branch/,
+  );
+});
+test("the installed Trigger SDK sends only the intended worker branch", async (t) => {
+  const { tasks } = require("@trigger.dev/sdk");
+  const previous = process.env.VERCEL_GIT_COMMIT_REF;
+  process.env.VERCEL_GIT_COMMIT_REF = "unrelated-vercel-branch";
+  t.after(() => {
+    if (previous === undefined) delete process.env.VERCEL_GIT_COMMIT_REF;
+    else process.env.VERCEL_GIT_COMMIT_REF = previous;
+  });
+  const calls = [];
+  t.mock.method(globalThis, "fetch", async (url, options) => {
+    assert.match(String(url), /\/api\/v1\/tasks\/run-swarm\/trigger$/);
+    calls.push(new Headers(options.headers));
+    return Response.json({ id: "run_test" });
+  });
+  for (const [env, expectedBranch] of [
+    [
+      {
+        TRIGGER_SECRET_KEY: "tr_prod_test",
+        VERCEL_GIT_COMMIT_REF: "main",
+        TRIGGER_PREVIEW_BRANCH: "stale-preview",
+      },
+      null,
+    ],
+    [
+      { TRIGGER_SECRET_KEY: "tr_dev_test", VERCEL_GIT_COMMIT_REF: "main" },
+      null,
+    ],
+    [
+      { TRIGGER_SECRET_KEY: "tr_dev_test", TRIGGER_DEV_BRANCH: "default" },
+      null,
+    ],
+    [
+      { TRIGGER_SECRET_KEY: "tr_dev_test", TRIGGER_DEV_BRANCH: "worker-dev" },
+      "worker-dev",
+    ],
+    [
+      {
+        TRIGGER_SECRET_KEY: "tr_preview_test",
+        VERCEL_GIT_COMMIT_REF: "feature/qa",
+      },
+      "feature/qa",
+    ],
+    [
+      {
+        TRIGGER_SECRET_KEY: "tr_preview_test",
+        TRIGGER_PREVIEW_BRANCH: "explicit-preview",
+        VERCEL_GIT_COMMIT_REF: "feature/qa",
+      },
+      "explicit-preview",
+    ],
+  ]) {
+    await tasks.trigger(
+      "run-swarm",
+      { runId: 1, targetUrl: "https://example.com" },
+      undefined,
+      { clientConfig: getTriggerClientConfig(env) },
+    );
+    assert.equal(calls.at(-1).get("x-trigger-branch"), expectedBranch);
+    assert.equal(
+      calls.at(-1).get("authorization"),
+      `Bearer ${env.TRIGGER_SECRET_KEY}`,
+    );
+  }
+  assert.equal(calls.length, 6);
+});
+test("branch environment errors explain how to recover", () => {
+  const message = swarmStartError(new Error("No matching branch env"));
+  assert.match(message, /Production TRIGGER_SECRET_KEY/);
+  assert.match(message, /deploy the matching branch/);
+});
+function swarmRoute(trigger, config, changes = {}) {
+  return load("app/api/projects/[id]/runs/route.ts", {
+    "@trigger.dev/sdk": { tasks: { trigger } },
+    "@/auth": { auth: async () => ({ user: { githubId: "owner-100" } }) },
+    "@/lib/trigger-client": { getTriggerClientConfig: config, swarmStartError },
+    "@/lib/schema": {
+      getProject: async () => ({ id: 12, app_url: "https://example.com" }),
+      createRun: async () => ({ id: 34 }),
+      updateRunStatus: async () => {},
+      ...changes,
+    },
+    "@/lib/github": {},
+  });
+}
+test("invalid worker configuration creates no queued run", async () => {
+  const route = swarmRoute(
+    () => assert.fail("must not trigger"),
+    () => {
+      throw new Error("Production TRIGGER_SECRET_KEY required");
+    },
+    { createRun: () => assert.fail("must not create a run") },
+  );
+  const response = await route.POST(
+    new Request("https://example.com/api/projects/12/runs", { method: "POST" }),
+    { params: Promise.resolve({ id: "12" }) },
+  );
+  assert.equal(response.status, 503);
+  assert.match((await response.json()).error, /Production TRIGGER_SECRET_KEY/);
+});
+test("swarm startup passes worker routing per request", async () => {
+  const config = { accessToken: "tr_prod_test", previewBranch: "" };
+  let triggered;
+  const route = swarmRoute(
+    async (...args) => {
+      triggered = args;
+    },
+    () => config,
+  );
+  const response = await route.POST(
+    new Request("https://example.com/api/projects/12/runs", { method: "POST" }),
+    { params: Promise.resolve({ id: "12" }) },
+  );
+  assert.equal(response.status, 200);
+  assert.deepEqual(triggered, [
+    "run-swarm",
+    { runId: 34, targetUrl: "https://example.com" },
+    undefined,
+    { clientConfig: config },
+  ]);
+});
+test("the current judge works through OpenRouter without a separate Decisions key", async (t) => {
+  const previous = process.env.OPENROUTER_API_KEY;
+  process.env.OPENROUTER_API_KEY = "router-test";
+  t.after(() => {
+    if (previous === undefined) delete process.env.OPENROUTER_API_KEY;
+    else process.env.OPENROUTER_API_KEY = previous;
+  });
+  t.mock.method(globalThis, "fetch", async (url, options) => {
+    assert.equal(url, "https://openrouter.ai/api/v1/chat/completions");
+    assert.equal(
+      new Headers(options.headers).get("authorization"),
+      "Bearer router-test",
+    );
+    assert.equal(JSON.parse(options.body).model, "openai/gpt-4o-mini");
+    return Response.json({
+      choices: [
+        {
+          message: {
+            content: JSON.stringify({ verdict: "pass", confidence: 0.9 }),
+          },
+        },
+      ],
+    });
+  });
+  const { judgeStep } = load("lib/models.ts", {
+    "@/lib/model-config": {
+      MODEL_CONFIG: {
+        judge: { provider: "openrouter-chat", model: "openai/gpt-4o-mini" },
+      },
+    },
+  });
+  assert.deepEqual(
+    await judgeStep({
+      stepTitle: "Checkout",
+      stepDetail: "Pay",
+      observation: "Success",
+    }),
+    { verdict: "pass", confidence: 0.9 },
+  );
+});
+test("a missing remote worker branch fails the run and returns recovery instructions", async (t) => {
+  const updates = [];
+  t.mock.method(console, "error", () => {});
+  const route = swarmRoute(
+    async () => {
+      throw new Error("No matching branch env");
+    },
+    () => ({ accessToken: "tr_preview_test", previewBranch: "feature/qa" }),
+    { updateRunStatus: async (...args) => updates.push(args) },
+  );
+  const response = await route.POST(
+    new Request("https://example.com/api/projects/12/runs", { method: "POST" }),
+    { params: Promise.resolve({ id: "12" }) },
+  );
+  assert.equal(response.status, 500);
+  assert.deepEqual(updates, [[34, "failed"]]);
+  assert.match((await response.json()).error, /deploy the matching branch/);
+});

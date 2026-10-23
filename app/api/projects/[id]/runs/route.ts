@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { tasks } from "@trigger.dev/sdk";
 import { auth } from "@/auth";
+import { getTriggerClientConfig, swarmStartError } from "@/lib/trigger-client";
 import { getProject, listRuns, createRun, updateRunStatus } from "@/lib/schema";
 import {
   getGithubContext,
@@ -46,6 +47,16 @@ export async function POST(
   const project = await getProject(Number(id), githubId);
   if (!project) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
+  }
+
+  let clientConfig;
+  try {
+    clientConfig = getTriggerClientConfig();
+  } catch (error) {
+    return NextResponse.json(
+      { error: swarmStartError(error) },
+      { status: 503 },
+    );
   }
 
   let targetUrl = project.app_url;
@@ -102,15 +113,13 @@ export async function POST(
   // Surface trigger failures instead of a generic 500 so the real cause
   // (e.g. tasks not deployed to Trigger.dev) is visible.
   try {
-    await tasks.trigger("run-swarm", { runId: run.id, targetUrl });
+    await tasks.trigger("run-swarm", { runId: run.id, targetUrl }, undefined, {
+      clientConfig,
+    });
   } catch (e) {
     console.error("tasks.trigger(run-swarm) failed", e);
     await updateRunStatus(run.id, "failed").catch(() => {});
-    const msg = e instanceof Error ? e.message : String(e);
-    return NextResponse.json(
-      { error: `Could not start the swarm: ${msg.slice(0, 300)}` },
-      { status: 500 },
-    );
+    return NextResponse.json({ error: swarmStartError(e) }, { status: 500 });
   }
   return NextResponse.json({ run });
 }
