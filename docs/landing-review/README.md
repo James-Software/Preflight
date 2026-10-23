@@ -1,6 +1,6 @@
 # Scroll-driven evidence fan
 
-The evidence step now shows three portrait cards instead of tabs: Screenshot, Console and Network. They unfold into a left/center/right fan. Continued scrolling brings each card into the center at full size while the others sit behind it, smaller and rotated. No glow, tint or highlight marks the selected card. The heading stays anchored; the three cards share a fixed-height stage.
+The evidence step now shows three portrait cards instead of tabs: Screenshot, Console and Network. They unfold into a left/center/right fan. Continued scrolling morphs the selected card from playing-card proportions into its own browser or tool-window dimensions. The browser fills the viewport with a 16px margin; Console opens up to 1000×600 and Network up to 1200×720, constrained to fit the screen. Other cards retain their playing-card proportions and move to the viewport edges. Reverse scrolling returns to the fan. No glow, tint or highlight marks the selected card. The heading stays anchored; the three cards share a fixed-height stage.
 
 The browser, evidence, diagnosis and PR still form one centered pinned sequence. Evidence gets four scroll beats: fan opening, screenshot forward, console forward and network forward. The page releases after the PR. Native scrolling remains in place, and the floating site nav is hidden during the sequence.
 
@@ -8,7 +8,7 @@ Reduced motion, JavaScript-disabled browsers and short viewports show the three 
 
 ## Evidence sequence
 
-| Viewport / theme | Fan opens | Screenshot forward | Console forward | Network forward |
+| Viewport / theme | Fan opens | Browser window | Console window | Network window |
 | --- | --- | --- | --- | --- |
 | 1440 × 900 / light | [View](fan/1440-light-0.png) | [View](fan/1440-light-1.png) | [View](fan/1440-light-2.png) | [View](fan/1440-light-3.png) |
 | 1440 × 900 / dark | [View](fan/1440-dark-0.png) | [View](fan/1440-dark-1.png) | [View](fan/1440-dark-2.png) | [View](fan/1440-dark-3.png) |
@@ -30,7 +30,8 @@ These after images show the reduced-motion stacked fallback. Before images use t
 ## Verification
 
 - Installation, typecheck, production build and diff checks pass. The repository has no lint or test scripts.
-- All three viewport sizes in both themes: fan opens; each card grows and comes forward in order; caption position stays fixed; front-card content is not clipped; no horizontal overflow; the pinned sequence releases afterward. See fan-verification.jsonl.
+- All three viewport sizes in both themes: each card expands to its actual window dimensions; windows stay centered and inside the viewport; other cards park at the sides in playing-card proportions; reverse scrolling restores the fan; no clipped window content or horizontal document overflow. See expanded-verification.jsonl.
+- Width, height and transform animate together over 700ms. The heading fades while a window is expanded so it stays out of the way. The pinned stage keeps its reserved height during the expansion.
 - Reduced motion and JavaScript-disabled checks confirm all three cards remain readable without transforms or pinning.
 - Axe WCAG A/AA checks, including text contrast, pass in both themes with no violations or incomplete checks. The stacked fallback exposes all three cards to the audit. See accessibility.jsonl.
 - CTA destinations remain `#early-access`, `#how-it-works` and `/login`. Privacy, Terms and For agents work. Blog and authenticated flows require external credentials; those integrations remain untested here.

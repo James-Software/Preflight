@@ -2,8 +2,6 @@
 
 import { LogBlock } from "./SampleRunBlocks";
 
-const TABS = ["Screenshot", "Console", "Network"] as const;
-
 export function CheckoutSnapshot() {
   return (
     <div

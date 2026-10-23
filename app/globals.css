@@ -279,7 +279,7 @@ body {
 .sample-store-icon { width: 22px; height: 22px; flex-shrink: 0; }
 .sample-pay-arrow { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.6; flex-shrink: 0; }
 
-/* The entire scene stays centered for four scroll beats, then leaves with its runway. */
+/* Scenes stay centered through their scroll beats, then leave with the runway. */
 .run-branch { display: inline-flex; align-items: center; gap: 7px; flex-wrap: wrap; font-size: 13px; font-weight: 500; }
 .run-scroll-sequence { margin-top: 64px; }
 .run-scene { padding-block: 48px; }
@@ -340,5 +340,22 @@ html[data-run-pinned] nav[aria-label="Main navigation"] { visibility: hidden; po
 .evidence-network dd { font-size: 14px; overflow-wrap: anywhere; }
 .evidence-network-note { margin-top: 16px; color: #c3cedd; font-size: 13px; line-height: 1.6; }
 [data-pinned] .evidence-fan { position: relative; display: block; height: 440px; perspective: 1000px; }
-[data-pinned] .evidence-card { position: absolute; top: 24px; left: 50%; width: min(300px, 78%); height: 400px; min-height: 0; transform-origin: 50% 70%; transform: translateX(-50%) translate(var(--card-x, 0px), var(--card-y, 14px)) rotate(var(--card-rotate, 0deg)) scale(var(--card-scale, .82)); transition: transform 650ms cubic-bezier(0.16, 1, 0.3, 1); }
+[data-pinned] .evidence-card { position: absolute; top: 50%; left: 50%; width: var(--card-width, 260px); height: var(--card-height, 364px); min-height: 0; transform-origin: 50% 50%; transform: translate(-50%, -50%) translate(var(--card-x, 0px), var(--card-y, 14px)) rotate(var(--card-rotate, 0deg)) scale(var(--card-scale, .88)); transition: width 700ms cubic-bezier(0.16, 1, 0.3, 1), height 700ms cubic-bezier(0.16, 1, 0.3, 1), transform 700ms cubic-bezier(0.16, 1, 0.3, 1); }
+/* The frame clips parked cards at the viewport edge, without creating page overflow. */
+[data-pinned] .run-pinned-frame { width: 100vw; margin-left: calc(50% - 50vw); padding-inline: 24px; overflow: clip; }
+.run-scene-caption { transition: opacity 200ms ease; }
+[data-pinned] article:has([data-evidence-fan][data-front]:not([data-front="-1"])) > .run-scene-caption { opacity: 0; }
+[data-pinned] .evidence-card[data-front="true"] > .evidence-card-body { height: calc(100% - 53px); padding: 24px; }
+[data-pinned] .evidence-card[data-front="true"] > .evidence-browser { padding: 0; }
+[data-pinned] .evidence-card[data-front="true"] .sample-checkout { height: 100%; display: flex; flex-direction: column; border-radius: 0; }
+[data-pinned] .evidence-card[data-front="true"] .sample-checkout-body { flex: 1; display: flex; flex-direction: column; justify-content: center; width: min(100%, 440px); margin-inline: auto; padding: 32px; }
+[data-pinned] .evidence-card[data-front="true"] .sample-pay { width: 100%; max-width: none; }
+[data-pinned] .evidence-card[data-front="true"] .evidence-request { font-size: 16px; padding-bottom: 32px; }
+[data-pinned] .evidence-card[data-front="true"] .evidence-network-note { max-width: 60ch; }
+@media (min-width: 768px) {
+  [data-pinned] .evidence-card[data-front="true"] .run-log-entry { grid-template-columns: 5ch 5ch minmax(0, 1fr); padding: 16px; }
+  [data-pinned] .evidence-card[data-front="true"] .run-log-entry > span:last-of-type { grid-column: auto; }
+  [data-pinned] .evidence-card[data-front="true"] .evidence-network dl { display: grid; grid-template-columns: 1fr 1fr; gap: 32px; }
+}
+
 @media (prefers-reduced-motion: reduce) { .evidence-card { transition: none !important; transform: none !important; } }

@@ -79,24 +79,55 @@ export default function RunScrollSequence({
         const open = Math.min(1, local / 0.7);
         const front = local < 1 ? -1 : Math.min(2, Math.floor(local - 1));
         fan.dataset.front = String(front);
-        const cardWidth = cards[0].offsetWidth;
-        const cardHeight = cards[0].offsetHeight;
+        const cardWidth = Math.min(260, fan.clientWidth * 0.7);
+        const cardHeight = cardWidth * 1.4;
         const spread = Math.max(
           12,
-          (fan.clientWidth - (cardWidth * 0.982 + cardHeight * 0.191) * 0.82) /
+          (fan.clientWidth - (cardWidth * 0.982 + cardHeight * 0.191) * 0.88) /
             2 -
             6,
         );
+        const captionHeight =
+          fan.closest<HTMLElement>(".run-scene-content")!.offsetHeight -
+          fan.offsetHeight;
+        const availableWidth = window.innerWidth - 32;
+        const availableHeight = window.innerHeight - 32;
+        const windows = [
+          { width: availableWidth, height: availableHeight },
+          {
+            width: Math.min(1000, availableWidth),
+            height: Math.min(600, availableHeight - 32),
+          },
+          {
+            width: Math.min(1200, availableWidth),
+            height: Math.min(720, availableHeight - 16),
+          },
+        ];
         cards.forEach((card, index) => {
           let side = index - 1;
           if (front >= 0)
             side = index === front ? 0 : (index - front + 3) % 3 === 1 ? 1 : -1;
           const focused = index === front;
           card.dataset.front = String(focused);
-          card.style.setProperty("--card-x", `${side * spread * open}px`);
+          const parked = front >= 0 && !focused;
+          const x = parked
+            ? side * (window.innerWidth / 2 + cardWidth * 0.12)
+            : side * spread * open;
+          card.style.setProperty(
+            "--card-width",
+            `${focused ? windows[index].width : cardWidth}px`,
+          );
+          card.style.setProperty(
+            "--card-height",
+            `${focused ? windows[index].height : cardHeight}px`,
+          );
+          card.style.setProperty("--card-x", `${x}px`);
           card.style.setProperty("--card-rotate", `${side * 11 * open}deg`);
-          card.style.setProperty("--card-scale", String(focused ? 1 : 0.82));
-          card.style.setProperty("--card-y", `${focused ? -8 : 14}px`);
+          card.style.setProperty("--card-scale", String(focused ? 1 : 0.88));
+          card.style.setProperty(
+            "--card-y",
+            `${focused ? -captionHeight / 2 : 14}px`,
+          );
           card.style.zIndex = String(focused ? 4 : index === 1 ? 2 : 1);
         });
       }
