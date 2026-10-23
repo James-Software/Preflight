@@ -367,8 +367,6 @@ html[data-run-pinned] nav[aria-label="Main navigation"] { visibility: hidden; po
 .agent-overview-avatar { position: relative; flex-shrink: 0; width: 36px; height: 36px; }
 .agent-overview-name { font-size: 14px; font-weight: 600; line-height: 1.4; }
 .agent-overview-source { margin-top: 2px; font-size: 12px; line-height: 1.4; }
-.agent-overview-dismiss { display: grid; place-items: center; width: 28px; height: 28px; margin-left: auto; align-self: flex-start; border-radius: 50%; cursor: pointer; }
-.agent-overview-dismiss:hover { background: var(--panel); }
 .agent-overview-finding { margin-top: 14px; }
 .agent-overview-finding h4 { font-size: 15px; font-weight: 600; line-height: 1.4; }
 .agent-overview-finding p { margin-top: 6px; font-size: 13px; line-height: 1.55; }
@@ -380,7 +378,6 @@ html[data-run-pinned] nav[aria-label="Main navigation"] { visibility: hidden; po
 html { --run-bg: #f5f6fa; --run-fg: #202b3d; --run-border: #ced5e0; --run-toolbar: #e9edf5; --run-muted: #4c5b70; --run-danger-bg: #fde9ed; --run-danger-fg: #94253a; --run-success-bg: #e4f4eb; --run-success-fg: #175738; }
 html.dark { --run-bg: #111822; --run-fg: #e3e9f2; --run-border: #384252; --run-toolbar: #202a37; --run-muted: #b4c0d0; --run-danger-bg: #45262f; --run-danger-fg: #ffbdc7; --run-success-bg: #15392e; --run-success-fg: #a8edc5; }
 .agent-overview[data-anchor="cursor"] { right: auto; bottom: auto; transition: left 120ms ease-out, top 120ms ease-out; }
-.agent-overview[data-held="true"] { transition: none; }
 @media (prefers-reduced-motion: reduce) { .agent-overview[data-anchor="cursor"] { transition: none; } }
 
 /* The final note confirms an action, with a checked agent avatar and PR receipt. */

@@ -63,7 +63,7 @@ export default function AgentOverview({
     let frame = 0;
     const position = () => {
       frame = 0;
-      if (!pointer.current || element.contains(document.activeElement)) return;
+      if (!pointer.current) return;
       const { x, y } = pointer.current;
       const width = element.offsetWidth;
       const height = element.offsetHeight;
@@ -91,22 +91,6 @@ export default function AgentOverview({
         return;
       if (!frame) frame = requestAnimationFrame(position);
     };
-    const freeze = () => {
-      cancelAnimationFrame(frame);
-      frame = 0;
-      if (element.dataset.anchor !== "cursor") return;
-      const bounds = element.getBoundingClientRect();
-      const parent = (
-        element.offsetParent as HTMLElement
-      ).getBoundingClientRect();
-      element.dataset.held = "true";
-      element.style.left = `${bounds.left - parent.left}px`;
-      element.style.top = `${bounds.top - parent.top}px`;
-    };
-    const resume = () => {
-      delete element.dataset.held;
-      schedule();
-    };
     const dismissOnEscape = (event: KeyboardEvent) => {
       if (event.key === "Escape") setDismissed(true);
     };
@@ -116,16 +100,12 @@ export default function AgentOverview({
     resize.observe(element);
     window.addEventListener("pointermove", schedule, { passive: true });
     window.addEventListener("resize", schedule);
-    element.addEventListener("focusin", freeze);
-    element.addEventListener("focusout", resume);
     return () => {
       cancelAnimationFrame(frame);
       window.removeEventListener("keydown", dismissOnEscape);
       resize.disconnect();
       window.removeEventListener("pointermove", schedule);
       window.removeEventListener("resize", schedule);
-      element.removeEventListener("focusin", freeze);
-      element.removeEventListener("focusout", resume);
     };
   }, [dismissed, pointer]);
   if (dismissed) return null;
@@ -171,24 +151,6 @@ export default function AgentOverview({
             {issue.source} · sample {issue.complete ? "action" : "finding"}
           </p>
         </div>
-        <button
-          type="button"
-          aria-label="Dismiss agent overview"
-          onClick={() => setDismissed(true)}
-          className="agent-overview-dismiss"
-        >
-          <svg
-            width="14"
-            height="14"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.75"
-            aria-hidden="true"
-          >
-            <path d="m6 6 12 12M18 6 6 18" />
-          </svg>
-        </button>
       </div>
       <div className="agent-overview-finding" role="status" aria-live="polite">
         <h4>{issue.title}</h4>
