@@ -69,50 +69,77 @@ function SourceLine({
   );
 }
 
-export function FixCodeBlock() {
+export function FixCodeBlock({ compact = false }: { compact?: boolean }) {
   return (
     <figure className="run-code-block">
       <figcaption className="run-block-header">
         <span className="break-all">app/checkout/page.tsx</span>
         <span className="run-block-meta">TSX · diff</span>
       </figcaption>
-      <div className="run-diff-summary">
-        <span className="run-branch">
-          <BranchIcon />
-          fix/checkout
-        </span>
-        <span>−2 / +3 lines</span>
-      </div>
+      {!compact && (
+        <div className="run-diff-summary">
+          <span className="run-branch">
+            <BranchIcon />
+            fix/checkout
+          </span>
+          <span>−2 / +3 lines</span>
+        </div>
+      )}
       <pre>
         <code>
-          <SourceLine number="88">
-            <strong>const</strong>
-            {" handlePay = useCallback(() => {"}
-          </SourceLine>
-          <SourceLine number="89" change="removed">
-            {"  pay(plan.id);"}
-          </SourceLine>
-          <SourceLine number="89" change="added">
-            {"  "}
-            <strong>if</strong>
-            {" (!plan || processing) "}
-            <strong>return</strong>
-            {";"}
-          </SourceLine>
-          <SourceLine number="90" change="added">
-            {"  pay(plan.id);"}
-          </SourceLine>
-          <SourceLine number="90" change="removed">
-            {"}, []); "}
-            <em>{"// stale closure"}</em>
-          </SourceLine>
-          <SourceLine number="91" change="added">
-            {"}, [plan, processing]);"}
-          </SourceLine>
-          <SourceLine number="92">{""}</SourceLine>
-          <SourceLine number="93">{"<button onClick={handlePay}>"}</SourceLine>
-          <SourceLine number="94">{"  Pay now"}</SourceLine>
-          <SourceLine number="95">{"</button>"}</SourceLine>
+          {compact ? (
+            <>
+              <SourceLine number="88">
+                <strong>const</strong>
+                {" handlePay = useCallback(() => {"}
+              </SourceLine>
+              <SourceLine number="89" change="removed">
+                {"  pay(plan.id);"}
+              </SourceLine>
+              <SourceLine number="89" change="added">
+                {"  if (plan) pay(plan.id);"}
+              </SourceLine>
+              <SourceLine number="90" change="removed">
+                {"}, []);"}
+              </SourceLine>
+              <SourceLine number="90" change="added">
+                {"}, [plan]);"}
+              </SourceLine>
+            </>
+          ) : (
+            <>
+              <SourceLine number="88">
+                <strong>const</strong>
+                {" handlePay = useCallback(() => {"}
+              </SourceLine>
+              <SourceLine number="89" change="removed">
+                {"  pay(plan.id);"}
+              </SourceLine>
+              <SourceLine number="89" change="added">
+                {"  "}
+                <strong>if</strong>
+                {" (!plan || processing) "}
+                <strong>return</strong>
+                {";"}
+              </SourceLine>
+              <SourceLine number="90" change="added">
+                {"  pay(plan.id);"}
+              </SourceLine>
+              <SourceLine number="90" change="removed">
+                {"}, []); "}
+                <em>{"// stale closure"}</em>
+              </SourceLine>
+              <SourceLine number="91" change="added">
+                {"}, [plan, processing]);"}
+              </SourceLine>
+              <SourceLine number="92">{""}</SourceLine>
+              <SourceLine number="93">
+                {"<button onClick={handlePay}>"}
+              </SourceLine>
+              <SourceLine number="94">{"  Pay now"}</SourceLine>
+              <SourceLine number="95">{"</button>"}</SourceLine>
+            </>
+          )}
         </code>
       </pre>
     </figure>

@@ -1,14 +1,25 @@
-# Annotated landing-page run
+# Pinned sample run
 
-The separate run demo and numbered feature grid now form one annotated sample run. Browser, evidence, diagnosis and diff panes demonstrate each claim; PR #436 ends with the human merge decision. Evidence tabs support click, Left/Right, Home/End and standard Tab navigation. Code wraps on narrow screens. The diff uses a file toolbar, line-number gutter and highlighted additions/removals; timestamped logs use terminal panes with severity labels. Checkout screenshots sit inside Chrome-style window tabs, navigation controls and an address bar. Network evidence has a matching inspector pane. The hero copy and mobile scale, early-access typography and scroll-stable nav are also corrected.
+Four minimal scenes share the center of the viewport: browser → evidence → diagnosis → fix. The scene stays pinned while scrolling through the sequence and releases after the PR. Scroll position selects the step; native page scrolling is preserved. The floating run toolbar is removed, and the site nav is hidden during the pinned sequence and restored on release.
 
-Inter and Space Grotesk are self-hosted from Fontsource 5.3.0 with their OFL licenses in `app/fonts`. This preserves the existing font families without build-time Google Fonts requests, which this environment denies. No dependencies or lockfiles changed.
+Each step has one short heading, one sentence and its product visual. The final diff is shorter, with the branch and human merge decision below it. Browser chrome, code blocks, logs, evidence tabs and both themes are retained. Reduced motion, JavaScript-disabled browsers and viewports too short for the visuals show all steps in natural document flow.
 
-The run now animates on scroll: a sticky header tracks Browser → Evidence → Diagnosis → Review, with a continuous progress line and staggered pane/annotation entrances. Branch icons identify `main` and `fix/checkout`, and the payoff uses a pull-request icon. Animations use transform and opacity, run once per pane, and are disabled for reduced motion; content remains visible without JavaScript.
+## Pinned scenes
 
-## Screenshots
+Each link shows the actual viewport at that step, with ordinary motion enabled.
 
-Full-page Chromium screenshots, reduced motion, explicit saved theme. Before images use the original landing components with the same local fonts (Google Fonts was inaccessible); development tooling is hidden. After images use the production build.
+| Viewport / theme | Browser | Evidence | Diagnosis | PR |
+| --- | --- | --- | --- | --- |
+| 1440 × 900 / light | [View](pinned/1440-light-0.png) | [View](pinned/1440-light-1.png) | [View](pinned/1440-light-2.png) | [View](pinned/1440-light-3.png) |
+| 1440 × 900 / dark | [View](pinned/1440-dark-0.png) | [View](pinned/1440-dark-1.png) | [View](pinned/1440-dark-2.png) | [View](pinned/1440-dark-3.png) |
+| 768 × 1024 / light | [View](pinned/768-light-0.png) | [View](pinned/768-light-1.png) | [View](pinned/768-light-2.png) | [View](pinned/768-light-3.png) |
+| 768 × 1024 / dark | [View](pinned/768-dark-0.png) | [View](pinned/768-dark-1.png) | [View](pinned/768-dark-2.png) | [View](pinned/768-dark-3.png) |
+| 390 × 844 / light | [View](pinned/390-light-0.png) | [View](pinned/390-light-1.png) | [View](pinned/390-light-2.png) | [View](pinned/390-light-3.png) |
+| 390 × 844 / dark | [View](pinned/390-dark-0.png) | [View](pinned/390-dark-1.png) | [View](pinned/390-dark-2.png) | [View](pinned/390-dark-3.png) |
+
+## Full-page comparison
+
+These after images show the reduced-motion stacked fallback. Before images use the original landing components with the same local fonts, because Google Fonts was inaccessible. Development tooling is hidden; after images use the production build.
 
 | Viewport | Light before / after | Dark before / after |
 | --- | --- | --- |
@@ -16,14 +27,12 @@ Full-page Chromium screenshots, reduced motion, explicit saved theme. Before ima
 | 768 × 1024 | [Before](before/768-light.png) · [After](after/768-light.png) | [Before](before/768-dark.png) · [After](after/768-dark.png) |
 | 390 × 844 | [Before](before/390-light.png) · [After](after/390-light.png) | [Before](before/390-dark.png) · [After](after/390-dark.png) |
 
-## Validation
+## Verification
 
-- `npm ci`, `npm run typecheck`, `npm run build`, and `git diff --check` pass. No lint or test scripts exist in package.json.
-- Production-server browser checks pass at all six viewport/theme combinations: no document overflow, no code overflow, all h1/h2 headings at most two lines, nav width and x-position unchanged after scrolling, mouse tab selection and keyboard selection work.
-- Scroll checks at 390px and 1440px verify stage changes, increasing progress, sticky header placement, normal-motion entrance animations, reduced-motion suppression and keyboard focus clearing the header. A JavaScript-disabled check verifies all panes and the PR remain visible. See scroll-verification.jsonl.
-- Mobile h1 measures approximately 48px; section headings measure 30px.
-- Axe WCAG A/AA checks cover the new section in both themes and every evidence tab, including 4.5:1 normal-text contrast. See accessibility.jsonl for exact results.
-- CTA hrefs remain `#early-access`, `#how-it-works` and `/login`. Privacy, Terms and the For agents destination return 200. Blog href is unchanged; `/blog` returns 500 without DATABASE_URL, an existing integration requirement. OAuth and waitlist submission were not exercised without credentials.
-- The illustrative sample is not a claim that an actual run occurred. Team should confirm the console error, absent checkout request, stale useCallback diagnosis, dependency-list fix and PR title. All panes use agent-2, /checkout, Pro, Pay now, app/checkout/page.tsx, run #128 and PR #436 consistently.
+- Installation, typecheck, production build and diff checks pass. The repository has no lint or test scripts.
+- At 1440×900, 768×1024 and 390×844, both themes: each of the four scenes stays within 2px of the viewport's vertical center; exactly one scene is active; the sequence releases after its last scene; no document or code overflow; evidence tabs work by mouse and keyboard. The floating site nav stays hidden while pinned and returns afterward. See pinned-verification.jsonl.
+- Reduced motion and JavaScript-disabled checks verify all four steps remain visible without pinning. Short viewports use this same natural-flow fallback.
+- Axe WCAG A/AA checks, including normal-text contrast, cover every evidence tab and all scene visuals in both themes using the reduced-motion fallback. See accessibility.jsonl.
+- CTA destinations remain `#early-access`, `#how-it-works` and `/login`. Privacy, Terms and For agents return 200. Blog needs DATABASE_URL and returns 500 without it; the link is unchanged. OAuth and waitlist submission remain untested without credentials.
 
-Only landing-page components, requested copy corrections, shared font transport and these review artifacts are changed. Auth, routes, waitlist handlers and legal content are unchanged.
+All content is illustrative. Confirm the console error, missing POST /api/checkout, stale useCallback diagnosis and dependency-list fix before presenting it as actual evidence. Fonts remain self-hosted with OFL licenses; no dependencies or lockfiles changed. Auth, routes, waitlist handlers and legal content are unchanged.

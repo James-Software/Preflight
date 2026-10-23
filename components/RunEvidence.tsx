@@ -87,7 +87,7 @@ export function CheckoutSnapshot() {
 
 export default function RunEvidence() {
   const id = useId();
-  const [active, setActive] = useState(0);
+  const [active, setActive] = useState(1);
   const refs = useRef<(HTMLButtonElement | null)[]>([]);
   return (
     <div>
@@ -138,9 +138,6 @@ export default function RunEvidence() {
         >
           {index === 0 && (
             <>
-              <p className="mb-4 text-sm">
-                Captured after the third click · agent-2
-              </p>
               <CheckoutSnapshot />
             </>
           )}
@@ -149,15 +146,10 @@ export default function RunEvidence() {
               title="Browser console"
               entries={[
                 {
-                  time: "00:03",
-                  level: "info",
-                  message: "/checkout · Pro selected",
-                },
-                {
                   time: "00:05",
                   level: "error",
                   message:
-                    "Uncaught TypeError: Cannot read properties of null (reading 'id')\n  at handlePay (app/checkout/page.tsx:89)",
+                    "TypeError: plan is null\n  at handlePay (page.tsx:89)",
                 },
                 {
                   time: "00:09",

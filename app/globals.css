@@ -222,14 +222,6 @@ body {
 /* One annotated product fragment; all sample code wraps at narrow widths. */
 .annotated-run { padding-block: 88px; }
 .run-intro h2 { max-width: 760px; font-size: clamp(1.875rem, 4vw, 3rem); line-height: 1.12; }
-.run-artifact { border-radius: 20px; overflow: clip; background: var(--surface); }
-.run-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 24px; background: var(--panel); }
-.run-row { display: grid; grid-template-columns: minmax(0, 1fr); }
-.run-annotation { padding: 28px 24px 16px; }
-.run-annotation h3 { font-size: 20px; font-weight: 600; letter-spacing: -.025em; }
-.run-annotation p { margin-top: 10px; line-height: 1.65; max-width: 34ch; }
-.run-pane { min-width: 0; padding: 24px; background: var(--panel); }
-.run-artifact pre { font-size: 14px; line-height: 1.8; white-space: pre-wrap; overflow-wrap: anywhere; }
 .sample-checkout { background: var(--surface); border: 1px solid var(--browser-edge); border-radius: 12px; overflow: hidden; --browser-edge: #cbd0d9; --browser-tabs: #dfe3eb; --browser-toolbar: #f1f3f7; --browser-address: #fff; --browser-ink: #303743; color: var(--browser-ink); }
 .sample-checkout-body { padding: 24px; }
 .sample-pay { margin-top: 24px; display: flex; justify-content: space-between; max-width: 300px; padding: 12px 18px; background: #1e1b4b; color: #fff; border-radius: 8px; font-weight: 600; }
@@ -239,19 +231,8 @@ body {
 .run-tabs button[aria-selected="true"] { background: #1e1b4b; color: #fff; }
 .dark .run-tabs button[aria-selected="true"] { background: #e3e4ff; color: #1e1b4b; }
 .run-evidence-panel { min-height: 225px; }
-.run-bug, .run-removed { color: #a51d2d; }
-.run-added { color: #17603b; }
-.dark .run-bug, .dark .run-removed { color: #ffa3ae; }
-.dark .run-added { color: #8ee4b0; }
-.run-source { background: #a51d2d12; text-decoration: underline; text-decoration-style: dotted; text-underline-offset: 4px; }
-.dark .run-source { background: #ffa3ae12; }
-.run-pr { padding: 28px 24px; background: var(--panel); }
 @media (min-width: 768px) {
   .annotated-run { padding-block: 128px; }
-  .run-row { grid-template-columns: minmax(0, 1fr) minmax(0, 1.8fr); }
-  .run-annotation { padding: 36px; }
-  .run-pane { padding: 32px; }
-  .run-header, .run-pr { padding: 28px 36px; }
 }
 
 /* Browser chrome is a static screenshot frame, not a second set of controls. */
@@ -310,24 +291,34 @@ body {
 .sample-store-icon { width: 22px; height: 22px; flex-shrink: 0; }
 .sample-pay-arrow { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.6; flex-shrink: 0; }
 
-/* A scroll-led run: the header stays with the evidence as the stages advance. */
-.run-scroll-header { position: sticky; top: 84px; z-index: 20; display: block; background: var(--surface); border-bottom: 1px solid var(--line); }
-.run-header-details { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 18px; }
-.run-header-details > p:last-child { margin-left: auto; }
+/* The entire scene stays centered for four scroll beats, then leaves with its runway. */
 .run-branch { display: inline-flex; align-items: center; gap: 7px; flex-wrap: wrap; font-size: 13px; font-weight: 500; }
-.run-stages { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px 12px; margin-top: 18px; font-size: 13px; }
-.run-stages li { display: flex; align-items: center; gap: 7px; }
-.run-stage-dot { width: 7px; height: 7px; border: 1px solid currentColor; border-radius: 50%; }
-.run-stages li[aria-current="step"] { font-weight: 600; }
-.run-stages li[aria-current="step"] .run-stage-dot, .run-stages li[data-complete="true"] .run-stage-dot { background: currentColor; }
-.run-scroll-track { position: absolute; bottom: -1px; left: 0; right: 0; height: 2px; overflow: hidden; }
-.run-scroll-track span { display: block; height: 100%; background: currentColor; transform-origin: left; transform: scaleX(var(--run-progress, 0)); }
-.run-pr-title { display: flex; align-items: flex-start; gap: 12px; margin-top: 8px; }
-.run-pr-title > svg { margin-top: 5px; }
+.run-scroll-sequence { margin-top: 64px; }
+.run-scene { padding-block: 48px; }
+.run-scene-content { width: 100%; max-width: 700px; margin-inline: auto; }
+.run-scene-caption { margin-bottom: 32px; text-align: center; }
+.run-scene-caption h3 { font-size: clamp(1.5rem, 3vw, 2rem); font-weight: 600; letter-spacing: -.035em; line-height: 1.15; text-wrap: balance; }
+.run-scene-caption p { margin-top: 12px; font-size: 15px; line-height: 1.5; }
+.run-scroll-sequence[data-pinned] { height: 440svh; }
+[data-pinned] .run-pinned-frame { position: sticky; top: 0; display: grid; align-items: center; height: 100svh; padding-block: 88px; }
+[data-pinned] .run-scene { grid-area: 1 / 1; padding: 0; opacity: 0; visibility: hidden; transform: translateY(24px); transition: opacity 350ms ease, transform 450ms cubic-bezier(0.16, 1, 0.3, 1), visibility 350ms; pointer-events: none; }
+[data-pinned] .run-scene[data-active] { opacity: 1; visibility: visible; transform: translateY(0); pointer-events: auto; }
+.run-scroll-sequence pre { font-size: 14px; line-height: 1.8; white-space: pre-wrap; overflow-wrap: anywhere; }
+.run-scroll-sequence .sample-checkout-body { padding: 28px; }
+.run-scroll-sequence .run-evidence-panel { min-height: 0; }
+.run-scroll-sequence .run-tabs { justify-content: center; margin-bottom: 20px; }
+.run-result { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 16px; padding-top: 24px; }
+.run-result > p { display: flex; align-items: center; gap: 10px; font-size: 14px; }
+.run-branch-target { font-weight: 400; }
 @media (max-width: 479px) {
-  .run-header-details > p:last-child { width: 100%; margin-left: 0; }
-  .run-stages { font-size: 12px; gap: 8px; }
-  .run-stages li { gap: 5px; }
+  .run-scene-caption { margin-bottom: 24px; }
+  .run-scroll-sequence .sample-checkout-body { padding: 20px; }
+  .run-scroll-sequence .run-log-entry { padding-block: 8px; }
+  .run-result { gap: 12px; padding-top: 20px; }
+  .run-scroll-sequence { margin-top: 32px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .run-scene { transition: none !important; transform: none !important; }
 }
 
-.run-row, .run-tabs button, .run-evidence-panel { scroll-margin-top: 260px; }
+html[data-run-pinned] nav[aria-label="Main navigation"] { visibility: hidden; pointer-events: none; }
