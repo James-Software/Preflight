@@ -6,7 +6,7 @@ Each expanded evidence window has a dismissible agent overview that follows 16px
 
 Agent summaries also appear on the opening checkout scene and the final fix scene. The final summary confirms the sample action with an animated checkmark on the robot and a green “Opened PR” receipt for #436, while leaving the merge decision with the user. The final scene’s PR caption also says “Opened PR”.
 
-The browser, evidence, diagnosis and PR still form one centered pinned sequence. Evidence gets four scroll beats: fan opening, screenshot forward, console forward and network forward. The page releases after the PR. After scrolling settles, the page snaps to the nearest animation beat. Snapping is restricted to the pinned range and disabled for reduced motion; scrolling before and after the animation stays in normal flow. The floating site nav is hidden during the sequence.
+The browser, evidence, diagnosis and PR still form one centered pinned sequence. Evidence gets four scroll beats: fan opening, screenshot forward, console forward and network forward. The page releases after the PR. Wheel/trackpad gestures, touch swipes and navigation keys advance one adjacent beat at a time. A gesture’s momentum tail cannot advance another beat, and the 700ms card morph finishes before another step starts. The opening and closing scenes sit at the runway boundaries so the next gesture releases into normal page scrolling. Scrollbar dragging still settles to the nearest beat. Snapping is restricted to the pinned range and disabled for reduced motion; scrolling before and after the animation stays in normal flow. The floating site nav is hidden during the sequence.
 
 Reduced motion, JavaScript-disabled browsers and short viewports show the three cards in natural document flow, fully readable without animation. The code/logs and browser frame are built as HTML rather than squeezing wide screenshots into narrow cards.
 
@@ -43,6 +43,8 @@ These after images show the reduced-motion stacked fallback. Before images use t
 | 390 × 844 | [Before](before/390-light.png) · [After](after/390-light.png) | [Before](before/390-dark.png) · [After](after/390-dark.png) |
 
 ## Verification
+
+- Scroll skipping regression: `PREFLIGHT_TEST_URL=http://localhost:3000 npm run test:scroll` (with a local server and Chromium installed; set `CHROMIUM_PATH` if needed). This uses native Chromium wheel and touch input at desktop and phone sizes to check every beat forwards/backwards, large deltas, momentum longer than the morph, entry/exit, held navigation keys, small trackpad deltas, reduced motion and short viewports. [Results](scroll-step-verification.jsonl). Earlier nearest-beat snap checks below describe the original implementation.
 
 - Installation, typecheck, production build and diff checks pass. The repository has no lint script; the subsequent site-wide UI fixes add regression checks through `npm test`.
 - All three viewport sizes in both themes: each card expands to its actual window dimensions; windows stay centered and inside the viewport; other cards park at the sides in playing-card proportions; reverse scrolling restores the fan; no clipped window content or horizontal document overflow. The initial screenshot placement is also checked. See balanced-verification.jsonl.
