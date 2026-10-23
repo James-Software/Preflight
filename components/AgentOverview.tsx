@@ -1,6 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState, type RefObject } from "react";
+
+export type AgentPointer = { x: number; y: number };
 
 const FINDINGS = [
   {
@@ -23,12 +25,102 @@ const FINDINGS = [
   },
 ];
 
-export default function AgentOverview({ finding }: { finding: number }) {
+export default function AgentOverview({
+  finding,
+  pointer,
+}: {
+  finding: number;
+  pointer: RefObject<AgentPointer | null>;
+}) {
   const [dismissed, setDismissed] = useState(false);
+  const popup = useRef<HTMLElement>(null);
+
+  useEffect(() => {
+    const element = popup.current;
+    if (!element || dismissed) return;
+    let frame = 0;
+    let hovered = false;
+    const position = () => {
+      frame = 0;
+      if (
+        !pointer.current ||
+        hovered ||
+        element.contains(document.activeElement)
+      )
+        return;
+      const { x, y } = pointer.current;
+      const width = element.offsetWidth;
+      const height = element.offsetHeight;
+      const parent = (
+        element.offsetParent as HTMLElement
+      ).getBoundingClientRect();
+      const left = Math.min(
+        Math.max(12, x + 16),
+        window.innerWidth - width - 12,
+      );
+      const above = y - height - 16;
+      const top = Math.max(
+        12,
+        Math.min(
+          window.innerHeight - height - 12,
+          above >= 12 ? above : y + 16,
+        ),
+      );
+      element.dataset.anchor = "cursor";
+      element.style.left = `${left - parent.left}px`;
+      element.style.top = `${top - parent.top}px`;
+    };
+    const schedule = (event?: Event) => {
+      if (
+        (event instanceof PointerEvent && event.pointerType === "touch") ||
+        (event?.target instanceof Node && element.contains(event.target))
+      )
+        return;
+      if (!frame) frame = requestAnimationFrame(position);
+    };
+    const freeze = () => {
+      hovered = true;
+      cancelAnimationFrame(frame);
+      frame = 0;
+      if (element.dataset.anchor !== "cursor") return;
+      const bounds = element.getBoundingClientRect();
+      const parent = (
+        element.offsetParent as HTMLElement
+      ).getBoundingClientRect();
+      element.dataset.held = "true";
+      element.style.left = `${bounds.left - parent.left}px`;
+      element.style.top = `${bounds.top - parent.top}px`;
+    };
+    const resume = () => {
+      hovered = false;
+      delete element.dataset.held;
+      schedule();
+    };
+    position();
+    const resize = new ResizeObserver(() => schedule());
+    resize.observe(element);
+    window.addEventListener("pointermove", schedule, { passive: true });
+    window.addEventListener("resize", schedule);
+    element.addEventListener("pointerenter", freeze);
+    element.addEventListener("pointerleave", resume);
+    element.addEventListener("focusin", freeze);
+    element.addEventListener("focusout", resume);
+    return () => {
+      cancelAnimationFrame(frame);
+      resize.disconnect();
+      window.removeEventListener("pointermove", schedule);
+      window.removeEventListener("resize", schedule);
+      element.removeEventListener("pointerenter", freeze);
+      element.removeEventListener("pointerleave", resume);
+      element.removeEventListener("focusin", freeze);
+      element.removeEventListener("focusout", resume);
+    };
+  }, [dismissed, pointer]);
   if (dismissed) return null;
   const issue = FINDINGS[finding];
   return (
     <aside
+      ref={popup}
       className="agent-overview"
       aria-label={`${issue.source} agent overview`}
     >

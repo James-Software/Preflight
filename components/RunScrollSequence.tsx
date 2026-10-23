@@ -1,7 +1,7 @@
 "use client";
 
 import { Children, useEffect, useRef, useState, type ReactNode } from "react";
-import AgentOverview from "./AgentOverview";
+import AgentOverview, { type AgentPointer } from "./AgentOverview";
 
 export default function RunScrollSequence({
   children,
@@ -10,6 +10,7 @@ export default function RunScrollSequence({
 }) {
   const root = useRef<HTMLDivElement>(null);
   const frame = useRef<HTMLDivElement>(null);
+  const pointer = useRef<AgentPointer | null>(null);
   const [pinned, setPinned] = useState(false);
   const [active, setActive] = useState(0);
   const [finding, setFinding] = useState<number | null>(null);
@@ -22,6 +23,10 @@ export default function RunScrollSequence({
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
     let request = 0;
     let enabled = false;
+    let snapTimer: ReturnType<typeof setTimeout> | undefined;
+    let snapRelease: ReturnType<typeof setTimeout> | undefined;
+    let snapping = false;
+    let pointerDown = false;
     const beats = [
       ...element.querySelectorAll<HTMLElement>(".run-scene-content"),
     ].map((panel) =>
@@ -155,8 +160,87 @@ export default function RunScrollSequence({
         });
       }
     };
+    const cancelSnap = () => {
+      clearTimeout(snapTimer);
+      clearTimeout(snapRelease);
+      snapping = false;
+    };
+    const snap = () => {
+      if (
+        !enabled ||
+        reduced.matches ||
+        pointerDown ||
+        window.getSelection()?.toString()
+      )
+        return;
+      const bounds = element.getBoundingClientRect();
+      const travel = element.offsetHeight - viewport.offsetHeight;
+      // Snap only inside the pinned animation, leaving entry and exit in normal flow.
+      if (bounds.top > 0 || bounds.bottom < window.innerHeight || travel <= 0)
+        return;
+      const progress = -bounds.top / travel;
+      if (progress <= 0.005 || progress >= 0.995) return;
+      const anchors = [0, totalBeats];
+      let start = 0;
+      beats.forEach((count) => {
+        if (count === 1) anchors.push(start + 0.5);
+        else
+          for (let step = 0; step < count; step++)
+            anchors.push(start + (step === 0 ? 0.8 : step + 0.5));
+        start += count;
+      });
+      const phase = progress * totalBeats;
+      const nearest = anchors.reduce((best, value) =>
+        Math.abs(value - phase) < Math.abs(best - phase) ? value : best,
+      );
+      const target =
+        window.scrollY + bounds.top + (travel * nearest) / totalBeats;
+      if (Math.abs(target - window.scrollY) < 4) return;
+      snapping = true;
+      window.scrollTo({ top: target, behavior: "smooth" });
+      snapRelease = setTimeout(() => {
+        snapping = false;
+      }, 1200);
+    };
+    const armSnap = () => {
+      clearTimeout(snapTimer);
+      if (!snapping && !pointerDown) snapTimer = setTimeout(snap, 200);
+    };
     const schedule = () => {
       if (!request) request = requestAnimationFrame(sync);
+      armSnap();
+    };
+    const rememberPointer = (event: PointerEvent) => {
+      if (event.pointerType !== "touch")
+        pointer.current = { x: event.clientX, y: event.clientY };
+    };
+    const press = () => {
+      pointerDown = true;
+      cancelSnap();
+    };
+    const release = () => {
+      pointerDown = false;
+      armSnap();
+    };
+    const key = (event: KeyboardEvent) => {
+      if (
+        [
+          "ArrowDown",
+          "ArrowUp",
+          "PageDown",
+          "PageUp",
+          "Home",
+          "End",
+          " ",
+        ].includes(event.key)
+      )
+        cancelSnap();
+    };
+    const scrollEnd = () => {
+      if (snapping) {
+        clearTimeout(snapRelease);
+        snapping = false;
+      }
     };
     const resize = new ResizeObserver(schedule);
     element
@@ -166,11 +250,28 @@ export default function RunScrollSequence({
     resize.observe(element);
     sync();
     window.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("scrollend", scrollEnd);
+    window.addEventListener("pointermove", rememberPointer, { passive: true });
+    window.addEventListener("pointerdown", press, { passive: true });
+    window.addEventListener("pointerup", release, { passive: true });
+    window.addEventListener("pointercancel", release, { passive: true });
+    window.addEventListener("wheel", cancelSnap, { passive: true });
+    window.addEventListener("touchstart", cancelSnap, { passive: true });
+    window.addEventListener("keydown", key);
     window.addEventListener("resize", schedule);
     reduced.addEventListener("change", schedule);
     return () => {
       document.documentElement.removeAttribute("data-run-pinned");
+      cancelSnap();
       cancelAnimationFrame(request);
+      window.removeEventListener("scrollend", scrollEnd);
+      window.removeEventListener("pointermove", rememberPointer);
+      window.removeEventListener("pointerdown", press);
+      window.removeEventListener("pointerup", release);
+      window.removeEventListener("pointercancel", release);
+      window.removeEventListener("wheel", cancelSnap);
+      window.removeEventListener("touchstart", cancelSnap);
+      window.removeEventListener("keydown", key);
       resize.disconnect();
       window.removeEventListener("scroll", schedule);
       window.removeEventListener("resize", schedule);
@@ -204,7 +305,7 @@ export default function RunScrollSequence({
           </div>
         ))}
         {pinned && finding !== null && (
-          <AgentOverview key={finding} finding={finding} />
+          <AgentOverview key={finding} finding={finding} pointer={pointer} />
         )}
       </div>
     </div>
