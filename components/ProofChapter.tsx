@@ -71,9 +71,9 @@ export default function ProofChapter() {
                 fix/checkout{" "}
                 <span className="run-branch-target">into main</span>
               </span>
-              <p>
+              <p className="run-pr-confirmation">
                 <PullRequestIcon />
-                <span>PR #436 · awaiting your merge</span>
+                <span>Opened PR #436 · awaiting your merge</span>
               </p>
             </div>
           </article>

@@ -4,7 +4,16 @@ import { useEffect, useRef, useState, type RefObject } from "react";
 
 export type AgentPointer = { x: number; y: number };
 
-const FINDINGS = [
+export const BROWSER_FINDING = 3;
+export const PR_FINDING = 4;
+
+type Finding = {
+  source: string;
+  title: string;
+  description: string;
+  complete?: boolean;
+};
+const FINDINGS: Finding[] = [
   {
     source: "Screenshot",
     title: "Checkout stalled",
@@ -23,6 +32,19 @@ const FINDINGS = [
     description:
       "No POST /api/checkout was sent. The handler failed before the request could leave the browser.",
   },
+  {
+    source: "Browser",
+    title: "Reproduced the checkout bug",
+    description:
+      "Selected Pro and clicked Pay now. The page stayed idle, so I’m collecting the evidence.",
+  },
+  {
+    source: "Pull request",
+    title: "Fix ready for your review",
+    description:
+      "Updated the handler to use the current plan and attached the evidence.",
+    complete: true,
+  },
 ];
 
 export default function AgentOverview({
@@ -39,15 +61,9 @@ export default function AgentOverview({
     const element = popup.current;
     if (!element || dismissed) return;
     let frame = 0;
-    let hovered = false;
     const position = () => {
       frame = 0;
-      if (
-        !pointer.current ||
-        hovered ||
-        element.contains(document.activeElement)
-      )
-        return;
+      if (!pointer.current || element.contains(document.activeElement)) return;
       const { x, y } = pointer.current;
       const width = element.offsetWidth;
       const height = element.offsetHeight;
@@ -71,15 +87,11 @@ export default function AgentOverview({
       element.style.top = `${top - parent.top}px`;
     };
     const schedule = (event?: Event) => {
-      if (
-        (event instanceof PointerEvent && event.pointerType === "touch") ||
-        (event?.target instanceof Node && element.contains(event.target))
-      )
+      if (event instanceof PointerEvent && event.pointerType === "touch")
         return;
       if (!frame) frame = requestAnimationFrame(position);
     };
     const freeze = () => {
-      hovered = true;
       cancelAnimationFrame(frame);
       frame = 0;
       if (element.dataset.anchor !== "cursor") return;
@@ -92,26 +104,26 @@ export default function AgentOverview({
       element.style.top = `${bounds.top - parent.top}px`;
     };
     const resume = () => {
-      hovered = false;
       delete element.dataset.held;
       schedule();
     };
+    const dismissOnEscape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setDismissed(true);
+    };
+    window.addEventListener("keydown", dismissOnEscape);
     position();
     const resize = new ResizeObserver(() => schedule());
     resize.observe(element);
     window.addEventListener("pointermove", schedule, { passive: true });
     window.addEventListener("resize", schedule);
-    element.addEventListener("pointerenter", freeze);
-    element.addEventListener("pointerleave", resume);
     element.addEventListener("focusin", freeze);
     element.addEventListener("focusout", resume);
     return () => {
       cancelAnimationFrame(frame);
+      window.removeEventListener("keydown", dismissOnEscape);
       resize.disconnect();
       window.removeEventListener("pointermove", schedule);
       window.removeEventListener("resize", schedule);
-      element.removeEventListener("pointerenter", freeze);
-      element.removeEventListener("pointerleave", resume);
       element.removeEventListener("focusin", freeze);
       element.removeEventListener("focusout", resume);
     };
@@ -122,22 +134,41 @@ export default function AgentOverview({
     <aside
       ref={popup}
       className="agent-overview"
+      data-complete={issue.complete || undefined}
       aria-label={`${issue.source} agent overview`}
     >
       <div className="agent-overview-header">
-        {/* A vector rendition of the supplied robot reference, rather than a remote asset. */}
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img
-          src="/agent-robot.svg"
-          width="36"
-          height="36"
-          alt=""
-          aria-hidden="true"
-        />
+        <div className="agent-overview-avatar">
+          {/* A vector rendition of the supplied robot reference. */}
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/agent-robot.svg"
+            width="36"
+            height="36"
+            alt=""
+            aria-hidden="true"
+          />
+          {issue.complete && (
+            <span className="agent-completed-badge" aria-hidden="true">
+              <svg
+                width="12"
+                height="12"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="3"
+                strokeLinecap="round"
+                strokeLinejoin="round"
+              >
+                <path d="m5 12 4 4 10-10" />
+              </svg>
+            </span>
+          )}
+        </div>
         <div>
           <p className="agent-overview-name">PreFlight agent</p>
           <p className="agent-overview-source">
-            {issue.source} · sample finding
+            {issue.source} · sample {issue.complete ? "action" : "finding"}
           </p>
         </div>
         <button
@@ -162,6 +193,30 @@ export default function AgentOverview({
       <div className="agent-overview-finding" role="status" aria-live="polite">
         <h4>{issue.title}</h4>
         <p>{issue.description}</p>
+        {issue.complete && (
+          <div className="agent-opened-pr">
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.75"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              aria-hidden="true"
+            >
+              <circle cx="6" cy="5" r="3" />
+              <circle cx="6" cy="19" r="3" />
+              <circle cx="18" cy="19" r="3" />
+              <path d="M6 8v8M18 16V8a3 3 0 0 0-3-3h-3m3-3-3 3 3 3" />
+            </svg>
+            <div>
+              <strong>Opened PR</strong>
+              <span>#436 · awaiting your merge</span>
+            </div>
+          </div>
+        )}
       </div>
     </aside>
   );

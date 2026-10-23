@@ -1,7 +1,11 @@
 "use client";
 
 import { Children, useEffect, useRef, useState, type ReactNode } from "react";
-import AgentOverview, { type AgentPointer } from "./AgentOverview";
+import AgentOverview, {
+  BROWSER_FINDING,
+  PR_FINDING,
+  type AgentPointer,
+} from "./AgentOverview";
 
 export default function RunScrollSequence({
   children,
@@ -63,10 +67,9 @@ export default function RunScrollSequence({
         });
       setPinned(enabled);
       const bounds = element.getBoundingClientRect();
-      document.documentElement.toggleAttribute(
-        "data-run-pinned",
-        enabled && bounds.top <= 0 && bounds.bottom >= window.innerHeight,
-      );
+      const inAnimation =
+        enabled && bounds.top <= 0 && bounds.bottom >= window.innerHeight;
+      document.documentElement.toggleAttribute("data-run-pinned", inAnimation);
       if (!enabled) {
         setFinding(null);
         cards.forEach((card) => {
@@ -93,7 +96,17 @@ export default function RunScrollSequence({
         const open = Math.min(1, local / 0.7);
         const front = local < 1 ? -1 : Math.min(2, Math.floor(local - 1));
         fan.dataset.front = String(front);
-        setFinding(next === fanScene && front >= 0 ? front : null);
+        setFinding(
+          !inAnimation
+            ? null
+            : next === 0
+              ? BROWSER_FINDING
+              : next === beats.length - 1
+                ? PR_FINDING
+                : next === fanScene && front >= 0
+                  ? front
+                  : null,
+        );
         const cardWidth = Math.min(260, fan.clientWidth * 0.7);
         const cardHeight = cardWidth * 1.4;
         const spread = Math.max(

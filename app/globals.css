@@ -364,7 +364,7 @@ html[data-run-pinned] nav[aria-label="Main navigation"] { visibility: hidden; po
 .agent-overview { position: absolute; right: 24px; bottom: 24px; z-index: 30; width: min(300px, calc(100% - 32px)); padding: 16px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); color: #1e1b4b; box-shadow: 0 8px 32px #11182214; animation: agent-overview-enter 320ms 500ms cubic-bezier(0.16, 1, 0.3, 1) both; }
 .dark .agent-overview { color: #edf0f6; box-shadow: 0 8px 32px #0003; }
 .agent-overview-header { display: flex; align-items: center; gap: 10px; }
-.agent-overview-header > img { flex-shrink: 0; }
+.agent-overview-avatar { position: relative; flex-shrink: 0; width: 36px; height: 36px; }
 .agent-overview-name { font-size: 14px; font-weight: 600; line-height: 1.4; }
 .agent-overview-source { margin-top: 2px; font-size: 12px; line-height: 1.4; }
 .agent-overview-dismiss { display: grid; place-items: center; width: 28px; height: 28px; margin-left: auto; align-self: flex-start; border-radius: 50%; cursor: pointer; }
@@ -382,3 +382,14 @@ html.dark { --run-bg: #111822; --run-fg: #e3e9f2; --run-border: #384252; --run-t
 .agent-overview[data-anchor="cursor"] { right: auto; bottom: auto; transition: left 120ms ease-out, top 120ms ease-out; }
 .agent-overview[data-held="true"] { transition: none; }
 @media (prefers-reduced-motion: reduce) { .agent-overview[data-anchor="cursor"] { transition: none; } }
+
+/* The final note confirms an action, with a checked agent avatar and PR receipt. */
+.agent-completed-badge { position: absolute; right: -3px; bottom: -3px; display: grid; place-items: center; width: 19px; height: 19px; border: 2px solid var(--surface); border-radius: 50%; background: var(--run-success-fg); color: var(--surface); }
+.agent-completed-badge path { stroke-dasharray: 22; animation: agent-check-draw 260ms 700ms ease-out backwards; }
+.agent-opened-pr { display: flex; align-items: center; gap: 10px; margin-top: 14px; padding: 12px; border-radius: 10px; background: var(--run-success-bg); color: var(--run-success-fg); }
+.agent-opened-pr > svg { flex-shrink: 0; }
+.agent-opened-pr strong { display: block; font-size: 14px; font-weight: 600; }
+.agent-opened-pr span { display: block; margin-top: 3px; font-size: 12px; line-height: 1.4; }
+.run-pr-confirmation { color: var(--run-success-fg); }
+@keyframes agent-check-draw { from { stroke-dashoffset: 22; } to { stroke-dashoffset: 0; } }
+@media (prefers-reduced-motion: reduce) { .agent-completed-badge path { animation: none; } }
