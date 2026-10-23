@@ -20,6 +20,22 @@ export default function RunScrollSequence({
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
     let request = 0;
     let enabled = false;
+    const beats = [
+      ...element.querySelectorAll<HTMLElement>(".run-scene-content"),
+    ].map((panel) =>
+      Number(panel.firstElementChild?.getAttribute("data-scroll-beats") || 1),
+    );
+    const totalBeats = beats.reduce((sum, count) => sum + count, 0);
+    const fan = element.querySelector<HTMLElement>("[data-evidence-fan]");
+    const cards = fan
+      ? [...fan.querySelectorAll<HTMLElement>("[data-evidence-card]")]
+      : [];
+    const fanScene = [
+      ...element.querySelectorAll(".run-scene-content"),
+    ].findIndex((panel) => panel.contains(fan));
+    const fanStart = beats
+      .slice(0, fanScene)
+      .reduce((sum, count) => sum + count, 0);
 
     const sync = () => {
       request = 0;
@@ -29,7 +45,15 @@ export default function RunScrollSequence({
       // Short viewports and reduced motion get the complete, natural document flow.
       enabled =
         !reduced.matches &&
-        panels.every((panel) => panel.offsetHeight <= window.innerHeight - 176);
+        panels.every((panel) => {
+          const evidence = panel.querySelector<HTMLElement>(
+            "[data-evidence-fan]",
+          );
+          const height = evidence
+            ? panel.offsetHeight - evidence.offsetHeight + 440
+            : panel.offsetHeight;
+          return height <= window.innerHeight - 176;
+        });
       setPinned(enabled);
       const bounds = element.getBoundingClientRect();
       document.documentElement.toggleAttribute(
@@ -45,9 +69,37 @@ export default function RunScrollSequence({
               Math.max(0, -element.getBoundingClientRect().top / distance),
             )
           : 0;
-      setActive(
-        Math.min(panels.length - 1, Math.floor(progress * panels.length)),
-      );
+      const phase = progress * totalBeats;
+      let next = 0;
+      let end = beats[0];
+      while (next < beats.length - 1 && phase >= end) end += beats[++next];
+      setActive(next);
+      if (fan && cards.length) {
+        const local = Math.max(0, Math.min(4, phase - fanStart));
+        const open = Math.min(1, local / 0.7);
+        const front = local < 1 ? -1 : Math.min(2, Math.floor(local - 1));
+        fan.dataset.front = String(front);
+        const cardWidth = cards[0].offsetWidth;
+        const cardHeight = cards[0].offsetHeight;
+        const spread = Math.max(
+          12,
+          (fan.clientWidth - (cardWidth * 0.982 + cardHeight * 0.191) * 0.82) /
+            2 -
+            6,
+        );
+        cards.forEach((card, index) => {
+          let side = index - 1;
+          if (front >= 0)
+            side = index === front ? 0 : (index - front + 3) % 3 === 1 ? 1 : -1;
+          const focused = index === front;
+          card.dataset.front = String(focused);
+          card.style.setProperty("--card-x", `${side * spread * open}px`);
+          card.style.setProperty("--card-rotate", `${side * 11 * open}deg`);
+          card.style.setProperty("--card-scale", String(focused ? 1 : 0.82));
+          card.style.setProperty("--card-y", `${focused ? -8 : 14}px`);
+          card.style.zIndex = String(focused ? 4 : index === 1 ? 2 : 1);
+        });
+      }
     };
     const schedule = () => {
       if (!request) request = requestAnimationFrame(sync);

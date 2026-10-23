@@ -1,6 +1,5 @@
 "use client";
 
-import { useId, useRef, useState } from "react";
 import { LogBlock } from "./SampleRunBlocks";
 
 const TABS = ["Screenshot", "Console", "Network"] as const;
@@ -86,119 +85,69 @@ export function CheckoutSnapshot() {
 }
 
 export default function RunEvidence() {
-  const id = useId();
-  const [active, setActive] = useState(1);
-  const refs = useRef<(HTMLButtonElement | null)[]>([]);
   return (
-    <div>
-      <div
-        role="tablist"
-        aria-label="Evidence from agent-2"
-        className="run-tabs"
-      >
-        {TABS.map((tab, index) => (
-          <button
-            key={tab}
-            ref={(el) => {
-              refs.current[index] = el;
-            }}
-            id={`${id}-tab-${index}`}
-            type="button"
-            role="tab"
-            aria-selected={active === index}
-            aria-controls={`${id}-panel-${index}`}
-            tabIndex={active === index ? 0 : -1}
-            onClick={() => setActive(index)}
-            onKeyDown={(event) => {
-              let next: number;
-              if (event.key === "ArrowRight") next = (index + 1) % TABS.length;
-              else if (event.key === "ArrowLeft")
-                next = (index + TABS.length - 1) % TABS.length;
-              else if (event.key === "Home") next = 0;
-              else if (event.key === "End") next = TABS.length - 1;
-              else return;
-              event.preventDefault();
-              setActive(next);
-              refs.current[next]?.focus();
-            }}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
-      <div className="run-evidence-stack">
-        {TABS.map((tab, index) => (
-          <div
-            key={tab}
-            id={`${id}-panel-${index}`}
-            role="tabpanel"
-            aria-labelledby={`${id}-tab-${index}`}
-            data-active={active === index || undefined}
-            aria-hidden={active !== index ? true : undefined}
-            inert={active !== index}
-            tabIndex={active === index ? 0 : -1}
-            className="run-evidence-panel"
-          >
-            <div className="run-evidence-content">
-              {index === 0 && (
-                <>
-                  <CheckoutSnapshot />
-                </>
-              )}
-              {index === 1 && (
-                <LogBlock
-                  title="Browser console"
-                  entries={[
-                    {
-                      time: "00:05",
-                      level: "error",
-                      message:
-                        "TypeError: plan is null\n  at handlePay (page.tsx:89)",
-                    },
-                    {
-                      time: "00:09",
-                      level: "info",
-                      message: "Pay now failed before sending a request.",
-                    },
-                  ]}
-                />
-              )}
-              {index === 2 && (
-                <figure className="run-network-block">
-                  <figcaption className="run-block-header">
-                    <span>Network</span>
-                    <span className="run-block-meta">agent-2 · /checkout</span>
-                  </figcaption>
-                  <div className="run-network-summary">
-                    3 clicks · 0 checkout requests
-                  </div>
-                  <dl className="run-network-request">
-                    <div>
-                      <dt>Request</dt>
-                      <dd>
-                        <code>POST /api/checkout</code>
-                      </dd>
-                    </div>
-                    <div>
-                      <dt>Status</dt>
-                      <dd>Not sent</dd>
-                    </div>
-                    <div>
-                      <dt>Initiator</dt>
-                      <dd>
-                        <code>handlePay · page.tsx:89</code>
-                      </dd>
-                    </div>
-                  </dl>
-                  <p className="run-network-note">
-                    Handler threw before fetch. No request reached the server.
-                  </p>
-                </figure>
-              )}
+    <div
+      className="evidence-fan"
+      data-evidence-fan
+      role="group"
+      aria-label="Captured evidence: screenshot, console and network"
+    >
+      <figure className="evidence-card" data-evidence-card="0">
+        <figcaption>
+          Screenshot<span>/checkout</span>
+        </figcaption>
+        <div className="evidence-card-body evidence-browser">
+          <CheckoutSnapshot />
+        </div>
+      </figure>
+      <figure className="evidence-card" data-evidence-card="1">
+        <figcaption>
+          Console<span>agent-2</span>
+        </figcaption>
+        <div className="evidence-card-body">
+          <LogBlock
+            title="Browser console"
+            entries={[
+              {
+                time: "00:05",
+                level: "error",
+                message:
+                  "TypeError: plan is null\n  at handlePay\n  page.tsx:89",
+              },
+              {
+                time: "00:09",
+                level: "info",
+                message: "Pay now failed before sending a request.",
+              },
+            ]}
+          />
+        </div>
+      </figure>
+      <figure className="evidence-card" data-evidence-card="2">
+        <figcaption>
+          Network<span>0 requests</span>
+        </figcaption>
+        <div className="evidence-card-body evidence-network">
+          <p className="evidence-request">
+            <code>POST /api/checkout</code>
+          </p>
+          <dl>
+            <div>
+              <dt>Status</dt>
+              <dd>Not sent</dd>
             </div>
-          </div>
-        ))}
-      </div>
+            <div>
+              <dt>Initiator</dt>
+              <dd>
+                <code>handlePay · page.tsx:89</code>
+              </dd>
+            </div>
+          </dl>
+          <p className="evidence-network-note">
+            The handler threw before fetch. Nothing reached the server.
+          </p>
+        </div>
+      </figure>
     </div>
   );
 }

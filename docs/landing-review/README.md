@@ -1,23 +1,21 @@
-# Pinned sample run
+# Scroll-driven evidence fan
 
-Four minimal scenes share the center of the viewport: browser → evidence → diagnosis → fix. The scene stays pinned while scrolling through the sequence and releases after the PR. Scroll position selects the step; native page scrolling is preserved. The floating run toolbar is removed, and the site nav is hidden during the pinned sequence and restored on release.
+The evidence step now shows three portrait cards instead of tabs: Screenshot, Console and Network. They unfold into a left/center/right fan. Continued scrolling brings each card into the center at full size while the others sit behind it, smaller and rotated. No glow, tint or highlight marks the selected card. The heading stays anchored; the three cards share a fixed-height stage.
 
-Each step has one short heading, one sentence and its product visual. The final diff is shorter, with the branch and human merge decision below it. Browser chrome, code blocks, logs, evidence tabs and both themes are retained. Evidence tabs crossfade with an 8px blur and a small scale/skew warp. All three panels share a grid slot sized by the tallest content, so the caption, tabs and surrounding scene keep identical geometry when the selected evidence changes. Inactive panels are inert and hidden from assistive technology; reduced motion disables the transition.
+The browser, evidence, diagnosis and PR still form one centered pinned sequence. Evidence gets four scroll beats: fan opening, screenshot forward, console forward and network forward. The page releases after the PR. Native scrolling remains in place, and the floating site nav is hidden during the sequence.
 
-Reduced motion, JavaScript-disabled browsers and viewports too short for the visuals show all steps in natural document flow.
+Reduced motion, JavaScript-disabled browsers and short viewports show the three cards in natural document flow, fully readable without animation. The code/logs and browser frame are built as HTML rather than squeezing wide screenshots into narrow cards.
 
-## Pinned scenes
+## Evidence sequence
 
-Each link shows the actual viewport at that step, with ordinary motion enabled.
-
-| Viewport / theme | Browser | Evidence | Diagnosis | PR |
+| Viewport / theme | Fan opens | Screenshot forward | Console forward | Network forward |
 | --- | --- | --- | --- | --- |
-| 1440 × 900 / light | [View](pinned/1440-light-0.png) | [View](pinned/1440-light-1.png) | [View](pinned/1440-light-2.png) | [View](pinned/1440-light-3.png) |
-| 1440 × 900 / dark | [View](pinned/1440-dark-0.png) | [View](pinned/1440-dark-1.png) | [View](pinned/1440-dark-2.png) | [View](pinned/1440-dark-3.png) |
-| 768 × 1024 / light | [View](pinned/768-light-0.png) | [View](pinned/768-light-1.png) | [View](pinned/768-light-2.png) | [View](pinned/768-light-3.png) |
-| 768 × 1024 / dark | [View](pinned/768-dark-0.png) | [View](pinned/768-dark-1.png) | [View](pinned/768-dark-2.png) | [View](pinned/768-dark-3.png) |
-| 390 × 844 / light | [View](pinned/390-light-0.png) | [View](pinned/390-light-1.png) | [View](pinned/390-light-2.png) | [View](pinned/390-light-3.png) |
-| 390 × 844 / dark | [View](pinned/390-dark-0.png) | [View](pinned/390-dark-1.png) | [View](pinned/390-dark-2.png) | [View](pinned/390-dark-3.png) |
+| 1440 × 900 / light | [View](fan/1440-light-0.png) | [View](fan/1440-light-1.png) | [View](fan/1440-light-2.png) | [View](fan/1440-light-3.png) |
+| 1440 × 900 / dark | [View](fan/1440-dark-0.png) | [View](fan/1440-dark-1.png) | [View](fan/1440-dark-2.png) | [View](fan/1440-dark-3.png) |
+| 768 × 1024 / light | [View](fan/768-light-0.png) | [View](fan/768-light-1.png) | [View](fan/768-light-2.png) | [View](fan/768-light-3.png) |
+| 768 × 1024 / dark | [View](fan/768-dark-0.png) | [View](fan/768-dark-1.png) | [View](fan/768-dark-2.png) | [View](fan/768-dark-3.png) |
+| 390 × 844 / light | [View](fan/390-light-0.png) | [View](fan/390-light-1.png) | [View](fan/390-light-2.png) | [View](fan/390-light-3.png) |
+| 390 × 844 / dark | [View](fan/390-dark-0.png) | [View](fan/390-dark-1.png) | [View](fan/390-dark-2.png) | [View](fan/390-dark-3.png) |
 
 ## Full-page comparison
 
@@ -32,10 +30,9 @@ These after images show the reduced-motion stacked fallback. Before images use t
 ## Verification
 
 - Installation, typecheck, production build and diff checks pass. The repository has no lint or test scripts.
-- At 1440×900, 768×1024 and 390×844, both themes: each of the four scenes stays within 2px of the viewport's vertical center; exactly one scene is active; the sequence releases after its last scene; no document or code overflow; evidence tabs work by mouse and keyboard. The floating site nav stays hidden while pinned and returns afterward. See pinned-verification.jsonl.
-- Reduced motion and JavaScript-disabled checks verify all four steps remain visible without pinning. Short viewports use this same natural-flow fallback.
-- Evidence-transition checks at all three viewport sizes in both themes compare the exact caption, tab-strip and panel-area bounds before, during and after switching tabs. They also verify the blur effect, rapid keyboard selection, no overflow and the reduced-motion fallback. See evidence-transition.jsonl.
-- Axe WCAG A/AA checks, including normal-text contrast, cover every evidence tab and all scene visuals in both themes using the reduced-motion fallback. See accessibility.jsonl.
-- CTA destinations remain `#early-access`, `#how-it-works` and `/login`. Privacy, Terms and For agents return 200. Blog needs DATABASE_URL and returns 500 without it; the link is unchanged. OAuth and waitlist submission remain untested without credentials.
+- All three viewport sizes in both themes: fan opens; each card grows and comes forward in order; caption position stays fixed; front-card content is not clipped; no horizontal overflow; the pinned sequence releases afterward. See fan-verification.jsonl.
+- Reduced motion and JavaScript-disabled checks confirm all three cards remain readable without transforms or pinning.
+- Axe WCAG A/AA checks, including text contrast, pass in both themes with no violations or incomplete checks. The stacked fallback exposes all three cards to the audit. See accessibility.jsonl.
+- CTA destinations remain `#early-access`, `#how-it-works` and `/login`. Privacy, Terms and For agents work. Blog and authenticated flows require external credentials; those integrations remain untested here.
 
 All content is illustrative. Confirm the console error, missing POST /api/checkout, stale useCallback diagnosis and dependency-list fix before presenting it as actual evidence. Fonts remain self-hosted with OFL licenses; no dependencies or lockfiles changed. Auth, routes, waitlist handlers and legal content are unchanged.

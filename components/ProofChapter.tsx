@@ -26,7 +26,7 @@ export default function ProofChapter() {
             </div>
             <CheckoutSnapshot />
           </article>
-          <article>
+          <article data-scroll-beats="4">
             <div className="run-scene-caption">
               <h3>The evidence, captured.</h3>
               <p>The screenshot, the error, the missing request.</p>
