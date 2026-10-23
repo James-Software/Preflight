@@ -222,7 +222,7 @@ body {
 /* One annotated product fragment; all sample code wraps at narrow widths. */
 .annotated-run { padding-block: 88px; }
 .run-intro h2 { max-width: 760px; font-size: clamp(1.875rem, 4vw, 3rem); line-height: 1.12; }
-.run-artifact { border-radius: 20px; overflow: hidden; background: var(--surface); }
+.run-artifact { border-radius: 20px; overflow: clip; background: var(--surface); }
 .run-header { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding: 24px; background: var(--panel); }
 .run-row { display: grid; grid-template-columns: minmax(0, 1fr); }
 .run-annotation { padding: 28px 24px 16px; }
@@ -309,3 +309,25 @@ body {
 
 .sample-store-icon { width: 22px; height: 22px; flex-shrink: 0; }
 .sample-pay-arrow { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.6; flex-shrink: 0; }
+
+/* A scroll-led run: the header stays with the evidence as the stages advance. */
+.run-scroll-header { position: sticky; top: 84px; z-index: 20; display: block; background: var(--surface); border-bottom: 1px solid var(--line); }
+.run-header-details { display: flex; align-items: center; flex-wrap: wrap; gap: 10px 18px; }
+.run-header-details > p:last-child { margin-left: auto; }
+.run-branch { display: inline-flex; align-items: center; gap: 7px; flex-wrap: wrap; font-size: 13px; font-weight: 500; }
+.run-stages { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 8px 12px; margin-top: 18px; font-size: 13px; }
+.run-stages li { display: flex; align-items: center; gap: 7px; }
+.run-stage-dot { width: 7px; height: 7px; border: 1px solid currentColor; border-radius: 50%; }
+.run-stages li[aria-current="step"] { font-weight: 600; }
+.run-stages li[aria-current="step"] .run-stage-dot, .run-stages li[data-complete="true"] .run-stage-dot { background: currentColor; }
+.run-scroll-track { position: absolute; bottom: -1px; left: 0; right: 0; height: 2px; overflow: hidden; }
+.run-scroll-track span { display: block; height: 100%; background: currentColor; transform-origin: left; transform: scaleX(var(--run-progress, 0)); }
+.run-pr-title { display: flex; align-items: flex-start; gap: 12px; margin-top: 8px; }
+.run-pr-title > svg { margin-top: 5px; }
+@media (max-width: 479px) {
+  .run-header-details > p:last-child { width: 100%; margin-left: 0; }
+  .run-stages { font-size: 12px; gap: 8px; }
+  .run-stages li { gap: 5px; }
+}
+
+.run-row, .run-tabs button, .run-evidence-panel { scroll-margin-top: 260px; }

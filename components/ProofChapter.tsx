@@ -1,3 +1,5 @@
+import RunScrollSequence from "./RunScrollSequence";
+import { BranchIcon, PullRequestIcon } from "./GitIcons";
 import RunEvidence, { CheckoutSnapshot } from "./RunEvidence";
 import { FixCodeBlock, LogBlock } from "./SampleRunBlocks";
 
@@ -18,11 +20,7 @@ export default function ProofChapter() {
           </p>
         </div>
         <p className="mb-4 mt-10 text-sm">Sample run</p>
-        <div data-ui="annotated-run" className="run-artifact">
-          <header className="run-header">
-            <p className="text-lg font-semibold">Run #128</p>
-            <p className="text-sm">3 agents · 47 steps · 1 finding</p>
-          </header>
+        <RunScrollSequence>
           <div className="run-row">
             <div className="run-annotation">
               <h3>Real browsers</h3>
@@ -113,13 +111,32 @@ export default function ProofChapter() {
             </div>
           </div>
           <footer className="run-pr">
-            <p className="text-sm">Your code. Your merge decision.</p>
-            <p className="mt-2 text-lg font-semibold leading-relaxed">
-              PR #436 · fix(checkout): guard stale plan in Pay now handler{" "}
-              <span className="font-normal">· awaiting your merge</span>
+            <p className="run-branch mb-4">
+              <BranchIcon />
+              fix/checkout{" "}
+              <svg
+                width="14"
+                height="14"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.75"
+                aria-hidden="true"
+              >
+                <path d="M4 12h16m-6-6 6 6-6 6" />
+              </svg>
+              <span className="sr-only">into</span> main
             </p>
+            <p className="text-sm">Your code. Your merge decision.</p>
+            <div className="run-pr-title">
+              <PullRequestIcon />
+              <p className="text-lg font-semibold leading-relaxed">
+                PR #436 · fix(checkout): guard stale plan in Pay now handler{" "}
+                <span className="font-normal">· awaiting your merge</span>
+              </p>
+            </div>
           </footer>
-        </div>
+        </RunScrollSequence>
       </div>
     </section>
   );

@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { BranchIcon } from "./GitIcons";
 
 type LogEntry = {
   time: string;
@@ -76,7 +77,11 @@ export function FixCodeBlock() {
         <span className="run-block-meta">TSX · diff</span>
       </figcaption>
       <div className="run-diff-summary">
-        Stale closure fix <span>−2 / +3 lines</span>
+        <span className="run-branch">
+          <BranchIcon />
+          fix/checkout
+        </span>
+        <span>−2 / +3 lines</span>
       </div>
       <pre>
         <code>

@@ -4,6 +4,8 @@ The separate run demo and numbered feature grid now form one annotated sample ru
 
 Inter and Space Grotesk are self-hosted from Fontsource 5.3.0 with their OFL licenses in `app/fonts`. This preserves the existing font families without build-time Google Fonts requests, which this environment denies. No dependencies or lockfiles changed.
 
+The run now animates on scroll: a sticky header tracks Browser → Evidence → Diagnosis → Review, with a continuous progress line and staggered pane/annotation entrances. Branch icons identify `main` and `fix/checkout`, and the payoff uses a pull-request icon. Animations use transform and opacity, run once per pane, and are disabled for reduced motion; content remains visible without JavaScript.
+
 ## Screenshots
 
 Full-page Chromium screenshots, reduced motion, explicit saved theme. Before images use the original landing components with the same local fonts (Google Fonts was inaccessible); development tooling is hidden. After images use the production build.
@@ -18,6 +20,7 @@ Full-page Chromium screenshots, reduced motion, explicit saved theme. Before ima
 
 - `npm ci`, `npm run typecheck`, `npm run build`, and `git diff --check` pass. No lint or test scripts exist in package.json.
 - Production-server browser checks pass at all six viewport/theme combinations: no document overflow, no code overflow, all h1/h2 headings at most two lines, nav width and x-position unchanged after scrolling, mouse tab selection and keyboard selection work.
+- Scroll checks at 390px and 1440px verify stage changes, increasing progress, sticky header placement, normal-motion entrance animations, reduced-motion suppression and keyboard focus clearing the header. A JavaScript-disabled check verifies all panes and the PR remain visible. See scroll-verification.jsonl.
 - Mobile h1 measures approximately 48px; section headings measure 30px.
 - Axe WCAG A/AA checks cover the new section in both themes and every evidence tab, including 4.5:1 normal-text contrast. See accessibility.jsonl for exact results.
 - CTA hrefs remain `#early-access`, `#how-it-works` and `/login`. Privacy, Terms and the For agents destination return 200. Blog href is unchanged; `/blog` returns 500 without DATABASE_URL, an existing integration requirement. OAuth and waitlist submission were not exercised without credentials.
