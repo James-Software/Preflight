@@ -13,7 +13,7 @@ export function staticDocument(path: string): PublicDocument | null {
     path, title: "PreFlight: AI Agents That Test Your App Like Real Users",
     body: `# Is your app ready to fly?
 
-PreFlight sends a swarm of AI agents to test your app like real users. Every bug they find comes back as fix.
+PreFlight sends a swarm of AI agents to test your app like real users. Every bug they find comes back as a fix.
 
 ## How it works
 

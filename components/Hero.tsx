@@ -24,9 +24,9 @@ export default function Hero() {
               box stays unpainted and does not clip the transparent canvas. */}
           <PlasmaSquare />
 
-          <div className="relative min-w-0 w-full px-12 pb-14 pt-24 text-center sm:px-16 sm:pb-20 sm:pt-28 md:px-12 md:py-24">
+          <div className="relative min-w-0 w-full px-5 pb-14 pt-24 text-center sm:px-16 sm:pb-20 sm:pt-28 md:px-12 md:py-24">
             <h1
-              className="animate-hero-rise mx-auto max-w-4xl text-balance font-sans text-[clamp(2rem,9vw,3rem)] leading-[1.08] font-semibold tracking-[-0.035em] text-white sm:text-6xl md:text-8xl"
+              className="animate-hero-rise mx-auto max-w-4xl text-balance font-sans text-[clamp(2.75rem,12.3vw,3.5rem)] leading-[1.08] font-semibold tracking-[-0.035em] text-white sm:text-6xl md:text-8xl"
               style={{ textShadow: "0 2px 24px rgba(30,20,120,0.35)" }}
             >
               Is your app ready to fly?
@@ -36,7 +36,7 @@ export default function Hero() {
               style={{ animationDelay: "120ms" }}
             >
               PreFlight sends a swarm of AI agents to test your app like real
-              users. Every bug they find comes back as fix.
+              users. Every bug they find comes back as a fix.
             </p>
             <div
               className="animate-hero-rise mx-auto mt-7 flex w-full max-w-xs flex-col items-center justify-center gap-3 sm:mt-9 sm:max-w-none sm:flex-row"

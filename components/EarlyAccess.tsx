@@ -1,14 +1,11 @@
 export default function EarlyAccess() {
   return (
-    <section id="early-access" className="py-24 md:py-32 bg-page">
+    <section id="early-access" className="pb-24 pt-0 md:pb-32 bg-page">
       <div className="mx-auto max-w-xl px-6 text-center">
-        <p className="text-xs font-semibold tracking-[0.22em] text-primary">
-          EARLY ACCESS
-        </p>
-        <h2 className="font-display mt-4 text-3xl font-bold tracking-tight text-ink md:text-4xl dark:text-white">
+        <h2 className="font-sans text-3xl font-bold tracking-tight text-ink md:text-4xl dark:text-white">
           Be first in line for takeoff.
         </h2>
-        <p className="mt-4 text-base leading-relaxed text-ink/60 dark:text-white/60">
+        <p className="mt-4 text-base leading-relaxed text-ink dark:text-white">
           PreFlight is in final approach. Join the waitlist with GitHub. Every
           request is reviewed by hand.
         </p>
@@ -27,7 +24,7 @@ export default function EarlyAccess() {
           </svg>
           Join the waitlist with GitHub
         </a>
-        <p className="mx-auto mt-4 max-w-md text-xs leading-relaxed text-ink/40 dark:text-white/40">
+        <p className="mx-auto mt-4 max-w-md text-xs leading-relaxed text-ink dark:text-white">
           By joining the waitlist, you agree to our{" "}
           <a
             href="/terms"

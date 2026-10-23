@@ -1,0 +1,8 @@
+{"width":1440,"height":900,"theme":"light","windows":[{"card":0,"width":960,"height":600},{"card":1,"width":640,"height":300},{"card":2,"width":720,"height":360}],"playingCardSides":true,"centered":true,"reverse":true,"noClipping":true,"noOverflow":true}
+{"width":1440,"height":900,"theme":"dark","windows":[{"card":0,"width":960,"height":600},{"card":1,"width":640,"height":300},{"card":2,"width":720,"height":360}],"playingCardSides":true,"centered":true,"reverse":true,"noClipping":true,"noOverflow":true}
+{"width":768,"height":1024,"theme":"light","windows":[{"card":0,"width":720,"height":450},{"card":1,"width":640,"height":300},{"card":2,"width":720,"height":360}],"playingCardSides":true,"centered":true,"reverse":true,"noClipping":true,"noOverflow":true}
+{"width":768,"height":1024,"theme":"dark","windows":[{"card":0,"width":720,"height":450},{"card":1,"width":640,"height":300},{"card":2,"width":720,"height":360}],"playingCardSides":true,"centered":true,"reverse":true,"noClipping":true,"noOverflow":true}
+{"width":390,"height":844,"theme":"light","windows":[{"card":0,"width":342,"height":440},{"card":1,"width":342,"height":360},{"card":2,"width":342,"height":420}],"playingCardSides":true,"centered":true,"reverse":true,"noClipping":true,"noOverflow":true}
+{"width":390,"height":844,"theme":"dark","windows":[{"card":0,"width":342,"height":440},{"card":1,"width":342,"height":360},{"card":2,"width":342,"height":420}],"playingCardSides":true,"centered":true,"reverse":true,"noClipping":true,"noOverflow":true}
+{"reducedMotion":"reduce","allCardsReadable":true}
+{"javaScriptEnabled":false,"allCardsReadable":true}
