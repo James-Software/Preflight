@@ -1,6 +1,7 @@
 "use client";
 
 import { Children, useEffect, useRef, useState, type ReactNode } from "react";
+import AgentOverview from "./AgentOverview";
 
 export default function RunScrollSequence({
   children,
@@ -11,6 +12,7 @@ export default function RunScrollSequence({
   const frame = useRef<HTMLDivElement>(null);
   const [pinned, setPinned] = useState(false);
   const [active, setActive] = useState(0);
+  const [finding, setFinding] = useState<number | null>(null);
   const scenes = Children.toArray(children);
 
   useEffect(() => {
@@ -60,7 +62,14 @@ export default function RunScrollSequence({
         "data-run-pinned",
         enabled && bounds.top <= 0 && bounds.bottom >= window.innerHeight,
       );
-      if (!enabled) return;
+      if (!enabled) {
+        setFinding(null);
+        cards.forEach((card) => {
+          card.removeAttribute("aria-hidden");
+          card.inert = false;
+        });
+        return;
+      }
       const distance = element.offsetHeight - viewport.offsetHeight;
       const progress =
         distance > 0
@@ -79,6 +88,7 @@ export default function RunScrollSequence({
         const open = Math.min(1, local / 0.7);
         const front = local < 1 ? -1 : Math.min(2, Math.floor(local - 1));
         fan.dataset.front = String(front);
+        setFinding(next === fanScene && front >= 0 ? front : null);
         const cardWidth = Math.min(260, fan.clientWidth * 0.7);
         const cardHeight = cardWidth * 1.4;
         const spread = Math.max(
@@ -120,6 +130,9 @@ export default function RunScrollSequence({
           const focused = index === front;
           card.dataset.front = String(focused);
           const parked = front >= 0 && !focused;
+          // The parked edge previews are decorative until their own scroll beat.
+          card.setAttribute("aria-hidden", String(parked));
+          card.inert = parked;
           const x = parked
             ? side * (window.innerWidth / 2 + cardWidth * 0.12)
             : side * spread * open;
@@ -190,6 +203,9 @@ export default function RunScrollSequence({
             <div className="run-scene-content">{scene}</div>
           </div>
         ))}
+        {pinned && finding !== null && (
+          <AgentOverview key={finding} finding={finding} />
+        )}
       </div>
     </div>
   );

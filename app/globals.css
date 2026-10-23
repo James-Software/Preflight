@@ -359,3 +359,19 @@ html[data-run-pinned] nav[aria-label="Main navigation"] { visibility: hidden; po
 }
 
 @media (prefers-reduced-motion: reduce) { .evidence-card { transition: none !important; transform: none !important; } }
+
+/* A small, contextual agent note, kept outside the evidence windows. */
+.agent-overview { position: absolute; right: 24px; bottom: 24px; z-index: 30; width: min(300px, calc(100% - 32px)); padding: 16px; border: 1px solid var(--line); border-radius: 18px; background: var(--surface); color: #1e1b4b; box-shadow: 0 8px 32px #11182214; animation: agent-overview-enter 320ms 500ms cubic-bezier(0.16, 1, 0.3, 1) both; }
+.dark .agent-overview { color: #edf0f6; box-shadow: 0 8px 32px #0003; }
+.agent-overview-header { display: flex; align-items: center; gap: 10px; }
+.agent-overview-header > img { flex-shrink: 0; }
+.agent-overview-name { font-size: 14px; font-weight: 600; line-height: 1.4; }
+.agent-overview-source { margin-top: 2px; font-size: 12px; line-height: 1.4; }
+.agent-overview-dismiss { display: grid; place-items: center; width: 28px; height: 28px; margin-left: auto; align-self: flex-start; border-radius: 50%; cursor: pointer; }
+.agent-overview-dismiss:hover { background: var(--panel); }
+.agent-overview-finding { margin-top: 14px; }
+.agent-overview-finding h4 { font-size: 15px; font-weight: 600; line-height: 1.4; }
+.agent-overview-finding p { margin-top: 6px; font-size: 13px; line-height: 1.55; }
+@keyframes agent-overview-enter { from { opacity: 0; transform: translateY(12px) scale(.96); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@media (max-width: 479px) { .agent-overview { right: 16px; bottom: 16px; padding: 14px; } }
+@media (prefers-reduced-motion: reduce) { .agent-overview { animation: none; } }
