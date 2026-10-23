@@ -1,3 +1,4 @@
+import SubmitButton from "@/components/SubmitButton";
 import Avatar from "@/components/Avatar";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
@@ -20,7 +21,7 @@ async function approve(formData: FormData) {
 
 export default async function AdminPage() {
   const session = await auth();
-  if (!session?.user) redirect("/login");
+  if (!session?.user) redirect("/login?callbackUrl=%2Fdashboard%2Fadmin");
   if (!isAdminLogin(session.user.githubLogin)) redirect("/dashboard");
 
   const waitlist = await listWaitlist();
@@ -31,7 +32,7 @@ export default async function AdminPage() {
         <h1 className="font-sans text-3xl font-semibold tracking-tight text-ink dark:text-white">
           Waitlist
         </h1>
-        <p className="mt-2 text-sm text-ink/60 dark:text-white/60">
+        <p className="mt-2 text-sm text-muted dark:text-muted">
           {waitlist.length === 0
             ? "Nobody waiting."
             : `${waitlist.length} ${waitlist.length === 1 ? "person" : "people"} waiting.`}{" "}
@@ -45,36 +46,46 @@ export default async function AdminPage() {
                 key={entry.github_login}
                 className="flex items-center gap-4 px-5 py-4"
               >
-                <Avatar user={{ name: entry.name ?? entry.github_login, image: entry.avatar_url }} className="h-10 w-10" />
+                <Avatar
+                  user={{
+                    name: entry.name ?? entry.github_login,
+                    image: entry.avatar_url,
+                  }}
+                  className="h-10 w-10"
+                />
                 <div className="min-w-0 flex-1">
                   <p className="truncate text-sm font-medium text-ink dark:text-white">
                     {entry.name ?? entry.github_login}
                   </p>
-                  <p className="truncate text-xs text-ink/50 dark:text-white/50">
+                  <p className="truncate text-xs text-muted dark:text-muted">
                     @{entry.github_login}
                   </p>
                 </div>
                 <form action={approve}>
-                  <input type="hidden" name="login" value={entry.github_login} />
-                  <button
-                    type="submit"
-                    className="pressable btn-gradient cursor-pointer rounded-full px-5 py-2 text-sm font-medium text-white"
-                  >
-                    Approve
-                  </button>
+                  <input
+                    type="hidden"
+                    name="login"
+                    value={entry.github_login}
+                  />
+                  <SubmitButton pendingLabel="Approving…">Approve</SubmitButton>
                 </form>
               </li>
             ))}
           </ul>
         )}
 
-        <p className="mt-8 text-xs text-ink/40 dark:text-white/40">
-          Admin: {ADMIN_LOGIN}. To add someone directly, run in Neon:{" "}
-          <code className="rounded bg-lavender px-1.5 py-0.5 dark:bg-white/10 dark:text-white/80">
-            INSERT INTO allowed_github_users (github_login) VALUES
-            (&apos;their-login&apos;)
-          </code>
-        </p>
+        <details className="mt-8 text-sm text-muted">
+          <summary className="min-h-11 cursor-pointer py-2 font-medium">
+            Manual access instructions
+          </summary>
+          <p className="mt-2 leading-relaxed">
+            Admin: {ADMIN_LOGIN}. To add someone directly, run in Neon:{" "}
+            <code className="rounded bg-lavender px-1.5 py-0.5 dark:bg-white/10 dark:text-white/80">
+              INSERT INTO allowed_github_users (github_login) VALUES
+              (&apos;their-login&apos;)
+            </code>
+          </p>
+        </details>
       </div>
     </main>
   );

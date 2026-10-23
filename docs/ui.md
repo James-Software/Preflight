@@ -25,6 +25,7 @@ Shared Tailwind colors are defined in `app/globals.css`:
 - `bg-panel`: quieter inset surfaces and selected controls.
 - `border-line`: standard borders in either mode.
 - `text-primary`: the theme-aware accent color.
+- `text-muted`: tested secondary text in both themes; use it for dates and helpers instead of low-opacity ink or white.
 
 Keep the existing rounded panels, pill buttons, `btn-gradient` primary actions,
 and short color transitions. Native controls inherit the document's color scheme.
@@ -39,3 +40,5 @@ not `transition: all`, and switch icons immediately under reduced motion.
 
 Use `CopyButton` for clipboard actions. It owns the copy/check icons, accessible
 labels and status, success reset, repeat-click timing, and timeout cleanup.
+
+Admin navigation is derived from `isAdminLogin` on the server and passed as a boolean to shared headers and profile menus. UI links are not authorization: pages, reports, and actions still check sessions and ownership. Run reports use stored artifacts; no illustrative landing data enters dashboard reports.

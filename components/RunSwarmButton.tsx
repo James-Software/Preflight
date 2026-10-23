@@ -27,7 +27,7 @@ export default function RunSwarmButton({ projectId }: { projectId: number }) {
   };
 
   return (
-    <div className="flex flex-col items-end gap-2">
+    <div className="flex min-w-0 max-w-full flex-col items-end gap-2">
       <button
         type="button"
         onClick={() => void start()}
@@ -36,7 +36,25 @@ export default function RunSwarmButton({ projectId }: { projectId: number }) {
       >
         {busy ? "Starting…" : "Run swarm"}
       </button>
-      {error && <p className="text-xs font-medium text-red-600 dark:text-red-400">{error}</p>}
+      {error && (
+        <div
+          role="alert"
+          className="max-w-sm text-sm text-red-700 dark:text-red-300"
+        >
+          <p className="break-words">{error}</p>
+          <a
+            href="#project-settings"
+            onClick={() =>
+              document
+                .getElementById("project-settings")
+                ?.setAttribute("open", "")
+            }
+            className="inline-flex min-h-11 items-center font-medium underline underline-offset-4"
+          >
+            Edit app URL
+          </a>
+        </div>
+      )}
     </div>
   );
 }

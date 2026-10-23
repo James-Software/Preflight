@@ -1,76 +1,99 @@
 "use client";
 
-import { useState } from "react";
+import { useActionState, useState } from "react";
 import RepoPicker from "./RepoPicker";
 
+export type ProjectFormState = {
+  error: string;
+  field?: "appUrl" | "repo";
+} | null;
+export type ProjectFormAction = (
+  state: ProjectFormState,
+  formData: FormData,
+) => Promise<ProjectFormState>;
 const ERRORS: Record<string, string> = {
-  "bad-url": "Enter a valid app URL starting with http:// or https://.",
-  "bad-repo": "Pick a repository from the list or paste a valid github.com link.",
+  "bad-url": "Enter an app URL starting with http:// or https://.",
+  "bad-repo": "Pick a repository or paste a valid GitHub link.",
   "unowned-repo": "You can only connect repositories you own.",
   "no-repo": "Pick a repository first.",
 };
-
-/**
- * New-project form. The App URL autofills from the selected repository's
- * website (its GitHub "homepage") when it has one — until the user types
- * their own, which always wins.
- */
 export default function NewProjectForm({
   action,
   error,
 }: {
-  action: (formData: FormData) => Promise<void>;
+  action: ProjectFormAction;
   error?: string;
 }) {
+  const [state, formAction, pending] = useActionState(action, null);
   const [appUrl, setAppUrl] = useState("");
+  const [selectedRepo, setSelectedRepo] = useState("");
   const [urlTouched, setUrlTouched] = useState(false);
-
-  const handleHomepage = (homepage: string | null) => {
-    if (!homepage || urlTouched) return;
-    const t = homepage.trim();
-    // Only autofill something the URL field will actually accept.
-    if (/^https?:\/\/.+\..+/.test(t)) setAppUrl(t);
-  };
-
+  const message = state?.error || (error && ERRORS[error]);
+  const urlError = state?.field === "appUrl";
   return (
-    <form action={action} className="mt-8 space-y-5">
-      <div>
-        <label
-          htmlFor="appUrl"
-          className="mb-1.5 block text-sm font-medium text-ink dark:text-white"
-        >
-          App URL
-        </label>
-        <input
-          id="appUrl"
-          name="appUrl"
-          type="url"
-          placeholder="https://myapp.com"
-          value={appUrl}
-          onChange={(e) => {
-            setAppUrl(e.target.value);
-            setUrlTouched(e.target.value.trim() !== "");
+    <form
+      action={formAction}
+      onReset={(event) => event.preventDefault()}
+      aria-busy={pending}
+      className="mt-8 space-y-6"
+    >
+      <fieldset disabled={pending} className="min-w-0 space-y-6">
+        <div>
+          <label htmlFor="appUrl" className="mb-2 block text-sm font-medium">
+            App URL
+          </label>
+          <input
+            id="appUrl"
+            name="appUrl"
+            type="url"
+            placeholder="https://myapp.com"
+            value={appUrl}
+            onChange={(e) => {
+              setAppUrl(e.target.value);
+              setUrlTouched(e.target.value.trim() !== "");
+            }}
+            aria-invalid={urlError || undefined}
+            aria-describedby={`app-url-help${urlError ? " project-error" : ""}`}
+            className="w-full rounded-xl border border-line bg-surface px-4 py-3 text-base placeholder:text-muted focus:border-primary"
+          />
+          <p
+            id="app-url-help"
+            className="mt-2 text-sm leading-relaxed text-muted"
+          >
+            Optional. Leave blank to test the latest preview deployment of your
+            default branch.
+          </p>
+        </div>
+        <RepoPicker
+          name="repo"
+          onSelection={setSelectedRepo}
+          errorId={state?.field === "repo" ? "project-error" : undefined}
+          onHomepage={(homepage) => {
+            if (
+              homepage &&
+              !urlTouched &&
+              /^https?:\/\/.+\..+/.test(homepage.trim())
+            )
+              setAppUrl(homepage.trim());
           }}
-          className="w-full rounded-xl border bg-white px-4 py-3 text-sm text-ink placeholder:text-ink/40 focus:border-ink/30 focus:outline-none dark:bg-white/5 dark:text-white dark:placeholder:text-white/40 dark:focus:border-white/30 border-line"
         />
-        <p className="mt-1.5 text-xs text-ink/40 dark:text-white/40">
-          Optional. Fills in automatically from the repository&apos;s website
-          when it has one. If left empty, runs test the default
-          branch&apos;s latest preview deployment.
-        </p>
-      </div>
-      <RepoPicker name="repo" onHomepage={handleHomepage} />
-
-      {error && ERRORS[error] ? (
-        <p className="text-sm font-medium text-red-600 dark:text-red-400">{ERRORS[error]}</p>
-      ) : null}
-
-      <button
-        type="submit"
-        className="pressable btn-gradient cursor-pointer rounded-full px-6 py-3 text-sm font-medium text-white"
-      >
-        Create project
-      </button>
+        {message && (
+          <p
+            id="project-error"
+            role="alert"
+            className="text-sm text-red-700 dark:text-red-300"
+          >
+            {message}
+          </p>
+        )}
+        <button
+          type="submit"
+          disabled={pending || !selectedRepo}
+          className="pressable btn-gradient min-h-11 rounded-full px-6 py-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
+        >
+          {pending ? "Creating project…" : "Create project"}
+        </button>
+      </fieldset>
     </form>
   );
 }

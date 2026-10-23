@@ -1,10 +1,9 @@
 import { auth } from "@/auth";
+import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { isAdminLogin } from "@/lib/access";
 import { createPost } from "@/lib/blog";
-import BlogEditor, {
-  type BlogEditorAction,
-} from "@/components/BlogEditor";
+import BlogEditor, { type BlogEditorAction } from "@/components/BlogEditor";
 
 const create: BlogEditorAction = async (_prevState, formData) => {
   "use server";
@@ -24,12 +23,18 @@ const create: BlogEditorAction = async (_prevState, formData) => {
       error: e instanceof Error ? e.message : "Could not create the post.",
     };
   }
-  redirect("/dashboard/admin/blog");
+  revalidatePath("/blog");
+  redirect(
+    formData.get("published") === "on"
+      ? "/dashboard/admin/blog?notice=published"
+      : "/dashboard/admin/blog?notice=draft",
+  );
 };
 
 export default async function NewBlogPostPage() {
   const session = await auth();
-  if (!session?.user) redirect("/login");
+  if (!session?.user)
+    redirect("/login?callbackUrl=%2Fdashboard%2Fadmin%2Fblog%2Fnew");
   if (!isAdminLogin(session.user.githubLogin)) redirect("/dashboard");
 
   return (
@@ -37,7 +42,7 @@ export default async function NewBlogPostPage() {
       <div className="mx-auto max-w-3xl px-6 py-14">
         <a
           href="/dashboard/admin/blog"
-          className="text-sm font-medium text-ink/50 transition-colors duration-150 hover:text-ink dark:text-white/50 dark:hover:text-white"
+          className="text-sm font-medium text-muted transition-colors duration-150 hover:text-ink dark:text-muted dark:hover:text-white"
         >
           &larr; All posts
         </a>
@@ -53,7 +58,6 @@ export default async function NewBlogPostPage() {
             published: false,
           }}
           action={create}
-          submitLabel="Create post"
         />
       </div>
     </main>

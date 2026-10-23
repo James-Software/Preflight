@@ -1,27 +1,44 @@
-export default function AccessDenied() {
+export default async function AccessDenied({
+  searchParams,
+}: {
+  searchParams: Promise<{ reason?: string }>;
+}) {
+  const waitlisted = (await searchParams).reason === "waitlist";
   return (
-    <main className="flex min-h-svh items-center justify-center pb-16 pt-28 px-6 bg-page">
+    <main className="flex min-h-svh items-center justify-center bg-page px-6 pb-16 pt-28">
       <div className="max-w-sm text-center">
-        <h1 className="font-sans text-2xl font-semibold tracking-tight text-ink dark:text-white">
-          You are on the waitlist
+        <h1 className="text-3xl font-semibold tracking-tight">
+          {waitlisted ? "You’re on the waitlist." : "We couldn’t sign you in."}
         </h1>
-        <p className="mt-3 text-sm leading-relaxed text-ink/60 dark:text-white/60">
-          PreFlight is invite-only right now. If you were expecting access,
-          email{" "}
+        <p className="mt-4 leading-relaxed text-muted">
+          {waitlisted
+            ? "Your access request was received. PreFlight is invite-only, and requests are reviewed by hand."
+            : "Your sign-in didn’t complete. Please try again or use the GitHub account that has access."}
+        </p>
+        <p className="mt-4 text-sm leading-relaxed text-muted">
+          Expecting access? Email{" "}
           <a
             href="mailto:hello@trypreflight.dev"
-            className="font-medium text-ink underline underline-offset-2 transition-colors duration-150 hover:text-ink/70 dark:text-white dark:hover:text-white/70"
+            className="font-medium text-primary underline underline-offset-4"
           >
             hello@trypreflight.dev
           </a>
           .
         </p>
         <a
-          href="/"
-          className="pressable btn-gradient mt-8 inline-block rounded-full px-6 py-3 text-sm font-medium text-white"
+          href={waitlisted ? "/" : "/login"}
+          className="pressable btn-gradient mt-6 inline-flex min-h-11 items-center rounded-full px-6 py-3 text-sm font-medium text-white"
         >
-          Back to home
+          {waitlisted ? "Back to home" : "Try signing in again"}
         </a>
+        {!waitlisted && (
+          <a
+            href="/"
+            className="mt-3 flex min-h-11 items-center justify-center text-sm font-medium text-muted hover:text-primary"
+          >
+            Back to home
+          </a>
+        )}
       </div>
     </main>
   );

@@ -32,7 +32,7 @@ export default function Capabilities() {
         <h2 className="max-w-2xl text-balance text-4xl font-semibold tracking-tight text-ink md:text-5xl dark:text-white">
           Built like a tester, not a script.
         </h2>
-        <p className="mt-4 max-w-xl text-base leading-relaxed text-ink/60 md:text-lg dark:text-neutral-400">
+        <p className="mt-4 max-w-xl text-base leading-relaxed text-muted md:text-lg dark:text-muted">
           Scripts check what you told them to. PreFlight explores like someone
           seeing your app for the first time.
         </p>
@@ -40,11 +40,13 @@ export default function Capabilities() {
         <div className="mt-12 grid gap-px overflow-hidden rounded-xl border border-ink/10 bg-ink/10 md:grid-cols-2 dark:border-white/10 dark:bg-white/10">
           {CAPABILITIES.map((c) => (
             <div key={c.n} className="p-8 bg-page">
-              <p className="font-mono text-sm text-ink/40 dark:text-neutral-600">{c.n}</p>
+              <p className="font-mono text-sm text-muted dark:text-muted">
+                {c.n}
+              </p>
               <h3 className="mt-3 text-xl font-semibold tracking-tight text-ink dark:text-white">
                 {c.title}
               </h3>
-              <p className="mt-2 text-base leading-relaxed text-ink/60 dark:text-neutral-400">
+              <p className="mt-2 text-base leading-relaxed text-muted dark:text-muted">
                 {c.body}
               </p>
             </div>

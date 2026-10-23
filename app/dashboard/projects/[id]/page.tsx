@@ -1,6 +1,10 @@
 import { auth } from "@/auth";
 import { redirect, notFound } from "next/navigation";
-import { getProject, listRuns } from "@/lib/schema";
+import { revalidatePath } from "next/cache";
+import ProjectUrlForm, {
+  type ProjectUrlAction,
+} from "@/components/ProjectUrlForm";
+import { getProject, listRuns, updateProjectAppUrl } from "@/lib/schema";
 import RunSwarmButton from "@/components/RunSwarmButton";
 import RunsList from "@/components/RunsList";
 
@@ -9,12 +13,18 @@ export default async function ProjectPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const session = await auth();
-  if (!session?.user) redirect("/login");
-  const githubId = session.user.githubId;
-  if (!githubId) redirect("/login");
-
   const { id } = await params;
+  const session = await auth();
+  if (!session?.user)
+    redirect(
+      `/login?callbackUrl=${encodeURIComponent(`/dashboard/projects/${id}`)}`,
+    );
+  const githubId = session.user.githubId;
+  if (!githubId)
+    redirect(
+      `/login?callbackUrl=${encodeURIComponent(`/dashboard/projects/${id}`)}`,
+    );
+
   const projectId = Number(id);
   if (!Number.isInteger(projectId) || projectId <= 0) notFound();
 
@@ -22,22 +32,51 @@ export default async function ProjectPage({
   if (!project) notFound();
   const runs = await listRuns(project.id);
 
+  const saveUrl: ProjectUrlAction = async (_previous, formData) => {
+    "use server";
+    const caller = await auth();
+    const owner = caller?.user?.githubId;
+    if (!owner)
+      return { error: "Your session expired. Sign in again before saving." };
+    const raw = String(formData.get("appUrl") ?? "").trim();
+    let appUrl: string | null = null;
+    if (raw) {
+      try {
+        const url = new URL(raw);
+        if (!["http:", "https:"].includes(url.protocol)) throw new Error();
+        appUrl = url.href;
+      } catch {
+        return { error: "Enter an app URL starting with http:// or https://." };
+      }
+    }
+    try {
+      if (!(await updateProjectAppUrl(projectId, owner, appUrl)))
+        return { error: "This project is no longer available." };
+      revalidatePath(`/dashboard/projects/${projectId}`);
+      return { saved: true };
+    } catch {
+      return { error: "Could not save the URL. Try again." };
+    }
+  };
+
   return (
     <main className="min-h-[calc(100svh-5rem)] bg-page">
       <div className="mx-auto max-w-6xl px-6 py-14">
         <a
           href="/dashboard"
-          className="text-sm font-medium text-ink/60 transition-colors duration-150 hover:text-ink dark:text-white/60 dark:hover:text-white"
+          className="text-sm font-medium text-muted transition-colors duration-150 hover:text-ink dark:text-muted dark:hover:text-white"
         >
           &larr; All projects
         </a>
-        <h1 className="font-sans mt-4 text-3xl font-semibold tracking-tight text-ink dark:text-white">
+        <h1 className="font-sans mt-4 break-words text-3xl font-semibold tracking-tight text-ink dark:text-white">
           {project.repo_full_name}
         </h1>
-        <p className="mt-2 text-sm text-ink/60 dark:text-white/60">
+        <p className="mt-2 break-all text-sm text-muted dark:text-muted">
           {project.app_url ??
             "Runs test the default branch's latest preview deployment."}
         </p>
+
+        <ProjectUrlForm action={saveUrl} initialUrl={project.app_url} />
 
         <div className="mt-10">
           <div className="flex items-center justify-between">
@@ -53,7 +92,7 @@ export default async function ProjectPage({
               status: r.status,
               created_at: r.created_at,
               target_url: r.target_url,
-              findingsCount: 0,
+              findingsCount: r.findingsCount,
             }))}
           />
         </div>

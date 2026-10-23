@@ -13,23 +13,22 @@ function formatDate(iso: string): string {
 
 export default async function Dashboard() {
   const session = await auth();
-  if (!session?.user) redirect("/login");
+  if (!session?.user) redirect("/login?callbackUrl=%2Fdashboard");
   const githubId = session.user.githubId;
-  if (!githubId) redirect("/login");
+  if (!githubId) redirect("/login?callbackUrl=%2Fdashboard");
 
   const projects = await listProjects(githubId);
   const user = session.user;
 
   return (
     <main className="min-h-[calc(100svh-5rem)] bg-page">
-
       <div className="mx-auto max-w-6xl px-6 py-14">
         <div className="flex flex-wrap items-center justify-between gap-5">
           <div>
             <h1 className="font-sans text-3xl font-semibold tracking-tight text-ink dark:text-white">
               Projects
             </h1>
-            <p className="mt-2 text-sm text-ink/60 dark:text-white/60">
+            <p className="mt-2 text-sm text-muted dark:text-muted">
               Every app the swarm is cleared to test.
             </p>
           </div>
@@ -40,14 +39,13 @@ export default async function Dashboard() {
             New project
           </a>
         </div>
-        <InviteCard />
 
         {projects.length === 0 ? (
           <div className="mt-10 rounded-2xl border px-8 py-14 text-center border-line bg-panel">
             <p className="font-display text-lg font-bold text-ink dark:text-white">
               No projects yet
             </p>
-            <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-ink/60 dark:text-white/60">
+            <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-muted dark:text-muted">
               Connect an app URL and a GitHub repository to run your first
               swarm.
             </p>
@@ -69,16 +67,17 @@ export default async function Dashboard() {
                 <p className="font-display text-base font-bold tracking-tight text-ink dark:text-white">
                   {project.repo_full_name}
                 </p>
-                <p className="mt-1 truncate text-sm text-ink/60 dark:text-white/60">
+                <p className="mt-1 truncate text-sm text-muted dark:text-muted">
                   {project.app_url ?? "Default branch preview deployment"}
                 </p>
-                <p className="mt-3 text-xs text-ink/40 dark:text-white/40">
+                <p className="mt-3 text-xs text-muted dark:text-muted">
                   Created {formatDate(project.created_at)}
                 </p>
               </a>
             ))}
           </div>
         )}
+        <InviteCard />
       </div>
     </main>
   );

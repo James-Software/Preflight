@@ -1,11 +1,10 @@
+import DeletePostButton from "@/components/DeletePostButton";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { isAdminLogin } from "@/lib/access";
 import { getPostById, updatePost, deletePost } from "@/lib/blog";
-import BlogEditor, {
-  type BlogEditorAction,
-} from "@/components/BlogEditor";
+import BlogEditor, { type BlogEditorAction } from "@/components/BlogEditor";
 
 const save: BlogEditorAction = async (_prevState, formData) => {
   "use server";
@@ -14,7 +13,17 @@ const save: BlogEditorAction = async (_prevState, formData) => {
     return { error: "Not authorized." };
   const id = Number(formData.get("id"));
   if (!id) return { error: "Missing post id." };
+  let notice = "saved";
   try {
+    const previous = await getPostById(id);
+    if (!previous) return { error: "This post is no longer available." };
+    const published = formData.get("published") === "on";
+    notice =
+      previous.published === published
+        ? "saved"
+        : published
+          ? "published"
+          : "unpublished";
     await updatePost(id, {
       title: String(formData.get("title") ?? ""),
       slug: String(formData.get("slug") ?? ""),
@@ -28,7 +37,8 @@ const save: BlogEditorAction = async (_prevState, formData) => {
     };
   }
   revalidatePath("/blog");
-  redirect("/dashboard/admin/blog");
+  revalidatePath("/dashboard/admin/blog");
+  redirect(`/dashboard/admin/blog?notice=${notice}`);
 };
 
 async function remove(formData: FormData) {
@@ -36,9 +46,10 @@ async function remove(formData: FormData) {
   const session = await auth();
   if (!isAdminLogin(session?.user?.githubLogin)) return;
   const id = Number(formData.get("id"));
-  if (id) await deletePost(id);
+  if (!Number.isSafeInteger(id) || id <= 0) return;
+  await deletePost(id);
   revalidatePath("/blog");
-  redirect("/dashboard/admin/blog");
+  redirect("/dashboard/admin/blog?notice=deleted");
 }
 
 export default async function EditBlogPostPage({
@@ -46,11 +57,14 @@ export default async function EditBlogPostPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
   const session = await auth();
-  if (!session?.user) redirect("/login");
+  if (!session?.user)
+    redirect(
+      `/login?callbackUrl=${encodeURIComponent(`/dashboard/admin/blog/${id}`)}`,
+    );
   if (!isAdminLogin(session.user.githubLogin)) redirect("/dashboard");
 
-  const { id } = await params;
   const post = await getPostById(Number(id));
   if (!post) redirect("/dashboard/admin/blog");
 
@@ -60,19 +74,16 @@ export default async function EditBlogPostPage({
         <div className="flex items-center justify-between">
           <a
             href="/dashboard/admin/blog"
-            className="text-sm font-medium text-ink/50 transition-colors duration-150 hover:text-ink dark:text-white/50 dark:hover:text-white"
+            className="text-sm font-medium text-muted transition-colors duration-150 hover:text-ink dark:text-muted dark:hover:text-white"
           >
             &larr; All posts
           </a>
-          <form action={remove}>
-            <input type="hidden" name="id" value={post.id} />
-            <button
-              type="submit"
-              className="cursor-pointer rounded-full px-4 py-2 text-sm font-medium text-red-600 transition-colors duration-150 hover:bg-red-50 dark:text-red-400 dark:hover:bg-red-400/10"
-            >
-              Delete post
-            </button>
-          </form>
+          <DeletePostButton
+            action={remove}
+            id={post.id}
+            title={post.title}
+            label="Delete post"
+          />
         </div>
         <h1 className="font-sans mt-6 text-3xl font-semibold tracking-tight text-ink dark:text-white">
           Edit post
@@ -86,7 +97,6 @@ export default async function EditBlogPostPage({
             published: post.published,
           }}
           action={save}
-          submitLabel="Save changes"
           hiddenId={post.id}
         />
       </div>

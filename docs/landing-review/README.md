@@ -44,7 +44,7 @@ These after images show the reduced-motion stacked fallback. Before images use t
 
 ## Verification
 
-- Installation, typecheck, production build and diff checks pass. The repository has no lint or test scripts.
+- Installation, typecheck, production build and diff checks pass. The repository has no lint script; the subsequent site-wide UI fixes add regression checks through `npm test`.
 - All three viewport sizes in both themes: each card expands to its actual window dimensions; windows stay centered and inside the viewport; other cards park at the sides in playing-card proportions; reverse scrolling restores the fan; no clipped window content or horizontal document overflow. The initial screenshot placement is also checked. See balanced-verification.jsonl.
 - Width, height and transform animate together over 700ms. The heading fades while a window is expanded so it stays out of the way. The pinned stage keeps its reserved height during the expansion.
 - Reduced motion and JavaScript-disabled checks confirm all three cards remain readable without transforms or pinning.
