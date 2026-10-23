@@ -148,7 +148,7 @@ export default function AgentOverview({
         <div>
           <p className="agent-overview-name">PreFlight agent</p>
           <p className="agent-overview-source">
-            {issue.source} · sample {issue.complete ? "action" : "finding"}
+            {issue.source}{!issue.complete && " · sample finding"}
           </p>
         </div>
       </div>
