@@ -1,6 +1,6 @@
 # Scroll-driven evidence fan
 
-The evidence step now shows three portrait cards instead of tabs: Screenshot, Console and Network. They unfold into a left/center/right fan. Continued scrolling morphs the selected card from playing-card proportions into its own browser or tool-window dimensions. The browser fills the viewport with a 16px margin; Console opens up to 1000×600 and Network up to 1200×720, constrained to fit the screen. Other cards retain their playing-card proportions and move to the viewport edges. Reverse scrolling returns to the fan. No glow, tint or highlight marks the selected card. The heading stays anchored; the three cards share a fixed-height stage.
+The evidence step now shows three portrait cards instead of tabs: Screenshot, Console and Network. They unfold with Screenshot centered and unrotated, Console on the left, and Network on the right. Screenshot is also stacked above the other two, so the first expansion starts in place. Continued scrolling morphs the selected card from playing-card proportions into its own browser or tool-window dimensions. The browser targets a 960×600 desktop window (16:10), Console 640×300, and Network 720×360. On narrower screens the windows fit the available width and retain enough height for readable content, instead of filling the viewport. Other cards retain their playing-card proportions and move to the viewport edges. Reverse scrolling returns to the fan. No glow, tint or highlight marks the selected card. The heading stays anchored; the three cards share a fixed-height stage.
 
 The browser, evidence, diagnosis and PR still form one centered pinned sequence. Evidence gets four scroll beats: fan opening, screenshot forward, console forward and network forward. The page releases after the PR. Native scrolling remains in place, and the floating site nav is hidden during the sequence.
 
@@ -30,7 +30,7 @@ These after images show the reduced-motion stacked fallback. Before images use t
 ## Verification
 
 - Installation, typecheck, production build and diff checks pass. The repository has no lint or test scripts.
-- All three viewport sizes in both themes: each card expands to its actual window dimensions; windows stay centered and inside the viewport; other cards park at the sides in playing-card proportions; reverse scrolling restores the fan; no clipped window content or horizontal document overflow. See expanded-verification.jsonl.
+- All three viewport sizes in both themes: each card expands to its actual window dimensions; windows stay centered and inside the viewport; other cards park at the sides in playing-card proportions; reverse scrolling restores the fan; no clipped window content or horizontal document overflow. The initial screenshot placement is also checked. See balanced-verification.jsonl.
 - Width, height and transform animate together over 700ms. The heading fades while a window is expanded so it stays out of the way. The pinned stage keeps its reserved height during the expansion.
 - Reduced motion and JavaScript-disabled checks confirm all three cards remain readable without transforms or pinning.
 - Axe WCAG A/AA checks, including text contrast, pass in both themes with no violations or incomplete checks. The stacked fallback exposes all three cards to the audit. See accessibility.jsonl.

@@ -90,23 +90,33 @@ export default function RunScrollSequence({
         const captionHeight =
           fan.closest<HTMLElement>(".run-scene-content")!.offsetHeight -
           fan.offsetHeight;
-        const availableWidth = window.innerWidth - 32;
-        const availableHeight = window.innerHeight - 32;
+        const availableWidth = window.innerWidth - 48;
+        const availableHeight = window.innerHeight - 64;
+        const browserWidth = Math.min(960, availableWidth);
+        const compact = availableWidth < 520;
         const windows = [
-          { width: availableWidth, height: availableHeight },
           {
-            width: Math.min(1000, availableWidth),
-            height: Math.min(600, availableHeight - 32),
+            width: browserWidth,
+            height: Math.min(
+              availableHeight,
+              Math.max(440, browserWidth * 0.625),
+            ),
           },
           {
-            width: Math.min(1200, availableWidth),
-            height: Math.min(720, availableHeight - 16),
+            width: Math.min(640, availableWidth),
+            height: Math.min(availableHeight, compact ? 360 : 300),
+          },
+          {
+            width: Math.min(720, availableWidth),
+            height: Math.min(availableHeight, compact ? 420 : 360),
           },
         ];
         cards.forEach((card, index) => {
-          let side = index - 1;
+          // Screenshot starts in the middle and stays there for its first expansion.
+          let side = [0, -1, 1][index];
           if (front >= 0)
-            side = index === front ? 0 : (index - front + 3) % 3 === 1 ? 1 : -1;
+            side =
+              index === front ? 0 : index === (front === 0 ? 1 : 0) ? -1 : 1;
           const focused = index === front;
           card.dataset.front = String(focused);
           const parked = front >= 0 && !focused;
@@ -128,7 +138,7 @@ export default function RunScrollSequence({
             "--card-y",
             `${focused ? -captionHeight / 2 : 14}px`,
           );
-          card.style.zIndex = String(focused ? 4 : index === 1 ? 2 : 1);
+          card.style.zIndex = String(focused ? 4 : index === 0 ? 3 : 1);
         });
       }
     };
