@@ -31,9 +31,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     // is recorded on the waitlist automatically, then denied.
     // Fails closed if the DB is unreachable.
     async signIn({ user, profile }) {
-      const p = profile as
-        | { login?: string; id?: number }
-        | undefined;
+      const p = profile as { login?: string; id?: number } | undefined;
       const login = p?.login?.toLowerCase().trim();
       if (!login) return false;
       try {
@@ -66,7 +64,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
           name: user.name ?? null,
           avatarUrl: user.image ?? null,
         });
-        return false;
+        return "/access-denied?reason=waitlist";
       } catch {
         return false;
       }

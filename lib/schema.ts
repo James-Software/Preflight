@@ -115,7 +115,7 @@ export async function ensureSchema(): Promise<void> {
 export async function createProject(
   ownerGithubId: string,
   appUrl: string | null,
-  repoFullName: string
+  repoFullName: string,
 ): Promise<Project> {
   await ensureSchema();
   const sql = getSql();
@@ -131,9 +131,7 @@ export async function createProject(
   return rows[0] as Project;
 }
 
-export async function listProjects(
-  ownerGithubId: string
-): Promise<Project[]> {
+export async function listProjects(ownerGithubId: string): Promise<Project[]> {
   await ensureSchema();
   const sql = getSql();
   const rows = await sql`
@@ -149,7 +147,7 @@ export async function listProjects(
 
 export async function getProject(
   id: number,
-  ownerGithubId: string
+  ownerGithubId: string,
 ): Promise<Project | null> {
   await ensureSchema();
   const sql = getSql();
@@ -164,17 +162,22 @@ export async function getProject(
   return rows[0] as Project;
 }
 
-export async function listRuns(projectId: number): Promise<Run[]> {
+export interface RunSummary extends Run {
+  findingsCount: number;
+}
+
+export async function listRuns(projectId: number): Promise<RunSummary[]> {
   await ensureSchema();
   const sql = getSql();
   const rows = await sql`
-    SELECT id, project_id, status, plan, target_url, created_at, started_at, finished_at
+    SELECT id, project_id, status, plan, target_url, created_at, started_at, finished_at,
+      (SELECT COUNT(*)::int FROM findings WHERE findings.run_id = runs.id) AS "findingsCount"
     FROM runs
     WHERE project_id = ${projectId}
     ORDER BY created_at DESC
   `;
   if (!Array.isArray(rows)) return [];
-  return rows as Run[];
+  return rows as RunSummary[];
 }
 
 export interface Agent {
@@ -186,7 +189,7 @@ export interface Agent {
 
 export async function createRun(
   projectId: number,
-  targetUrl?: string | null
+  targetUrl?: string | null,
 ): Promise<Run> {
   await ensureSchema();
   const sql = getSql();
@@ -208,7 +211,7 @@ export async function createRun(
  */
 export async function cancelRun(
   runId: number,
-  projectId: number
+  projectId: number,
 ): Promise<boolean> {
   await ensureSchema();
   const rows = await getSql()`
@@ -222,7 +225,7 @@ export async function cancelRun(
 
 export async function updateRunStatus(
   runId: number,
-  status: string
+  status: string,
 ): Promise<void> {
   await ensureSchema();
   await getSql()`UPDATE runs SET status = ${status} WHERE id = ${runId}`;
@@ -230,7 +233,7 @@ export async function updateRunStatus(
 
 export async function createAgent(
   runId: number,
-  assignment: unknown
+  assignment: unknown,
 ): Promise<Agent> {
   await ensureSchema();
   const sql = getSql();
@@ -247,7 +250,7 @@ export async function createAgent(
 
 export async function updateAgentStatus(
   agentId: number,
-  status: string
+  status: string,
 ): Promise<void> {
   await ensureSchema();
   await getSql()`UPDATE agents SET status = ${status} WHERE id = ${agentId}`;
@@ -273,4 +276,69 @@ export async function createFinding(input: {
        ${input.reproSteps}, ${input.screenshotUrl}, ${input.consoleLogs},
        ${JSON.stringify(input.networkErrors)}::jsonb, 'open')
   `;
+}
+
+export interface FindingReport {
+  id: number;
+  title: string;
+  severity: string | null;
+  status: string;
+  repro_steps: string | null;
+  screenshot_url: string | null;
+  console_logs: string | null;
+  network_errors: unknown;
+  root_cause: string | null;
+  confidence: string | null;
+  patch_diff: string | null;
+  pr_url: string | null;
+  pr_number: number | null;
+  pr_state: string | null;
+}
+
+/** A report is scoped to both its project and the signed-in owner. */
+export async function getRunReport(
+  projectId: number,
+  runId: number,
+  ownerGithubId: string,
+): Promise<{ run: Run; findings: FindingReport[] } | null> {
+  await ensureSchema();
+  const sql = getSql();
+  const runs = await sql`
+    SELECT r.* FROM runs r
+    JOIN projects p ON p.id = r.project_id
+    WHERE r.id = ${runId} AND r.project_id = ${projectId}
+      AND p.owner_github_id = ${ownerGithubId}
+    LIMIT 1
+  `;
+  if (!Array.isArray(runs) || !runs.length) return null;
+  const findings = await sql`
+    SELECT f.id, f.title, f.severity, f.status, f.repro_steps,
+      f.screenshot_url, f.console_logs, f.network_errors,
+      d.root_cause, d.confidence, d.patch_diff,
+      pr.pr_url, pr.pr_number, pr.state AS pr_state
+    FROM findings f
+    LEFT JOIN diagnoses d ON d.finding_id = f.id
+    LEFT JOIN LATERAL (
+      SELECT pr_url, pr_number, state FROM pull_requests
+      WHERE diagnosis_id = d.id ORDER BY id DESC LIMIT 1
+    ) pr ON TRUE
+    WHERE f.run_id = ${runId}
+    ORDER BY CASE f.severity WHEN 'critical' THEN 0 WHEN 'high' THEN 1
+      WHEN 'medium' THEN 2 WHEN 'low' THEN 3 ELSE 4 END, f.id
+  `;
+  return { run: runs[0] as Run, findings: findings as FindingReport[] };
+}
+
+export async function updateProjectAppUrl(
+  projectId: number,
+  ownerGithubId: string,
+  appUrl: string | null,
+): Promise<boolean> {
+  await ensureSchema();
+  const rows = await getSql()`
+    UPDATE projects SET app_url = ${appUrl}
+    WHERE id = ${projectId} AND owner_github_id = ${ownerGithubId}
+    RETURNING id
+  `;
+  return Array.isArray(rows) && rows.length > 0;
 }

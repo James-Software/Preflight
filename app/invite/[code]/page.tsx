@@ -29,9 +29,9 @@ export default async function InvitePage({
           <h1 className="font-sans text-2xl font-semibold tracking-tight text-ink dark:text-white">
             This invite link is not valid
           </h1>
-          <p className="mt-3 text-sm leading-relaxed text-ink/60 dark:text-white/60">
-            It may have been fully claimed or revoked. Ask the person who
-            sent it for a fresh link, or join the waitlist instead.
+          <p className="mt-3 text-sm leading-relaxed text-muted dark:text-muted">
+            It may have been fully claimed or revoked. Ask the person who sent
+            it for a fresh link, or join the waitlist instead.
           </p>
           <a
             href="/#early-access"
@@ -47,16 +47,14 @@ export default async function InvitePage({
   return (
     <main className="flex min-h-svh items-center justify-center pb-16 pt-28 px-6 bg-page">
       <div className="max-w-sm text-center">
-        <p className="text-xs font-semibold tracking-[0.22em] text-primary">
-          INVITATION
-        </p>
         <h1 className="font-sans mt-4 text-2xl font-semibold tracking-tight text-ink dark:text-white">
           You are invited to PreFlight
         </h1>
-        <p className="mt-3 text-sm leading-relaxed text-ink/60 dark:text-white/60">
-          <span className="font-medium text-ink dark:text-white">@{invite.inviterLogin}</span>{" "}
-          invited you to skip the waitlist. Join with GitHub to claim your
-          spot.
+        <p className="mt-3 text-sm leading-relaxed text-muted dark:text-muted">
+          <span className="font-medium text-ink dark:text-white">
+            @{invite.inviterLogin}
+          </span>{" "}
+          invited you to skip the waitlist. Join with GitHub to claim your spot.
         </p>
         <form action={accept}>
           <button
@@ -75,7 +73,7 @@ export default async function InvitePage({
             Join with GitHub
           </button>
         </form>
-        <p className="mt-4 text-xs text-ink/40 dark:text-white/40">
+        <p className="mt-4 text-xs text-muted dark:text-muted">
           {invite.remaining} of 3 invites remaining on this link.
         </p>
       </div>

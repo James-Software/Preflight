@@ -8,30 +8,30 @@ export default function Footer() {
         <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-3">
           <a
             href="/privacy"
-            className="text-sm text-ink/45 transition-colors duration-150 hover:text-ink dark:text-white/45 dark:hover:text-white"
+            className="text-sm text-muted transition-colors duration-150 hover:text-ink dark:text-muted dark:hover:text-white"
           >
             Privacy Policy
           </a>
           <a
             href="/terms"
-            className="text-sm text-ink/45 transition-colors duration-150 hover:text-ink dark:text-white/45 dark:hover:text-white"
+            className="text-sm text-muted transition-colors duration-150 hover:text-ink dark:text-muted dark:hover:text-white"
           >
             Terms of Service
           </a>
           <a
             href="/blog"
-            className="text-sm text-ink/45 transition-colors duration-150 hover:text-ink dark:text-white/45 dark:hover:text-white"
+            className="text-sm text-muted transition-colors duration-150 hover:text-ink dark:text-muted dark:hover:text-white"
           >
             Blog
           </a>
           <a
             href="/llms.txt"
-            className="text-sm text-ink/45 transition-colors duration-150 hover:text-ink dark:text-white/45 dark:hover:text-white"
+            className="text-sm text-muted transition-colors duration-150 hover:text-ink dark:text-muted dark:hover:text-white"
           >
             For agents
           </a>
         </div>
-        <p className="text-sm text-ink/45 dark:text-white/45">&copy; 2026</p>
+        <p className="text-sm text-muted dark:text-muted">&copy; 2026</p>
       </div>
     </footer>
   );

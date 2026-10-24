@@ -1,12 +1,7 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import Markdown from "./Markdown";
-
-/* ------------------------------------------------------------------ */
-/* Blog post editor: write markdown with a live preview tab. Used by   */
-/* both the new-post and edit-post admin pages.                        */
-/* ------------------------------------------------------------------ */
 
 export interface BlogEditorInitial {
   title: string;
@@ -15,157 +10,211 @@ export interface BlogEditorInitial {
   markdown: string;
   published: boolean;
 }
-
 export type BlogEditorAction = (
   prevState: { error: string } | null,
   formData: FormData,
 ) => Promise<{ error: string } | null>;
 
+const FIELD =
+  "mt-2 w-full rounded-xl border border-line bg-surface px-4 py-3 text-base outline-none placeholder:text-muted focus:border-primary";
+
 export default function BlogEditor({
   initial,
   action,
-  submitLabel,
   hiddenId,
 }: {
   initial: BlogEditorInitial;
   action: BlogEditorAction;
-  submitLabel: string;
   hiddenId?: number;
 }) {
-  const [state, formAction] = useActionState(action, null);
+  const [state, formAction, pending] = useActionState(action, null);
   const [tab, setTab] = useState<"write" | "preview">("write");
-  const [markdown, setMarkdown] = useState(initial.markdown);
-
+  const [values, setValues] = useState(initial);
+  const dirty = Object.keys(initial).some(
+    (key) =>
+      values[key as keyof BlogEditorInitial] !==
+      initial[key as keyof BlogEditorInitial],
+  );
+  const change = <K extends keyof BlogEditorInitial>(
+    key: K,
+    value: BlogEditorInitial[K],
+  ) => setValues((prev) => ({ ...prev, [key]: value }));
+  useEffect(() => {
+    if (!dirty || pending) return;
+    const warn = (event: BeforeUnloadEvent) => {
+      event.preventDefault();
+      event.returnValue = "";
+    };
+    window.addEventListener("beforeunload", warn);
+    return () => window.removeEventListener("beforeunload", warn);
+  }, [dirty, pending]);
+  const label = values.published
+    ? initial.published
+      ? "Save changes"
+      : "Publish post"
+    : initial.published
+      ? "Unpublish post"
+      : "Save draft";
+  const saving =
+    values.published && !initial.published
+      ? "Publishing…"
+      : !values.published && initial.published
+        ? "Unpublishing…"
+        : "Saving…";
   return (
-    <form action={formAction} className="mt-8 space-y-6">
-      <input type="hidden" name="markdown" value={markdown} />
-      {typeof hiddenId === "number" ? (
+    <form
+      action={formAction}
+      onReset={(event) => event.preventDefault()}
+      aria-busy={pending}
+      className="mt-8 space-y-6"
+    >
+      <input type="hidden" name="markdown" value={values.markdown} />
+      {typeof hiddenId === "number" && (
         <input type="hidden" name="id" value={hiddenId} />
-      ) : null}
-      {state?.error ? (
-        <p role="alert" className="rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-600 dark:text-red-400">
+      )}
+      {state?.error && (
+        <p
+          role="alert"
+          className="rounded-xl bg-red-500/10 px-4 py-3 text-sm text-red-700 dark:text-red-300"
+        >
           {state.error}
         </p>
-      ) : null}
-
-      <div>
-        <label
-          htmlFor="blog-title"
-          className="text-sm font-medium text-ink dark:text-white"
-        >
-          Title
-        </label>
-        <input
-          id="blog-title"
-          name="title"
-          type="text"
-          required
-          defaultValue={initial.title}
-          placeholder="Why your staging environment lies to you"
-          className="mt-2 w-full rounded-xl border bg-white px-4 py-3 text-[15px] text-ink outline-none transition-colors duration-150 placeholder:text-ink/30 focus:border-primary dark:bg-white/5 dark:text-white dark:placeholder:text-white/30 border-line"
-        />
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-2">
+      )}
+      <fieldset
+        disabled={pending}
+        className="min-w-0 space-y-6 disabled:opacity-75"
+      >
         <div>
-          <label htmlFor="blog-slug" className="text-sm font-medium text-ink dark:text-white">
+          <label htmlFor="blog-title" className="text-sm font-medium">
+            Title
+          </label>
+          <input
+            id="blog-title"
+            name="title"
+            required
+            value={values.title}
+            onChange={(e) => change("title", e.target.value)}
+            placeholder="The build passed. The checkout didn’t."
+            className={FIELD}
+          />
+        </div>
+        <div>
+          <label htmlFor="blog-slug" className="text-sm font-medium">
             Slug
           </label>
           <input
             id="blog-slug"
             name="slug"
-            type="text"
-            defaultValue={initial.slug}
-            placeholder="auto-generated from the title"
-            className="mt-2 w-full rounded-xl border bg-white px-4 py-3 font-mono text-sm text-ink outline-none transition-colors duration-150 placeholder:text-ink/30 focus:border-primary dark:bg-white/5 dark:text-white dark:placeholder:text-white/30 border-line"
+            value={values.slug}
+            onChange={(e) => change("slug", e.target.value)}
+            placeholder="Generated from the title if left blank"
+            aria-describedby="blog-slug-help"
+            className={FIELD}
           />
-          <p className="mt-1.5 text-xs text-ink/50 dark:text-white/50">
-            Leave blank to generate from the title. Lives at
-            /blog/your-slug.
+          <p id="blog-slug-help" className="mt-2 break-all text-sm text-muted">
+            {values.slug
+              ? `/blog/${values.slug}`
+              : "Leave blank to generate the URL from the title."}
           </p>
         </div>
         <div>
-          <label
-            htmlFor="blog-description"
-            className="text-sm font-medium text-ink dark:text-white"
-          >
+          <label htmlFor="blog-description" className="text-sm font-medium">
             Description
           </label>
-          <input
+          <textarea
             id="blog-description"
             name="description"
-            type="text"
-            defaultValue={initial.description}
-            placeholder="One or two sentences for previews and SEO."
-            className="mt-2 w-full rounded-xl border bg-white px-4 py-3 text-[15px] text-ink outline-none transition-colors duration-150 placeholder:text-ink/30 focus:border-primary dark:bg-white/5 dark:text-white dark:placeholder:text-white/30 border-line"
+            rows={2}
+            value={values.description}
+            onChange={(e) => change("description", e.target.value)}
+            placeholder="One or two sentences for article previews."
+            className={FIELD}
           />
         </div>
-      </div>
-
-      <div>
-        <div className="flex items-center justify-between">
-          <label
-            htmlFor="blog-markdown"
-            className="text-sm font-medium text-ink dark:text-white"
-          >
-            Content
+        <div>
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <span id="blog-content-label" className="text-sm font-medium">
+              Content
+            </span>
+            <div
+              className="flex gap-1 rounded-full bg-panel p-1"
+              role="group"
+              aria-label="Editor view"
+            >
+              {(["write", "preview"] as const).map((view) => (
+                <button
+                  key={view}
+                  type="button"
+                  onClick={() => setTab(view)}
+                  aria-pressed={tab === view}
+                  className={`min-h-11 rounded-full px-4 text-sm font-medium capitalize ${tab === view ? "bg-ink text-white dark:bg-white dark:text-ink" : "text-muted"}`}
+                >
+                  {view}
+                </button>
+              ))}
+            </div>
+          </div>
+          {tab === "write" ? (
+            <textarea
+              id="blog-markdown"
+              aria-labelledby="blog-content-label"
+              value={values.markdown}
+              onChange={(e) => change("markdown", e.target.value)}
+              placeholder="Write your post in Markdown. Paragraphs, lists, links, and fenced code blocks all work."
+              className={`${FIELD} min-h-[50vh] font-mono text-sm leading-relaxed`}
+            />
+          ) : (
+            <div
+              aria-labelledby="blog-content-label"
+              className="mt-3 min-h-[50vh] rounded-xl bg-surface p-5 md:p-8"
+            >
+              <h2 className="break-words text-3xl font-semibold tracking-tight">
+                {values.title || "Untitled post"}
+              </h2>
+              {values.description && (
+                <p className="mt-4 whitespace-pre-wrap text-lg leading-relaxed text-muted">
+                  {values.description}
+                </p>
+              )}
+              <div className="mt-8">
+                {values.markdown.trim() ? (
+                  <Markdown content={values.markdown} />
+                ) : (
+                  <p className="text-muted">Nothing to preview yet.</p>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+        <div className="flex flex-wrap items-center justify-between gap-5">
+          <label className="flex min-h-11 cursor-pointer items-center gap-3 text-sm font-medium">
+            <input
+              type="checkbox"
+              name="published"
+              checked={values.published}
+              onChange={(e) => change("published", e.target.checked)}
+              className="h-5 w-5 accent-[var(--accent)]"
+            />
+            Publish on the blog
           </label>
-          <div className="flex rounded-full border p-0.5 border-line">
-            {(["write", "preview"] as const).map((t) => (
-              <button
-                key={t}
-                type="button"
-                onClick={() => setTab(t)}
-                aria-pressed={tab === t}
-                className={`rounded-full px-4 py-1.5 text-sm font-medium capitalize transition-colors duration-150 ${
-                  tab === t
-                    ? "bg-ink text-white dark:bg-white dark:text-ink"
-                    : "text-ink/60 hover:text-ink dark:text-white/60 dark:hover:text-white"
-                }`}
-              >
-                {t}
-              </button>
-            ))}
-          </div>
+          <button
+            type="submit"
+            disabled={pending}
+            className="pressable btn-gradient min-h-11 rounded-full px-6 py-3 text-sm font-medium text-white disabled:cursor-wait"
+          >
+            {pending ? saving : label}
+          </button>
         </div>
-        {tab === "write" ? (
-          <textarea
-            id="blog-markdown"
-            value={markdown}
-            onChange={(e) => setMarkdown(e.target.value)}
-            placeholder={"# Your headline\n\nWrite in Markdown. **Bold**, `code`, lists, and fenced code blocks all work."}
-            className="mt-2 min-h-[50vh] w-full rounded-xl border bg-white px-4 py-3 font-mono text-sm leading-relaxed text-ink outline-none transition-colors duration-150 placeholder:text-ink/30 focus:border-primary dark:bg-white/5 dark:text-white dark:placeholder:text-white/30 border-line"
-          />
-        ) : (
-          <div className="mt-2 min-h-[50vh] rounded-xl border border-ink/10 p-6 md:p-8 dark:border-white/10 bg-page">
-            {markdown.trim() ? (
-              <Markdown content={markdown} />
-            ) : (
-              <p className="text-sm text-ink/40 dark:text-white/40">
-                Nothing to preview yet.
-              </p>
-            )}
-          </div>
-        )}
-      </div>
-
-      <div className="flex items-center justify-between gap-4">
-        <label className="flex cursor-pointer items-center gap-2.5 text-sm font-medium text-ink dark:text-white">
-          <input
-            type="checkbox"
-            name="published"
-            defaultChecked={initial.published}
-            className="h-4 w-4 accent-[#6366f1]"
-          />
-          Published
-        </label>
-        <button
-          type="submit"
-          className="pressable btn-gradient cursor-pointer rounded-full px-7 py-3 text-sm font-medium text-white"
-        >
-          {submitLabel}
-        </button>
-      </div>
+      </fieldset>
+      <p role="status" aria-live="polite" className="text-sm text-muted">
+        {pending
+          ? saving
+          : dirty
+            ? "Unsaved changes"
+            : values.published
+              ? "Published · changes appear when you save."
+              : "Draft · only visible to you."}
+      </p>
     </form>
   );
 }

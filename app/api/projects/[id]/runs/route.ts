@@ -1,26 +1,18 @@
 import { NextRequest, NextResponse } from "next/server";
 import { tasks } from "@trigger.dev/sdk";
 import { auth } from "@/auth";
+import { getTriggerClientConfig, swarmStartError } from "@/lib/trigger-client";
 import { getProject, listRuns, createRun, updateRunStatus } from "@/lib/schema";
-import { getSql } from "@/lib/db";
 import {
   getGithubContext,
   resolveDefaultBranchPreview,
   GithubAuthError,
 } from "@/lib/github";
 
-async function findingsCount(runId: number): Promise<number> {
-  const rows = await getSql()`
-    SELECT COUNT(*)::int AS c FROM findings WHERE run_id = ${runId}
-  `;
-  if (!Array.isArray(rows) || rows.length === 0) return 0;
-  return (rows[0] as { c: number }).c ?? 0;
-}
-
 /** GET /api/projects/[id]/runs — runs with findings counts (for polling). */
 export async function GET(
   _req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const session = await auth();
   const githubId = session?.user?.githubId;
@@ -33,10 +25,7 @@ export async function GET(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
   const runs = await listRuns(project.id);
-  const withCounts = await Promise.all(
-    runs.map(async (r) => ({ ...r, findingsCount: await findingsCount(r.id) }))
-  );
-  return NextResponse.json({ runs: withCounts });
+  return NextResponse.json({ runs });
 }
 
 /**
@@ -47,7 +36,7 @@ export async function GET(
  */
 export async function POST(
   req: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const session = await auth();
   const githubId = session?.user?.githubId;
@@ -60,6 +49,16 @@ export async function POST(
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
 
+  let clientConfig;
+  try {
+    clientConfig = getTriggerClientConfig();
+  } catch (error) {
+    return NextResponse.json(
+      { error: swarmStartError(error) },
+      { status: 503 },
+    );
+  }
+
   let targetUrl = project.app_url;
   if (!targetUrl) {
     const ctx = await getGithubContext(req);
@@ -69,7 +68,7 @@ export async function POST(
           error: "GitHub session expired. Please log in again.",
           tokenMissing: true,
         },
-        { status: 401 }
+        { status: 401 },
       );
     }
     const [owner, repo] = project.repo_full_name.split("/");
@@ -83,7 +82,7 @@ export async function POST(
             error: "GitHub session expired. Please log in again.",
             tokenExpired: true,
           },
-          { status: 401 }
+          { status: 401 },
         );
       }
       throw e;
@@ -94,7 +93,7 @@ export async function POST(
           error:
             "No preview deployment found for the default branch. Connect a hosting provider (Vercel, Netlify, …) to this repo, or set an App URL on the project.",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
     targetUrl = preview.url;
@@ -107,22 +106,20 @@ export async function POST(
     console.error("createRun failed", e);
     return NextResponse.json(
       { error: "Could not create the run. Try again." },
-      { status: 500 }
+      { status: 500 },
     );
   }
   // Fire and forget: the task updates the run row as it progresses.
   // Surface trigger failures instead of a generic 500 so the real cause
   // (e.g. tasks not deployed to Trigger.dev) is visible.
   try {
-    await tasks.trigger("run-swarm", { runId: run.id, targetUrl });
+    await tasks.trigger("run-swarm", { runId: run.id, targetUrl }, undefined, {
+      clientConfig,
+    });
   } catch (e) {
     console.error("tasks.trigger(run-swarm) failed", e);
     await updateRunStatus(run.id, "failed").catch(() => {});
-    const msg = e instanceof Error ? e.message : String(e);
-    return NextResponse.json(
-      { error: `Could not start the swarm: ${msg.slice(0, 300)}` },
-      { status: 500 }
-    );
+    return NextResponse.json({ error: swarmStartError(e) }, { status: 500 });
   }
   return NextResponse.json({ run });
 }

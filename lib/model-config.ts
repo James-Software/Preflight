@@ -1,36 +1,48 @@
-/* ------------------------------------------------------------------ */
-/* Model configuration — the one file to edit when swapping models.    */
-/*                                                                    */
-/* Defaults are PAID OpenRouter models. Free models require opting    */
-/* into model-improvement data sharing; with privacy set to "no       */
-/* training" they 402. Env vars override the file without a code      */
-/* change (useful in Vercel).                                          */
-/*                                                                    */
-/* Current stack (2026-10-16, est. ~$0.15-0.30 per 3-agent run):      */
-/*   driver:  openai/gpt-5.6-luna      (OpenRouter chat completions)   */
-/*   judge:   openai/gpt-4o-mini       (OpenRouter chat completions)   */
-/*                                                                    */
-/* Note: typesafe/jev-1.13 (the planned Decisions-API judge) was not  */
-/* found on OpenRouter, so the judge stays on chat completions for    */
-/* now. Revisit if it becomes available.                              */
-/*                                                                    */
-/* Rate-limit note: the agent loop backs off and retries on 429s. If  */
-/* a model misbehaves, swap the id — no other code changes needed.    */
-/* ------------------------------------------------------------------ */
+import {
+  assertOpenAIDecisionsConfig,
+  OPENAI_DECISIONS_MODEL,
+} from "@/lib/openai-decisions";
 
-export type JudgeProvider = "openrouter-chat" | "openrouter-decisions";
+/** Browser actions use OpenRouter; typed QA judgments use OpenAI Decisions. */
+export type JudgeProvider =
+  | "openai-decisions"
+  | "openrouter-chat"
+  | "openrouter-decisions";
+const judgeProvider = (process.env.JUDGE_PROVIDER ||
+  "openai-decisions") as JudgeProvider;
 
 export const MODEL_CONFIG = {
   driver: {
     provider: "openrouter-chat" as const,
-    // Needs vision + JSON output.
     model: process.env.DRIVER_MODEL || "openai/gpt-5.6-luna",
   },
   judge: {
-    // "openrouter-chat": JSON verdicts via chat completions.
-    // "openrouter-decisions": Jev typed decisions (fractions of a cent).
-    provider: (process.env.JUDGE_PROVIDER ||
-      "openrouter-chat") as JudgeProvider,
-    model: process.env.JUDGE_MODEL || "openai/gpt-4o-mini",
+    provider: judgeProvider,
+    model:
+      process.env.JUDGE_MODEL ||
+      (judgeProvider === "openai-decisions"
+        ? OPENAI_DECISIONS_MODEL
+        : "openai/gpt-4o-mini"),
   },
 };
+
+/** Fail before allocating paid browsers when worker credentials/config are missing. */
+export function assertSwarmModelConfig(): void {
+  if (
+    !["openai-decisions", "openrouter-chat", "openrouter-decisions"].includes(
+      MODEL_CONFIG.judge.provider,
+    )
+  ) {
+    throw new Error(
+      "JUDGE_PROVIDER must be openai-decisions, openrouter-chat, or openrouter-decisions",
+    );
+  }
+  if (!process.env.OPENROUTER_API_KEY?.trim()) {
+    throw new Error(
+      "OPENROUTER_API_KEY is not set in the Trigger.dev worker environment; the browser driver needs it.",
+    );
+  }
+  if (MODEL_CONFIG.judge.provider === "openai-decisions") {
+    assertOpenAIDecisionsConfig(MODEL_CONFIG.judge.model);
+  }
+}

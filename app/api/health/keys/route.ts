@@ -1,4 +1,5 @@
 import { auth } from "@/auth";
+import { getTriggerClientConfig } from "@/lib/trigger-client";
 import { getSql } from "@/lib/db";
 import { isAdminLogin } from "@/lib/access";
 import { NextResponse } from "next/server";
@@ -91,8 +92,10 @@ export async function GET() {
 
   checks.push(
     await check("Trigger.dev (TRIGGER_SECRET_KEY)", async () => {
-      if (!process.env.TRIGGER_SECRET_KEY) throw new Error("not set");
-      return "set (task sync in the Trigger.dev dashboard is the live test)";
+      const config = getTriggerClientConfig();
+      return config.previewBranch
+        ? "Key and worker branch configured. Confirm this branch is deployed in Trigger.dev; this check does not start a task."
+        : "Key configured for an unbranched worker environment. Confirm its tasks are deployed in Trigger.dev; this check does not start a task.";
     })
   );
 

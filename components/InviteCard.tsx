@@ -14,6 +14,7 @@ type InviteStatus = {
 export default function InviteCard() {
   const [status, setStatus] = useState<InviteStatus | null>(null);
   const [busy, setBusy] = useState(false);
+  const [error, setError] = useState("");
 
   useEffect(() => {
     let cancelled = false;
@@ -34,11 +35,18 @@ export default function InviteCard() {
 
   const reveal = async () => {
     setBusy(true);
+    setError("");
     try {
       const res = await fetch("/api/invites", { method: "POST" });
       if (res.ok) {
         setStatus((await res.json()) as InviteStatus);
+      } else {
+        setError("Could not create the invite link. Try again.");
       }
+    } catch {
+      setError(
+        "Could not create the invite link. Check your connection and try again.",
+      );
     } finally {
       setBusy(false);
     }
@@ -50,7 +58,7 @@ export default function InviteCard() {
         <p className="font-display text-base font-bold tracking-tight text-ink dark:text-white">
           Invite to PreFlight
         </p>
-        <p className="mt-1 text-sm text-ink/60 dark:text-white/60">
+        <p className="mt-1 text-sm text-muted dark:text-muted">
           {status.remaining} out of {status.max} invites remaining.
         </p>
         {status.link && (
@@ -62,6 +70,11 @@ export default function InviteCard() {
           </div>
         )}
       </div>
+      {error && (
+        <p role="alert" className="text-sm text-red-700 dark:text-red-300">
+          {error}
+        </p>
+      )}
       {!status.link && (
         <button
           type="button"

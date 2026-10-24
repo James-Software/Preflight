@@ -31,12 +31,35 @@ export default function RunScrollSequence({
     let snapRelease: ReturnType<typeof setTimeout> | undefined;
     let snapping = false;
     let pointerDown = false;
+    let stepLockedUntil = 0;
+    let wheelLast = -Infinity;
+    let wheelTotal = 0;
+    let wheelConsumed = false;
+    let touch: { x: number; y: number; consumed: boolean } | null = null;
     const beats = [
       ...element.querySelectorAll<HTMLElement>(".run-scene-content"),
     ].map((panel) =>
       Number(panel.firstElementChild?.getAttribute("data-scroll-beats") || 1),
     );
     const totalBeats = beats.reduce((sum, count) => sum + count, 0);
+    const anchors: number[] = [];
+    let start = 0;
+    beats.forEach((count) => {
+      for (let step = 0; step < count; step++)
+        anchors.push(start + (count > 1 && step === 0 ? 0.8 : step + 0.5));
+      start += count;
+    });
+    // The opening and closing scenes also serve as the natural entry/exit points.
+    anchors[0] = 0;
+    anchors[anchors.length - 1] = totalBeats;
+    const nearestAnchor = (phase: number) =>
+      anchors.reduce(
+        (best, value, index) =>
+          Math.abs(value - phase) < Math.abs(anchors[best] - phase)
+            ? index
+            : best,
+        0,
+      );
     const fan = element.querySelector<HTMLElement>("[data-evidence-fan]");
     const cards = fan
       ? [...fan.querySelectorAll<HTMLElement>("[data-evidence-card]")]
@@ -178,6 +201,29 @@ export default function RunScrollSequence({
       clearTimeout(snapRelease);
       snapping = false;
     };
+    const goTo = (index: number) => {
+      cancelSnap();
+      const travel = element.offsetHeight - viewport.offsetHeight;
+      const target =
+        window.scrollY +
+        element.getBoundingClientRect().top +
+        (travel * anchors[index]) / totalBeats;
+      snapping = true;
+      // Allow the 700ms card morph to finish, even if native smooth scrolling ends earlier.
+      stepLockedUntil = performance.now() + 850;
+      window.scrollTo({
+        top:
+          index === 0
+            ? Math.ceil(target)
+            : index === anchors.length - 1
+              ? Math.floor(target)
+              : target,
+        behavior: "smooth",
+      });
+      snapRelease = setTimeout(() => {
+        snapping = false;
+      }, 1200);
+    };
     const snap = () => {
       if (
         !enabled ||
@@ -188,32 +234,112 @@ export default function RunScrollSequence({
         return;
       const bounds = element.getBoundingClientRect();
       const travel = element.offsetHeight - viewport.offsetHeight;
-      // Snap only inside the pinned animation, leaving entry and exit in normal flow.
       if (bounds.top > 0 || bounds.bottom < window.innerHeight || travel <= 0)
         return;
-      const progress = -bounds.top / travel;
-      if (progress <= 0.005 || progress >= 0.995) return;
-      const anchors = [0, totalBeats];
-      let start = 0;
-      beats.forEach((count) => {
-        if (count === 1) anchors.push(start + 0.5);
-        else
-          for (let step = 0; step < count; step++)
-            anchors.push(start + (step === 0 ? 0.8 : step + 0.5));
-        start += count;
-      });
-      const phase = progress * totalBeats;
-      const nearest = anchors.reduce((best, value) =>
-        Math.abs(value - phase) < Math.abs(best - phase) ? value : best,
-      );
+      const index = nearestAnchor((-bounds.top / travel) * totalBeats);
       const target =
-        window.scrollY + bounds.top + (travel * nearest) / totalBeats;
-      if (Math.abs(target - window.scrollY) < 4) return;
-      snapping = true;
-      window.scrollTo({ top: target, behavior: "smooth" });
-      snapRelease = setTimeout(() => {
-        snapping = false;
-      }, 1200);
+        window.scrollY + bounds.top + (travel * anchors[index]) / totalBeats;
+      if (Math.abs(target - window.scrollY) >= 4) goTo(index);
+    };
+    const captures = (delta: number) => {
+      if (!enabled || reduced.matches) return false;
+      const bounds = element.getBoundingClientRect();
+      const travel = element.offsetHeight - viewport.offsetHeight;
+      if (travel <= 0) return false;
+      // Catch gestures crossing into the stage, including a large mouse-wheel delta.
+      if (bounds.top > 1) return delta > 0 && delta >= bounds.top;
+      if (bounds.bottom < window.innerHeight - 1)
+        return delta < 0 && -delta >= window.innerHeight - bounds.bottom;
+      // Once the last (or first) scene is settled, scrolling releases normally.
+      if (
+        performance.now() >= stepLockedUntil &&
+        ((delta < 0 && bounds.top >= -1) ||
+          (delta > 0 && bounds.bottom <= window.innerHeight + 1))
+      )
+        return false;
+      return true;
+    };
+    const advance = (delta: number) => {
+      if (performance.now() < stepLockedUntil) return;
+      const bounds = element.getBoundingClientRect();
+      const travel = element.offsetHeight - viewport.offsetHeight;
+      const index =
+        bounds.top > 1
+          ? 0
+          : bounds.bottom < window.innerHeight - 1
+            ? anchors.length - 1
+            : Math.max(
+                0,
+                Math.min(
+                  anchors.length - 1,
+                  nearestAnchor((-bounds.top / travel) * totalBeats) +
+                    Math.sign(delta),
+                ),
+              );
+      goTo(index);
+    };
+    const wheel = (event: WheelEvent) => {
+      // Leave pinch zoom and horizontal trackpad gestures to the browser.
+      if (
+        event.defaultPrevented ||
+        event.ctrlKey ||
+        !enabled ||
+        reduced.matches ||
+        !event.cancelable ||
+        Math.abs(event.deltaX) > Math.abs(event.deltaY)
+      )
+        return;
+      const delta =
+        event.deltaY *
+        (event.deltaMode === 1
+          ? 16
+          : event.deltaMode === 2
+            ? window.innerHeight
+            : 1);
+      if (!delta) return;
+      const now = performance.now();
+      if (now - wheelLast > 220) {
+        wheelTotal = 0;
+        wheelConsumed = false;
+      }
+      wheelLast = now;
+      const bounds = element.getBoundingClientRect();
+      const inside = bounds.top <= 1 && bounds.bottom >= window.innerHeight - 1;
+      if (!(wheelConsumed && enabled && inside) && !captures(delta)) return;
+      event.preventDefault();
+      if (wheelConsumed) return;
+      if (Math.sign(wheelTotal) !== Math.sign(delta)) wheelTotal = 0;
+      wheelTotal += delta;
+      if (Math.abs(wheelTotal) >= 32) {
+        wheelConsumed = true;
+        advance(wheelTotal);
+      }
+    };
+    const touchStart = (event: TouchEvent) => {
+      cancelSnap();
+      touch =
+        event.touches.length === 1
+          ? {
+              x: event.touches[0].clientX,
+              y: event.touches[0].clientY,
+              consumed: false,
+            }
+          : null;
+    };
+    const touchMove = (event: TouchEvent) => {
+      if (!touch || event.touches.length !== 1 || !event.cancelable) return;
+      const delta = touch.y - event.touches[0].clientY;
+      if (Math.abs(delta) <= Math.abs(touch.x - event.touches[0].clientX))
+        return;
+      if (!captures(delta) && !touch.consumed) return;
+      event.preventDefault();
+      if (!touch.consumed && Math.abs(delta) >= 32) {
+        touch.consumed = true;
+        advance(delta);
+      }
+    };
+    const touchEnd = () => {
+      touch = null;
     };
     const armSnap = () => {
       clearTimeout(snapTimer);
@@ -237,17 +363,31 @@ export default function RunScrollSequence({
     };
     const key = (event: KeyboardEvent) => {
       if (
-        [
-          "ArrowDown",
-          "ArrowUp",
-          "PageDown",
-          "PageUp",
-          "Home",
-          "End",
-          " ",
-        ].includes(event.key)
+        event.defaultPrevented ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.altKey ||
+        (event.target instanceof Element &&
+          event.target.closest(
+            "input, textarea, select, button, a, [contenteditable]",
+          ))
       )
+        return;
+      if (["Home", "End"].includes(event.key)) {
         cancelSnap();
+        return;
+      }
+      const delta =
+        ["ArrowDown", "PageDown"].includes(event.key) ||
+        (event.key === " " && !event.shiftKey)
+          ? 1
+          : ["ArrowUp", "PageUp"].includes(event.key) ||
+              (event.key === " " && event.shiftKey)
+            ? -1
+            : 0;
+      if (!delta || !captures(delta)) return;
+      event.preventDefault();
+      if (!event.repeat) advance(delta);
     };
     const scrollEnd = () => {
       if (snapping) {
@@ -268,8 +408,11 @@ export default function RunScrollSequence({
     window.addEventListener("pointerdown", press, { passive: true });
     window.addEventListener("pointerup", release, { passive: true });
     window.addEventListener("pointercancel", release, { passive: true });
-    window.addEventListener("wheel", cancelSnap, { passive: true });
-    window.addEventListener("touchstart", cancelSnap, { passive: true });
+    window.addEventListener("wheel", wheel, { passive: false });
+    window.addEventListener("touchstart", touchStart, { passive: true });
+    window.addEventListener("touchmove", touchMove, { passive: false });
+    window.addEventListener("touchend", touchEnd);
+    window.addEventListener("touchcancel", touchEnd);
     window.addEventListener("keydown", key);
     window.addEventListener("resize", schedule);
     reduced.addEventListener("change", schedule);
@@ -282,8 +425,11 @@ export default function RunScrollSequence({
       window.removeEventListener("pointerdown", press);
       window.removeEventListener("pointerup", release);
       window.removeEventListener("pointercancel", release);
-      window.removeEventListener("wheel", cancelSnap);
-      window.removeEventListener("touchstart", cancelSnap);
+      window.removeEventListener("wheel", wheel);
+      window.removeEventListener("touchstart", touchStart);
+      window.removeEventListener("touchmove", touchMove);
+      window.removeEventListener("touchend", touchEnd);
+      window.removeEventListener("touchcancel", touchEnd);
       window.removeEventListener("keydown", key);
       resize.disconnect();
       window.removeEventListener("scroll", schedule);

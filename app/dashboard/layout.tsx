@@ -1,14 +1,22 @@
 import type { Metadata } from "next";
 import { auth } from "@/auth";
-import { redirect } from "next/navigation";
+import { isAdminLogin } from "@/lib/access";
 import DashboardHeader from "@/components/DashboardHeader";
 
-export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default async function DashboardLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const session = await auth();
-  if (!session?.user) redirect("/login");
+  // Pages enforce auth before data reads and preserve their own return URL.
+  if (!session?.user) return children;
   return (
     <div className="min-h-svh bg-page">
-      <DashboardHeader user={{ name: session.user.name, image: session.user.image }} />
+      <DashboardHeader
+        user={{ name: session.user.name, image: session.user.image }}
+        isAdmin={isAdminLogin(session.user.githubLogin)}
+      />
       {children}
     </div>
   );

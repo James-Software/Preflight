@@ -26,7 +26,9 @@
     "build": "next build",
     "dev": "next dev",
     "start": "next start",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "node --test tests/*.test.cjs",
+    "test:scroll": "node tests/scroll-sequence.browser.cjs"
   },
   "version": "0.1.0"
 }

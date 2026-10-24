@@ -18,8 +18,9 @@ Built for the Galuxium Nexus V2 hackathon (deadline Oct 31, 2026).
   `supabase/schema.sql`.
 - **Test swarm** — Playwright on cloud browsers (Browserbase). An LLM drives each
   browser agent as a real user through generated test plans.
-- **Decision layer** — Jev (TypeSafe's Decisions API): cheap, typed pass/fail and
-  routing judgments on every test step, keeping inference costs near zero.
+- **Decision layer** — OpenAI's Decisions API (`gpt-6-luna`) evaluates step pass/fail
+  with predicate probabilities and bug severity with typed choices. It uses
+  `OPENAI_API_KEY` in the Trigger.dev workers; the browser driver uses OpenRouter.
 - **Fix agent** — a GitHub App (least privilege: contents + PRs on repos you pick).
   Diagnoses root cause from repo code plus captured console/network output, fixes in
   a sandbox, and opens a PR. Humans merge — never direct pushes.
@@ -42,10 +43,16 @@ Built for the Galuxium Nexus V2 hackathon (deadline Oct 31, 2026).
 ## Getting started
 
 ```bash
-cp .env.example .env.local   # then fill in your Supabase values
+cp .env.example .env.local   # then fill in your web app values
 npm install
 npm run dev
 ```
+
+Swarm workers also need their own credentials and deployment in Trigger.dev.
+See [swarm setup and model credentials](docs/swarm-setup.md) for Production versus
+Preview routing, “No matching branch env” recovery, and OpenAI Decisions setup.
+Set `OPENAI_API_KEY` in the matching Trigger.dev worker environment before running
+swarms; retain `OPENROUTER_API_KEY` for the browser driver.
 
 ## Shared UI
 

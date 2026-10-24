@@ -26,7 +26,12 @@ export async function generateMetadata({
   return {
     title: post.title,
     alternates: publicAlternates(`/blog/${encodeURIComponent(slug)}`),
-    openGraph: { type: "article", title: post.title, publishedTime: new Date(post.created_at).toISOString(), modifiedTime: new Date(post.updated_at).toISOString() },
+    openGraph: {
+      type: "article",
+      title: post.title,
+      publishedTime: new Date(post.created_at).toISOString(),
+      modifiedTime: new Date(post.updated_at).toISOString(),
+    },
     description: post.description ?? undefined,
   };
 }
@@ -42,28 +47,40 @@ export default async function BlogPostPage({
 
   return (
     <main className="min-h-screen bg-page">
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd({
-        "@context": "https://schema.org", "@type": "BlogPosting", headline: post.title,
-        ...(post.description ? { description: post.description } : {}),
-        datePublished: new Date(post.created_at).toISOString(), dateModified: new Date(post.updated_at).toISOString(),
-        mainEntityOfPage: `${SITE_URL}/blog/${encodeURIComponent(post.slug)}`,
-        publisher: { "@type": "Organization", name: "PreFlight", url: SITE_URL },
-      }) }} />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: serializeJsonLd({
+            "@context": "https://schema.org",
+            "@type": "BlogPosting",
+            headline: post.title,
+            ...(post.description ? { description: post.description } : {}),
+            datePublished: new Date(post.created_at).toISOString(),
+            dateModified: new Date(post.updated_at).toISOString(),
+            mainEntityOfPage: `${SITE_URL}/blog/${encodeURIComponent(post.slug)}`,
+            publisher: {
+              "@type": "Organization",
+              name: "PreFlight",
+              url: SITE_URL,
+            },
+          }),
+        }}
+      />
       <article className="mx-auto max-w-3xl px-6 pb-20 pt-32 md:pb-28 md:pt-36">
         <a
           href="/blog"
-          className="text-sm font-medium text-ink/50 transition-colors duration-150 hover:text-ink dark:text-white/50 dark:hover:text-white"
+          className="text-sm font-medium text-muted transition-colors duration-150 hover:text-ink dark:text-muted dark:hover:text-white"
         >
           &larr; All posts
         </a>
-        <p className="mt-8 font-mono text-xs text-ink/40 dark:text-white/40">
+        <p className="mt-8 text-sm text-muted dark:text-muted">
           {formatDate(post.created_at)}
         </p>
         <h1 className="font-sans mt-3 text-balance text-4xl font-semibold tracking-tight text-ink md:text-5xl dark:text-white">
           {post.title}
         </h1>
         {post.description ? (
-          <p className="mt-4 text-lg leading-relaxed text-ink/60 dark:text-white/60">
+          <p className="mt-4 text-lg leading-relaxed text-muted dark:text-muted">
             {post.description}
           </p>
         ) : null}
