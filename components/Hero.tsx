@@ -1,7 +1,7 @@
 import PlasmaSquare from "./PlasmaSquare";
 
 /* ------------------------------------------------------------------ */
-/* Hero — one big square filling ~96% of the viewport, rendered as     */
+/* Hero — a nearly edge-to-edge cloud window below the navigation.    */
 /* living plasma in the classic gradient's blues (#4e2fd8 → #6a6df5   */
 /* → #8aa5ff, diagonal to top-right). The square is identical in both  */
 /* themes (white headline stays on the plasma); only the page behind   */
@@ -14,9 +14,9 @@ export default function Hero() {
       id="top"
       className="relative flex min-h-svh flex-col overflow-x-clip"
     >
-      <div className="flex min-w-0 flex-1 px-[2vw] pb-[2vh] pt-[84px]">
+      <div className="flex min-w-0 flex-1 px-2 pb-2 pt-20">
         <div
-          className="relative flex min-w-0 w-full flex-1 items-center justify-center rounded-[1.75rem] md:rounded-[2.5rem]"
+          className="relative flex min-w-0 w-full flex-1 items-center justify-center rounded-xl"
           style={{ background: "none", border: 0, boxShadow: "none" }}
         >
           {/* The square itself: living plasma in the classic gradient's

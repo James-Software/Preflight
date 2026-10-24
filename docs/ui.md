@@ -28,7 +28,7 @@ Shared Tailwind colors are defined in `app/globals.css`:
 - `text-muted`: tested secondary text in both themes; use it for dates and helpers instead of low-opacity ink or white.
 
 Use `btn-primary` for the original blue gradient primary actions: `#8aa5ff` →
-`#6a6df5` → `#4e2fd8`, with pill corners and the original inset/highlight shadows.
+`#6a6df5` → `#4e2fd8`, with pill corners and inset highlights only—no outer glow or drop shadow.
 This exact treatment is an explicit user preference; preserve it during style
 refinements. The later dark-purple stops (`#6259d5` / `#5141c7` / `#4323b8`)
 are not the requested original gradient.
@@ -53,6 +53,6 @@ Admin navigation is derived from `isAdminLogin` on the server and passed as a bo
 
 ## Landing motion
 
-The cloud window is a regular rounded rectangle. Clouds can move inside it; the outline must stay fixed in both WebGL and the CSS fallback.
+The cloud window is a regular rounded rectangle with 12px corners. It fills the space below the 80px navigation with 8px side/bottom gutters; do not add extra shader or fallback insets. Clouds can move inside it; the outline must stay fixed in both WebGL and the CSS fallback.
 
 The evidence sequence preserves native wheel, touch and keyboard scrolling. Make accidental skips less likely with enough scroll distance between beats. Do not consume gestures, discard momentum, prevent input defaults or enforce a per-step cooldown. Settling is proximity-only, confined to the animation, and has no running page-scroll tween that can catch new input; reduced motion and short viewports keep normal document flow.

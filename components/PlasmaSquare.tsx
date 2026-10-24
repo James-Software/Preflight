@@ -27,9 +27,9 @@ void main() {
 `;
 
 /* Fixed window insets in CSS pixels, shared by WebGL and the fallback. */
-const SIDE_BLEED = 26;
-const TOP_BLEED = 46;
-const BOTTOM_BLEED = 12;
+const SIDE_BLEED = 0;
+const TOP_BLEED = 0;
+const BOTTOM_BLEED = 0;
 const SCROLL_STRENGTH = 0.5;
 
 const FRAG = `

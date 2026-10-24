@@ -116,8 +116,8 @@ async function hero(browser, fallback) {
     await wait(page, 1000);
     const after = await pixels();
     assert.ok(
-      before.opaque > 10000 && before.clear > 1000,
-      "valid filled window with transparent margins",
+      before.opaque > 10000 && before.clear > 20,
+      "valid filled window with transparent rounded corners",
     );
     assert.equal(
       after.mask,
