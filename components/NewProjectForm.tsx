@@ -89,7 +89,7 @@ export default function NewProjectForm({
         <button
           type="submit"
           disabled={pending || !selectedRepo}
-          className="pressable btn-gradient min-h-11 rounded-full px-6 py-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
+          className="pressable btn-primary min-h-11 rounded-full px-6 py-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
         >
           {pending ? "Creating project…" : "Create project"}
         </button>

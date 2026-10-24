@@ -52,7 +52,7 @@ export default function LoginHandoff({ returnTo }: { returnTo: string }) {
           type="button"
           disabled={busy}
           onClick={begin}
-          className="pressable btn-gradient mt-6 min-h-11 rounded-full px-6 py-3 text-sm font-medium text-white disabled:cursor-wait disabled:opacity-75"
+          className="pressable btn-primary mt-6 min-h-11 rounded-full px-6 py-3 text-sm font-medium text-white disabled:cursor-wait disabled:opacity-75"
         >
           {busy ? "Connecting…" : "Try GitHub again"}
         </button>

@@ -11,13 +11,13 @@ export function frontmatter(document: PublicDocument): string {
 export function staticDocument(path: string): PublicDocument | null {
   if (path === "/") return {
     path, title: "PreFlight: AI Agents That Test Your App Like Real Users",
-    body: `# Is your app ready to fly?
+    body: `# Your build passed. Now test the app.
 
-PreFlight sends a swarm of AI agents to test your app like real users. Every bug they find comes back as a fix.
+Run AI agents through your app in real browsers. Review findings with screenshots, console logs and network traces.
 
 ## How it works
 
-PreFlight sends a swarm of agents through your app like real users. Every bug they find comes back with the evidence and a fix, ready for you to merge.
+Follow an illustrative checkout bug through the browser, the evidence and a proposed change.
 
 1. Connect your application and a GitHub repository you own.
 2. Run agents against your deployed application in real browsers.
@@ -33,7 +33,7 @@ PreFlight sends a swarm of agents through your app like real users. Every bug th
 
 ## Early access
 
-PreFlight is in final approach. Join the waitlist with GitHub. Every request is reviewed by hand.
+Sign in with GitHub to join the waitlist. We review each request before granting access.
 
 [Join the waitlist with GitHub](${SITE_URL}/login)
 

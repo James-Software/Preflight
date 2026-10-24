@@ -51,7 +51,7 @@ export default function ProjectUrlForm({
         <button
           type="submit"
           disabled={pending}
-          className="pressable btn-gradient min-h-11 rounded-full px-5 py-2 text-sm font-medium text-white disabled:opacity-60"
+          className="pressable btn-primary min-h-11 rounded-full px-5 py-2 text-sm font-medium text-white disabled:opacity-60"
         >
           {pending ? "Saving…" : "Save app URL"}
         </button>

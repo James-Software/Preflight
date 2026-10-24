@@ -73,18 +73,21 @@ export default async function BlogPostPage({
         >
           &larr; All posts
         </a>
-        <p className="mt-8 text-sm text-muted dark:text-muted">
-          {formatDate(post.created_at)}
-        </p>
-        <h1 className="font-sans mt-3 text-balance text-4xl font-semibold tracking-tight text-ink md:text-5xl dark:text-white">
+        <h1 className="mt-10 text-balance text-4xl font-medium leading-[1.1] tracking-tight text-ink md:text-5xl dark:text-white">
           {post.title}
         </h1>
+        <time
+          dateTime={new Date(post.created_at).toISOString()}
+          className="mt-5 block text-sm text-muted"
+        >
+          {formatDate(post.created_at)}
+        </time>
         {post.description ? (
           <p className="mt-4 text-lg leading-relaxed text-muted dark:text-muted">
             {post.description}
           </p>
         ) : null}
-        <div className="mt-10 border-t border-ink/10 pt-2 dark:border-white/10">
+        <div className="mt-12">
           <Markdown content={post.markdown} />
         </div>
       </article>

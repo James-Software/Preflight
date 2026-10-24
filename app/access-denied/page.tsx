@@ -27,7 +27,7 @@ export default async function AccessDenied({
         </p>
         <a
           href={waitlisted ? "/" : "/login"}
-          className="pressable btn-gradient mt-6 inline-flex min-h-11 items-center rounded-full px-6 py-3 text-sm font-medium text-white"
+          className="pressable btn-primary mt-6 inline-flex min-h-11 items-center rounded-full px-6 py-3 text-sm font-medium text-white"
         >
           {waitlisted ? "Back to home" : "Try signing in again"}
         </a>

@@ -1,4 +1,5 @@
 import { task } from "@trigger.dev/sdk";
+import { setTimeout as delay } from "node:timers/promises";
 import { chromium, type Page } from "playwright-core";
 import { createBrowserSession, closeBrowserSession } from "@/lib/browserbase";
 import {
@@ -113,6 +114,9 @@ export const browserAgent = task({
     let sessionId: string | null = null;
     let findingsCount = 0;
     let actionsUsed = 0;
+    let stepLogStart = 0;
+    let stepConsoleStart = 0;
+    let stepNetworkStart = 0;
 
     const recordFinding = async (
       page: Page,
@@ -144,10 +148,16 @@ export const browserAgent = task({
           agentId: agent.id,
           severity,
           title: title.slice(0, 200),
-          reproSteps: actionLog.join("\n").slice(0, 4000) || null,
+          reproSteps:
+            actionLog.slice(stepLogStart).join("\n").slice(0, 4000) || null,
           screenshotUrl,
-          consoleLogs: consoleLogs.slice(-30).join("\n").slice(0, 4000) || null,
-          networkErrors,
+          consoleLogs:
+            consoleLogs
+              .slice(stepConsoleStart)
+              .slice(-30)
+              .join("\n")
+              .slice(0, 4000) || null,
+          networkErrors: networkErrors.slice(stepNetworkStart),
         });
         findingsCount++;
       } catch (e) {
@@ -202,8 +212,20 @@ export const browserAgent = task({
       );
       actionsUsed++;
 
-      for (const step of payload.assignment.steps) {
-        if (actionsUsed >= MAX_ACTIONS) break;
+      for (const [stepIndex, step] of payload.assignment.steps.entries()) {
+        if (actionsUsed >= MAX_ACTIONS) {
+          throw new Error(
+            "Browser agent reached its action budget before all steps were tested.",
+          );
+        }
+        // Keep initial navigation evidence for the first step, then isolate each goal.
+        if (stepIndex > 0) {
+          stepLogStart = actionLog.length;
+          stepConsoleStart = consoleLogs.length;
+          stepNetworkStart = networkErrors.length;
+        }
+        actionLog.push(`Start step at ${page.url()}`);
+        let finished = false;
         for (
           let attempt = 0;
           attempt < MAX_ACTIONS_PER_STEP && actionsUsed < MAX_ACTIONS;
@@ -222,42 +244,57 @@ export const browserAgent = task({
           try {
             action = await driverDecide({
               goal: `Step: ${step.title}. ${step.detail}`,
-              history: actionLog.slice(-10),
+              history: actionLog.slice(stepLogStart).slice(-10),
               axTree,
-              consoleLogs: consoleLogs.slice(-10),
+              consoleLogs: consoleLogs.slice(stepConsoleStart).slice(-10),
               screenshotBase64: screenshot.toString("base64"),
             });
-          } catch (e) {
-            actionLog.push(
-              `driver error: ${(e as Error).message.slice(0, 200)}`,
+          } catch (error) {
+            // A driver/model failure says nothing about whether the app is broken.
+            // Propagate it before judging or creating a finding for this step.
+            throw new Error(
+              `Browser driver failed during "${step.title}". This test step was not evaluated.`,
+              { cause: error },
             );
-            break;
           }
           actionLog.push(describeAction(action));
           actionsUsed++;
 
-          if (action.action === "done") break;
+          if (action.action === "done") {
+            finished = true;
+            break;
+          }
           if (action.action === "report_bug") {
+            finished = true;
             await recordFinding(page, action.title, action.detail);
             break;
           }
           const result = await executeAction(page, action);
           actionLog.push(`  → ${result}`);
           // Gentle on free-tier rate limits.
-          await new Promise((r) => setTimeout(r, 1000));
+          await delay(1000);
         }
 
-        // Judge the step; a failure is itself a finding.
+        if (!finished) {
+          throw new Error(
+            `Browser agent reached its action budget during "${step.title}". This test step was not evaluated.`,
+          );
+        }
+
+        // Judge only completed observations, never model/runner errors.
         try {
           const verdict = await judgeStep({
             stepTitle: step.title,
             stepDetail: step.detail,
             observation: [
-              `Recent actions:`,
-              ...actionLog.slice(-8),
-              `Console errors: ${consoleLogs.slice(-5).join(" | ") || "none"}`,
+              `Current URL: ${page.url()}`,
+              `Current page: ${(await page.locator("body").ariaSnapshot()).slice(0, 4000)}`,
+              `This step's actions:`,
+              ...actionLog.slice(stepLogStart),
+              `Console output: ${consoleLogs.slice(stepConsoleStart).slice(-5).join(" | ") || "none"}`,
               `Network errors: ${
                 networkErrors
+                  .slice(stepNetworkStart)
                   .slice(-5)
                   .map((n) => n.url)
                   .join(" | ") || "none"
@@ -268,7 +305,7 @@ export const browserAgent = task({
             await recordFinding(
               page,
               `Step failed: ${step.title}`,
-              `The agent could not complete this step.\n${actionLog.slice(-8).join("\n")}`,
+              `The agent could not complete this step.\n${actionLog.slice(stepLogStart).join("\n")}`,
             );
           }
         } catch (error) {

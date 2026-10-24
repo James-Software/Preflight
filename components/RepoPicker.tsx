@@ -209,7 +209,7 @@ export default function RepoPicker({
               </p>
               <a
                 href="https://github.com/apps/preflight-qa/installations/new"
-                className="pressable btn-gradient mt-2 inline-block rounded-full px-4 py-2 text-xs font-medium text-white"
+                className="pressable btn-primary mt-2 inline-block rounded-full px-4 py-2 text-xs font-medium text-white"
               >
                 Install PreFlight on GitHub
               </a>

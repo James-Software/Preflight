@@ -308,6 +308,7 @@ function browserTask({ verdictError = false, severityError = false } = {}) {
   const statuses = [],
     closed = [];
   const page = {
+    url: () => "https://example.com",
     on: () => {},
     goto: async () => {},
     screenshot: async () => Buffer.from("test-image"),

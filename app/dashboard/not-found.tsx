@@ -9,7 +9,7 @@ export default function DashboardNotFound() {
       </p>
       <a
         href="/dashboard"
-        className="pressable btn-gradient mt-8 inline-flex min-h-11 items-center rounded-full px-6 py-3 text-sm font-medium text-white"
+        className="pressable btn-primary mt-8 inline-flex min-h-11 items-center rounded-full px-6 py-3 text-sm font-medium text-white"
       >
         All projects
       </a>

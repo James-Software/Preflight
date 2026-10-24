@@ -11,7 +11,7 @@ export default function PostNotFound() {
         </p>
         <a
           href="/blog"
-          className="pressable btn-gradient mt-8 inline-flex min-h-11 items-center rounded-full px-6 py-3 text-sm font-medium text-white"
+          className="pressable btn-primary mt-8 inline-flex min-h-11 items-center rounded-full px-6 py-3 text-sm font-medium text-white"
         >
           All blog posts
         </a>
