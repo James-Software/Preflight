@@ -10,7 +10,7 @@
   --color-panel: var(--panel);
   --color-line: var(--line);
   --color-muted: var(--muted);
-  --color-ink: #1e1b4b;
+  --color-ink: #242329;
   --color-primary: var(--accent);
   --color-deep: #4338ca;
   --color-mist: #e0e7ff;
@@ -24,11 +24,13 @@
 
 html {
   --accent: #5146c7;
-  --muted: #5d5b71;
+  --muted: #64636d;
   --page: #fafafa;
   --surface: #ffffff;
-  --panel: #f1f0f9;
-  --line: #1e1b4b1a;
+  --panel: #efeff2;
+  --line: #2423291f;
+  --action: #5140b5;
+  --action-hover: #423296;
   color-scheme: light;
   scroll-behavior: smooth;
   background-color: var(--page);
@@ -37,10 +39,12 @@ html {
 html.dark {
   --accent: #a6adff;
   --muted: #afb3c4;
-  --page: #05060a;
-  --surface: #0a0c14;
-  --panel: #ffffff0d;
+  --page: #09090b;
+  --surface: #121215;
+  --panel: #1b1b20;
   --line: #ffffff1a;
+  --action: #6553c9;
+  --action-hover: #705ed4;
   color-scheme: dark;
   background-color: var(--page);
 }
@@ -135,25 +139,18 @@ body {
   transform: scale(0.75);
 }
 
-/* Brand actions retain their purple gradient with readable white labels. */
-.btn-gradient {
-  background-image: linear-gradient(
-    180deg,
-    #6259d5 0%,
-    #5141c7 48%,
-    #4323b8 100%
-  );
-  box-shadow: none;
+.hero-headline {
+  font-size: clamp(1.75rem, calc(6.5vw + 0.625rem), 6rem);
 }
 
-/* Lift on hover, dip + 0.97 press on click. The transform transition
-   comes from .pressable. */
-.btn-gradient:hover {
-  transform: translateY(-2px);
+/* Flat action color leaves the plasma and evidence as the page's visual focus. */
+.btn-primary {
+  border-radius: 8px;
+  background-color: var(--action);
+  color: #fff;
 }
-.btn-gradient:active {
-  transform: translateY(1px) scale(0.97);
-}
+.btn-primary:hover { background-color: var(--action-hover); }
+.btn-primary:disabled { cursor: not-allowed; }
 
 .text-gradient {
   background-image: linear-gradient(115deg, #4a7cff 10%, #8b5cf6 90%);

@@ -48,7 +48,7 @@ export default async function AdminBlogPage({
           </div>
           <a
             href="/dashboard/admin/blog/new"
-            className="pressable btn-gradient inline-flex min-h-11 items-center rounded-full px-6 py-2.5 text-sm font-medium text-white"
+            className="pressable btn-primary inline-flex min-h-11 items-center rounded-full px-6 py-2.5 text-sm font-medium text-white"
           >
             New post
           </a>

@@ -12,10 +12,11 @@ export default function ProofChapter() {
       <div className="mx-auto max-w-6xl px-6">
         <div className="run-intro">
           <h2 className="text-balance font-semibold tracking-tight">
-            Every run ends in a pull request.
+            A checkout bug, from click to fix.
           </h2>
           <p className="mt-5 text-base leading-relaxed md:text-lg">
-            A sample run. One bug. One fix.
+            Follow a sample run through the browser, the evidence and a proposed
+            change.
           </p>
         </div>
         <RunScrollSequence>

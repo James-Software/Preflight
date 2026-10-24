@@ -32,7 +32,7 @@ export default function RunSwarmButton({ projectId }: { projectId: number }) {
         type="button"
         onClick={() => void start()}
         disabled={busy}
-        className="pressable btn-gradient cursor-pointer rounded-full px-5 py-2.5 text-sm font-medium text-white disabled:cursor-wait disabled:opacity-70"
+        className="pressable btn-primary cursor-pointer rounded-full px-5 py-2.5 text-sm font-medium text-white disabled:cursor-wait disabled:opacity-70"
       >
         {busy ? "Starting…" : "Run swarm"}
       </button>

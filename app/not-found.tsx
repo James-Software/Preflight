@@ -17,7 +17,7 @@ export default function NotFound() {
         <div className="mt-8 flex flex-wrap items-center gap-6">
           <a
             href="/"
-            className="pressable btn-gradient inline-flex min-h-11 items-center rounded-full px-6 py-3 text-sm font-medium text-white"
+            className="pressable btn-primary inline-flex min-h-11 items-center rounded-full px-6 py-3 text-sm font-medium text-white"
           >
             Back to home
           </a>

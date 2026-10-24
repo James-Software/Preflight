@@ -53,7 +53,7 @@ export default function InviteCard() {
   };
 
   return (
-    <div className="mt-8 flex flex-wrap items-center justify-between gap-4 rounded-2xl border px-6 py-5 border-line bg-panel">
+    <div className="mt-8 flex flex-wrap items-center justify-between gap-4 rounded-lg px-6 py-5 bg-panel">
       <div className="min-w-0">
         <p className="font-display text-base font-bold tracking-tight text-ink dark:text-white">
           Invite to PreFlight
@@ -63,9 +63,9 @@ export default function InviteCard() {
         </p>
         {status.link && (
           <div className="mt-3 flex flex-wrap items-center gap-2">
-            <code className="min-w-0 break-all rounded-lg border bg-white px-3 py-2 text-xs text-ink/70 dark:bg-black/40 dark:text-white/70 border-line">
+            <span className="min-w-0 break-all rounded-lg border bg-white px-3 py-2 text-xs text-ink/70 dark:bg-black/40 dark:text-white/70 border-line">
               {status.link}
-            </code>
+            </span>
             <CopyButton text={status.link} label="Copy invite link" />
           </div>
         )}
@@ -80,7 +80,7 @@ export default function InviteCard() {
           type="button"
           onClick={() => void reveal()}
           disabled={busy || status.remaining === 0}
-          className="pressable btn-gradient shrink-0 cursor-pointer rounded-full px-5 py-2.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
+          className="pressable btn-primary shrink-0 cursor-pointer rounded-full px-5 py-2.5 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-50"
         >
           {busy ? "Creating…" : "Get invite link"}
         </button>

@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import Providers from "@/components/Providers";
-import { SITE_URL } from "@/lib/site";
+import { SITE_URL, SITE_DESCRIPTION } from "@/lib/site";
 
 const display = localFont({
   src: [
@@ -31,11 +31,11 @@ export const metadata: Metadata = {
     template: "%s | PreFlight",
   },
   description:
-    "PreFlight sends a swarm of AI agents to test your app like real users. Every bug they find comes back as a fix.",
+    SITE_DESCRIPTION,
   openGraph: {
     title: "PreFlight: AI Agents That Test Your App Like Real Users",
     description:
-      "PreFlight sends a swarm of AI agents to test your app like real users. Every bug they find comes back as a fix.",
+      SITE_DESCRIPTION,
     url: SITE_URL,
     siteName: "PreFlight",
     type: "website",
@@ -44,7 +44,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "PreFlight: AI Agents That Test Your App Like Real Users",
     description:
-      "PreFlight sends a swarm of AI agents to test your app like real users. Every bug they find comes back as a fix.",
+      SITE_DESCRIPTION,
   },
   robots: {
     index: true,

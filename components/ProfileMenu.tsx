@@ -102,7 +102,7 @@ export default function ProfileMenu({
           id={id}
           role="dialog"
           aria-label="Profile and appearance"
-          className="absolute right-0 top-[calc(100%+10px)] z-50 max-h-[calc(100dvh-6rem)] w-64 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-2xl border border-line bg-surface/95 p-2 text-ink shadow-[0_8px_30px_rgba(30,27,75,0.14)] backdrop-blur-xl dark:text-white dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)]"
+          className="absolute right-0 top-[calc(100%+10px)] z-50 max-h-[calc(100dvh-6rem)] w-64 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-2xl border border-line bg-surface p-2 text-ink shadow-[0_8px_30px_rgba(30,27,75,0.14)] dark:text-white dark:shadow-[0_8px_30px_rgba(0,0,0,0.5)]"
         >
           <p className="truncate px-3 py-2 text-sm font-medium">
             {user.name || "Your account"}

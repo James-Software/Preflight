@@ -35,7 +35,7 @@ export default async function InvitePage({
           </p>
           <a
             href="/#early-access"
-            className="pressable btn-gradient mt-8 inline-block rounded-full px-6 py-3 text-sm font-medium text-white"
+            className="pressable btn-primary mt-8 inline-block rounded-full px-6 py-3 text-sm font-medium text-white"
           >
             Join the waitlist
           </a>
@@ -59,7 +59,7 @@ export default async function InvitePage({
         <form action={accept}>
           <button
             type="submit"
-            className="pressable btn-gradient mt-8 inline-flex cursor-pointer items-center gap-2.5 rounded-full px-7 py-3.5 text-sm font-medium text-white"
+            className="pressable btn-primary mt-8 inline-flex cursor-pointer items-center gap-2.5 rounded-full px-7 py-3.5 text-sm font-medium text-white"
           >
             <svg
               width="18"

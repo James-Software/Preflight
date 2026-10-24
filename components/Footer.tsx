@@ -1,7 +1,7 @@
 export default function Footer() {
   return (
-    <footer className="border-t border-ink/10 dark:border-white/10 bg-page">
-      <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-3 px-6 py-8 sm:flex-row">
+    <footer className="bg-page">
+      <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-5 px-6 py-10 sm:flex-row">
         <p className="font-display text-sm font-bold tracking-tight text-ink dark:text-white">
           PreFlight
         </p>
@@ -31,7 +31,7 @@ export default function Footer() {
             For agents
           </a>
         </div>
-        <p className="text-sm text-muted dark:text-muted">&copy; 2026</p>
+        <p className="text-sm text-muted dark:text-muted">&copy; 2026 PreFlight</p>
       </div>
     </footer>
   );

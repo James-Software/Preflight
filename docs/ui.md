@@ -27,8 +27,12 @@ Shared Tailwind colors are defined in `app/globals.css`:
 - `text-primary`: the theme-aware accent color.
 - `text-muted`: tested secondary text in both themes; use it for dates and helpers instead of low-opacity ink or white.
 
-Keep the existing rounded panels, pill buttons, `btn-gradient` primary actions,
-and short color transitions. Native controls inherit the document's color scheme.
+Use `btn-primary` for solid purple primary actions with an 8px corner radius.
+Use neutral surfaces and readable charcoal text outside the brand artwork. Keep
+navigation opaque and shadow-free; shadows belong to floating menus and dialogs.
+Choose lists for projects and articles; reserve panels for grouped form controls,
+empty states and evidence. The plasma hero and pinned evidence sequence are the
+signature visuals. Native controls inherit the document's color scheme.
 
 ## Compact feedback animations
 

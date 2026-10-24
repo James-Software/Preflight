@@ -137,7 +137,7 @@ export default function BlogEditor({
               Content
             </span>
             <div
-              className="flex gap-1 rounded-full bg-panel p-1"
+              className="flex gap-1 rounded-lg bg-panel p-1"
               role="group"
               aria-label="Editor view"
             >
@@ -147,7 +147,7 @@ export default function BlogEditor({
                   type="button"
                   onClick={() => setTab(view)}
                   aria-pressed={tab === view}
-                  className={`min-h-11 rounded-full px-4 text-sm font-medium capitalize ${tab === view ? "bg-ink text-white dark:bg-white dark:text-ink" : "text-muted"}`}
+                  className={`min-h-11 rounded-md px-4 text-sm font-medium capitalize ${tab === view ? "bg-ink text-white dark:bg-white dark:text-ink" : "text-muted"}`}
                 >
                   {view}
                 </button>
@@ -200,7 +200,7 @@ export default function BlogEditor({
           <button
             type="submit"
             disabled={pending}
-            className="pressable btn-gradient min-h-11 rounded-full px-6 py-3 text-sm font-medium text-white disabled:cursor-wait"
+            className="pressable btn-primary min-h-11 rounded-full px-6 py-3 text-sm font-medium text-white disabled:cursor-wait"
           >
             {pending ? saving : label}
           </button>
