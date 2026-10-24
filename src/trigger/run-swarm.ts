@@ -1,6 +1,7 @@
 import { task, tasks } from "@trigger.dev/sdk";
 import { getSql } from "@/lib/db";
 import { updateRunStatus } from "@/lib/schema";
+import { assertSwarmModelConfig } from "@/lib/model-config";
 import type { Assignment, PlanStep } from "./browser-agent";
 
 function chunk<T>(arr: T[], n: number): T[][] {
@@ -56,8 +57,15 @@ export const runSwarm = task({
     if (!targetUrl) {
       await updateRunStatus(payload.runId, "failed");
       throw new Error(
-        "Run has no target URL: set an App URL on the project or connect a hosting provider for preview deployments."
+        "Run has no target URL: set an App URL on the project or connect a hosting provider for preview deployments.",
       );
+    }
+
+    try {
+      assertSwarmModelConfig();
+    } catch (error) {
+      await updateRunStatus(payload.runId, "failed");
+      throw error;
     }
 
     let plan = run.plan as PlanStep[] | null;
@@ -87,7 +95,7 @@ export const runSwarm = task({
     }));
 
     try {
-      await tasks.batchTriggerAndWait(
+      const result = await tasks.batchTriggerAndWait(
         "browser-agent",
         assignments.map((assignment, i) => ({
           payload: {
@@ -96,8 +104,13 @@ export const runSwarm = task({
             assignment,
             appUrl: targetUrl,
           },
-        }))
+        })),
       );
+      if (result.runs.some((agent) => !agent.ok)) {
+        throw new Error(
+          "A browser agent failed. Check its Trigger.dev task log for model or browser errors.",
+        );
+      }
     } catch (e) {
       await updateRunStatus(payload.runId, "failed");
       throw e;

@@ -8,6 +8,7 @@ import {
   type AgentAction,
 } from "@/lib/models";
 import { uploadScreenshot } from "@/lib/evidence";
+import { MODEL_CONFIG } from "@/lib/model-config";
 import { createAgent, updateAgentStatus, createFinding } from "@/lib/schema";
 
 export type PlanStep = { id: string; title: string; detail: string };
@@ -116,7 +117,7 @@ export const browserAgent = task({
     const recordFinding = async (
       page: Page,
       title: string,
-      detail: string
+      detail: string,
     ): Promise<void> => {
       try {
         const shot = await page.screenshot({ type: "jpeg", quality: 60 });
@@ -126,7 +127,7 @@ export const browserAgent = task({
             payload.runId,
             payload.agentIndex,
             actionsUsed,
-            Buffer.from(shot)
+            Buffer.from(shot),
           );
         } catch {
           screenshotUrl = null;
@@ -134,8 +135,9 @@ export const browserAgent = task({
         let severity = "medium";
         try {
           severity = (await assessSeverity({ title, detail })).severity;
-        } catch {
-          // keep medium
+        } catch (error) {
+          if (MODEL_CONFIG.judge.provider === "openai-decisions") throw error;
+          // Legacy providers retain the default severity when triage is unavailable.
         }
         await createFinding({
           runId: payload.runId,
@@ -150,8 +152,12 @@ export const browserAgent = task({
         findingsCount++;
       } catch (e) {
         consoleLogs.push(
-          `[finding-error] ${e instanceof Error ? e.message : String(e)}`.slice(0, 300)
+          `[finding-error] ${e instanceof Error ? e.message : String(e)}`.slice(
+            0,
+            300,
+          ),
         );
+        if (MODEL_CONFIG.judge.provider === "openai-decisions") throw e;
       }
     };
 
@@ -170,7 +176,7 @@ export const browserAgent = task({
         }
       });
       page.on("pageerror", (err) =>
-        consoleLogs.push(`[pageerror] ${String(err).slice(0, 500)}`)
+        consoleLogs.push(`[pageerror] ${String(err).slice(0, 500)}`),
       );
       page.on("requestfailed", (req) => {
         networkErrors.push({
@@ -180,7 +186,10 @@ export const browserAgent = task({
       });
       page.on("response", (res) => {
         if (res.status() >= 400) {
-          networkErrors.push({ url: res.url().slice(0, 300), status: res.status() });
+          networkErrors.push({
+            url: res.url().slice(0, 300),
+            status: res.status(),
+          });
         }
       });
 
@@ -189,7 +198,7 @@ export const browserAgent = task({
           action: "goto",
           value: payload.appUrl,
           reasoning: "start the assignment at the app",
-        })
+        }),
       );
       actionsUsed++;
 
@@ -197,15 +206,17 @@ export const browserAgent = task({
         if (actionsUsed >= MAX_ACTIONS) break;
         for (
           let attempt = 0;
-          attempt < MAX_ACTIONS_PER_STEP &&
-          actionsUsed < MAX_ACTIONS;
+          attempt < MAX_ACTIONS_PER_STEP && actionsUsed < MAX_ACTIONS;
           attempt++
         ) {
           const screenshot = await page.screenshot({
             type: "jpeg",
             quality: 50,
           });
-          const axTree = (await page.locator("body").ariaSnapshot()).slice(0, 20000);
+          const axTree = (await page.locator("body").ariaSnapshot()).slice(
+            0,
+            20000,
+          );
 
           let action: AgentAction;
           try {
@@ -218,7 +229,7 @@ export const browserAgent = task({
             });
           } catch (e) {
             actionLog.push(
-              `driver error: ${(e as Error).message.slice(0, 200)}`
+              `driver error: ${(e as Error).message.slice(0, 200)}`,
             );
             break;
           }
@@ -246,7 +257,10 @@ export const browserAgent = task({
               ...actionLog.slice(-8),
               `Console errors: ${consoleLogs.slice(-5).join(" | ") || "none"}`,
               `Network errors: ${
-                networkErrors.slice(-5).map((n) => n.url).join(" | ") || "none"
+                networkErrors
+                  .slice(-5)
+                  .map((n) => n.url)
+                  .join(" | ") || "none"
               }`,
             ].join("\n"),
           });
@@ -254,11 +268,13 @@ export const browserAgent = task({
             await recordFinding(
               page,
               `Step failed: ${step.title}`,
-              `The agent could not complete this step.\n${actionLog.slice(-8).join("\n")}`
+              `The agent could not complete this step.\n${actionLog.slice(-8).join("\n")}`,
             );
           }
-        } catch {
-          // Judging is best-effort on the free tier; the evidence is kept.
+        } catch (error) {
+          // A failed/refused decision is not a completed QA test.
+          if (MODEL_CONFIG.judge.provider === "openai-decisions") throw error;
+          console.warn("QA step judge unavailable", error);
         }
       }
 

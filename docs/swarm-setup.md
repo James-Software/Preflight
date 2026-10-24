@@ -27,19 +27,31 @@ Set these in the **matching Trigger.dev environment**, then deploy the workers:
 | Variable | Used for |
 | --- | --- |
 | `DATABASE_URL` | Read/write projects, plans, run status, agents and findings in Neon/Postgres. It must match the web app's intended database. |
-| `OPENROUTER_API_KEY` | Authenticate both the browser driver and the current judge to OpenRouter. Requires access and sufficient credit for the configured models. |
+| `OPENAI_API_KEY` | Authenticate the default judge directly to OpenAI's Decisions API. The key/project must have access to the endpoint and `gpt-6-luna`. Worker-only; never a `NEXT_PUBLIC_` variable. |
+| `OPENROUTER_API_KEY` | Authenticate the browser driver to OpenRouter. Requires access and sufficient credit for the configured driver model. |
 | `BROWSERBASE_API_KEY` | Start and close real cloud-browser sessions. |
 | `BROWSERBASE_PROJECT_ID` | Select the Browserbase project when required by the account. |
 | `BLOB_READ_WRITE_TOKEN` | Upload finding screenshots to Vercel Blob. Without it screenshot upload fails; other finding data can still be recorded. |
 
-Optional model overrides: `DRIVER_MODEL`, `JUDGE_MODEL`, `JUDGE_PROVIDER`. The actual defaults live in `lib/model-config.ts`: driver `openai/gpt-5.6-luna`, judge `openai/gpt-4o-mini`, both using OpenRouter chat completions. Provider/model availability is a separate live check; these defaults are not proof of account access.
+## OpenAI Decisions setup
 
-## Is the Decisions API connected?
+The default judge now calls `POST https://api.openai.com/v1/decisions` directly, authenticated with a regular OpenAI API key in `OPENAI_API_KEY`. It does not send that key to OpenRouter. The contract is verified against the [official OpenAI SDK source](https://github.com/openai/openai-node/blob/21a056dc61ceca96aceda58a845353b3c1b13efc/src/resources/decisions.ts) and [official API schema](https://github.com/openai/openai-openapi/blob/master/openapi.yaml), checked October 23, 2026. The current contract supports only `gpt-6-luna` for Decisions.
 
-There is an **optional, unverified adapter** in `lib/models.ts`. It is selected only with `JUDGE_PROVIDER=openrouter-decisions`. The default is `openrouter-chat`, so Decisions is not needed to run a swarm. An OpenAI-hosted Decisions endpoint or separate OpenAI Decisions key is not configured anywhere in this code.
+In Trigger.dev, select the worker environment matching the web app's key (Production for the live site). Add the private OpenAI key as `OPENAI_API_KEY`. Remove old judge overrides or set these explicitly:
 
-The optional adapter targets `https://openrouter.ai/api/alpha/decisions` for Jev/TypeSafe decisions and authenticates with the same `OPENROUTER_API_KEY`. The originally planned model/access was not verified; the configuration intentionally keeps the chat judge as the default. Do not enable the adapter without confirming the provider's current endpoint, model, request/response schema and your account's access. Setting a separate Decisions key in Trigger.dev would not activate it.
+```dotenv
+JUDGE_PROVIDER=openai-decisions
+JUDGE_MODEL=gpt-6-luna
+```
 
-The judge answers two bounded questions: “Did this test step succeed?” and “How severe is this finding?” The browser driver chooses the next click/fill/navigation action; the judge evaluates the recorded actions and console/network observations. A specialized decisions service could eventually replace those chat requests with typed verdicts. That is an optional implementation choice, not a requirement for testing an app, and its cost or reliability benefit has not been measured here.
+Retain `OPENROUTER_API_KEY` for the browser driver. Its default is still `openai/gpt-5.6-luna`; `DRIVER_MODEL` can override it. The judge's direct OpenAI model ID has no `openai/` prefix. Deploy the workers with the code change after adding the environment variables. Do not paste keys into chat or commit them. A key being present does not prove account/model access; an authorized live run is required to verify that.
 
-Local regression tests mock external responses and verify worker-routing headers against the installed Trigger SDK and the default judge's OpenRouter request. They do not enqueue paid swarms or verify production credentials. Live verification requires deploying the configured workers and starting an authorized test run.
+Each step sends one named `predicate` question and reads its probability: `p >= 0.5` is pass, otherwise fail. Confidence is the probability of the selected verdict (`max(p, 1-p)`). Bug triage sends one named `choice` question with low, medium, high and critical options, preserving OpenAI's returned confidence. API requests use `{model, input, questions: [...]}`; responses contain an ordered `answers` array. This is a separate contract from the old OpenRouter alpha adapter's `state`/question-map format.
+
+Missing/invalid worker configuration fails the parent run before planning or browser allocation. Refusals, missing/malformed answers and API failures cannot become passes or completed agent runs. Responses are bounded by a 20-second timeout per attempt; 429/5xx responses retry up to three attempts. Authentication errors do not retry. Raw provider error bodies are not included in errors because they may echo private input. The parent checks failed child-task results before marking the swarm complete.
+
+The judge answers two bounded questions: “Did this test step succeed?” and “How severe is this finding?” The browser driver chooses clicks, fills and navigation. Decisions evaluates recorded actions and console/network observations. Current pricing and total-run savings are not established by the API schema, so the implementation makes no cost guarantee.
+
+An explicit chat fallback remains available with `JUDGE_PROVIDER=openrouter-chat` and `JUDGE_MODEL=openai/gpt-4o-mini`; this uses `OPENROUTER_API_KEY`. The legacy `openrouter-decisions` adapter is retained for compatibility but is unverified and is not the OpenAI integration. No automatic provider fallback occurs when an OpenAI request fails.
+
+Regression tests verify the documented request/response contract, endpoint and key separation, probability/choice parsing, invalid answers/refusals, retries, credential validation, and child-to-parent failure propagation. External responses are mocked; the tests do not spend credits or verify the user's key. The web app's `/api/health/keys` checks do not validate worker-only credentials. Live verification requires the configured worker deployment and an authorized test run.

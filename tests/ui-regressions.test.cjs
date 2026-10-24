@@ -1,29 +1,6 @@
 const { test } = require("node:test");
 const assert = require("node:assert/strict");
-const fs = require("node:fs");
-const path = require("node:path");
-const vm = require("node:vm");
-const ts = require("typescript");
-
-// Transpile isolated server modules so tests can supply session/DB boundaries
-// without credentials, a network connection, or a running Next server.
-function load(relative, mocks) {
-  const filename = path.join(__dirname, "..", relative);
-  const code = ts.transpileModule(fs.readFileSync(filename, "utf8"), {
-    compilerOptions: {
-      module: ts.ModuleKind.CommonJS,
-      target: ts.ScriptTarget.ES2022,
-      jsx: ts.JsxEmit.ReactJSX,
-    },
-  }).outputText;
-  const module = { exports: {} };
-  const localRequire = (name) =>
-    Object.hasOwn(mocks, name) ? mocks[name] : require(name);
-  vm.runInThisContext(`(function(exports,require,module){${code}\n})`, {
-    filename,
-  })(module.exports, localRequire, module);
-  return module.exports;
-}
+const { load } = require("./load-module.cjs");
 const { safeReturnTo } = load("lib/return-to.ts", {
   "./site": { SITE_URL: "https://www.trypreflight.dev" },
 });
@@ -301,7 +278,7 @@ test("swarm startup passes worker routing per request", async () => {
     { clientConfig: config },
   ]);
 });
-test("the current judge works through OpenRouter without a separate Decisions key", async (t) => {
+test("the explicit OpenRouter chat fallback still uses its own key and endpoint", async (t) => {
   const previous = process.env.OPENROUTER_API_KEY;
   process.env.OPENROUTER_API_KEY = "router-test";
   t.after(() => {
@@ -326,6 +303,7 @@ test("the current judge works through OpenRouter without a separate Decisions ke
     });
   });
   const { judgeStep } = load("lib/models.ts", {
+    "@/lib/openai-decisions": {},
     "@/lib/model-config": {
       MODEL_CONFIG: {
         judge: { provider: "openrouter-chat", model: "openai/gpt-4o-mini" },
