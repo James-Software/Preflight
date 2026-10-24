@@ -1,0 +1,7 @@
+{"hero":"WebGL","fixedRoundedBorder":"pass","movingInterior":"pass"}
+{"hero":"CSS fallback","fixedRoundedBorder":"pass","movingInterior":"CSS animation retained"}
+{"viewport":"1440x900","continuousWheel":"pass","unrestrictedFastScroll":"pass","reverse":"pass","proximityOnly":"pass","keyboard":"pass","touch":"n/a","entryExit":"pass","preventedInputs":0}
+{"viewport":"390x844","continuousWheel":"pass","unrestrictedFastScroll":"pass","reverse":"pass","proximityOnly":"pass","keyboard":"pass","touch":"pass","entryExit":"pass","preventedInputs":0}
+{"fallback":"reduced-motion","nativeScroll":"pass"}
+{"fallback":"short-viewport","nativeScroll":"pass"}
+{"fallback":"no-JavaScript","nativeScroll":"pass"}

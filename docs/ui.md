@@ -47,3 +47,9 @@ Use `CopyButton` for clipboard actions. It owns the copy/check icons, accessible
 labels and status, success reset, repeat-click timing, and timeout cleanup.
 
 Admin navigation is derived from `isAdminLogin` on the server and passed as a boolean to shared headers and profile menus. UI links are not authorization: pages, reports, and actions still check sessions and ownership. Run reports use stored artifacts; no illustrative landing data enters dashboard reports.
+
+## Landing motion
+
+The cloud window is a regular rounded rectangle. Clouds can move inside it; the outline must stay fixed in both WebGL and the CSS fallback.
+
+The evidence sequence preserves native wheel, touch and keyboard scrolling. Make accidental skips less likely with enough scroll distance between beats. Do not consume gestures, discard momentum, prevent input defaults or enforce a per-step cooldown. Settling is proximity-only, confined to the animation, and has no running page-scroll tween that can catch new input; reduced motion and short viewports keep normal document flow.

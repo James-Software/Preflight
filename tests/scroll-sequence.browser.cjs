@@ -1,63 +1,146 @@
-// Run against a local server: PREFLIGHT_TEST_URL=http://localhost:3000 npm run test:scroll
+// Start the app, then run: PREFLIGHT_TEST_URL=http://localhost:3000 npm run test:scroll
 const assert = require("node:assert/strict");
 const { chromium } = require("playwright-core");
 const url = process.env.PREFLIGHT_TEST_URL || "http://localhost:3000";
-const anchors = [0, 1.8, 2.5, 3.5, 4.5, 5.5, 7];
-
-async function position(page, phase) {
-  await page.evaluate((phase) => {
-    const root = document.querySelector('[data-ui="annotated-run"]');
-    const start = root.getBoundingClientRect().top + scrollY;
-    scrollTo({
-      top: Math.ceil(start + ((root.offsetHeight - innerHeight) * phase) / 7),
-      behavior: "instant",
-    });
-  }, phase);
-  await page.waitForTimeout(1400);
-}
-async function expectPhase(page, expected, message) {
-  const phase = await page.evaluate(() => {
-    const root = document.querySelector('[data-ui="annotated-run"]');
-    return (
-      (-root.getBoundingClientRect().top / (root.offsetHeight - innerHeight)) *
-      7
-    );
-  });
-  assert.ok(
-    Math.abs(phase - expected) < 0.02,
-    `${message}: expected ${expected}, got ${phase}`,
+const wait = (page, ms = 700) => page.waitForTimeout(ms);
+async function position(page, phase, offset = 0) {
+  await page.evaluate(
+    ({ phase, offset }) => {
+      const root = document.querySelector('[data-ui="annotated-run"]');
+      const start = root.getBoundingClientRect().top + scrollY;
+      scrollTo({
+        top:
+          Math.ceil(start + ((root.offsetHeight - innerHeight) * phase) / 7) +
+          offset,
+        behavior: "instant",
+      });
+    },
+    { phase, offset },
   );
+  await wait(page);
+  return page.evaluate(() => scrollY);
 }
-async function wheelBurst(page, direction, long = false) {
-  // Native wheel events, including a momentum tail longer than the card transition.
-  for (let i = 0; i < (long ? 28 : 5); i++) {
-    await page.mouse.wheel(
-      0,
-      direction * (i < 3 ? 2400 : Math.max(12, 800 - i * 35)),
-    );
-    await page.waitForTimeout(40);
-  }
-  await page.waitForTimeout(1100);
+async function y(page) {
+  return page.evaluate(() => scrollY);
 }
-async function swipe(page, session, direction) {
-  const x = 190,
-    y = direction > 0 ? 700 : 150;
+async function swipe(page, session) {
   await session.send("Input.dispatchTouchEvent", {
     type: "touchStart",
-    touchPoints: [{ x, y }],
+    touchPoints: [{ x: 190, y: 650 }],
   });
-  for (let i = 1; i <= 10; i++) {
+  const positions = [];
+  for (let i = 1; i <= 8; i++) {
     await session.send("Input.dispatchTouchEvent", {
       type: "touchMove",
-      touchPoints: [{ x, y: y - direction * i * 45 }],
+      touchPoints: [{ x: 190, y: 650 - i * 30 }],
     });
-    await page.waitForTimeout(35);
+    await wait(page, 60);
+    if (i === 4 || i === 8) positions.push(await y(page));
   }
   await session.send("Input.dispatchTouchEvent", {
     type: "touchEnd",
     touchPoints: [],
   });
-  await page.waitForTimeout(1200);
+  await wait(page);
+  return positions;
+}
+async function hero(browser, fallback) {
+  const page = await browser.newPage({
+    viewport: { width: 1024, height: 768 },
+  });
+  await page.addInitScript((fallback) => {
+    const original = HTMLCanvasElement.prototype.getContext;
+    HTMLCanvasElement.prototype.getContext = function (kind, options) {
+      if (kind === "webgl" || kind === "experimental-webgl") {
+        if (fallback) return null;
+        // Keep frame pixels available for an alpha-mask comparison in this test only.
+        return original.call(this, kind, {
+          ...options,
+          preserveDrawingBuffer: true,
+        });
+      }
+      return original.call(this, kind, options);
+    };
+  }, fallback);
+  await page.goto(url, { waitUntil: "networkidle" });
+  if (fallback) {
+    const panel = page.locator(".plasma-fallback");
+    await panel.waitFor();
+    const before = await panel.evaluate((e) => ({
+      radius: getComputedStyle(e).borderRadius,
+      animation: getComputedStyle(e).animationName,
+    }));
+    await wait(page, 1000);
+    assert.deepEqual(
+      await panel.evaluate((e) => ({
+        radius: getComputedStyle(e).borderRadius,
+        animation: getComputedStyle(e).animationName,
+      })),
+      before,
+    );
+    assert.equal(before.animation, "none");
+    assert.notEqual(before.radius, "0px");
+  } else {
+    await page.waitForFunction(
+      () =>
+        getComputedStyle(document.querySelector("#top canvas")).visibility ===
+        "visible",
+    );
+    const pixels = () =>
+      page.evaluate(() => {
+        const canvas = document.querySelector("#top canvas"),
+          gl = canvas.getContext("webgl");
+        const bytes = new Uint8Array(canvas.width * canvas.height * 4);
+        gl.readPixels(
+          0,
+          0,
+          canvas.width,
+          canvas.height,
+          gl.RGBA,
+          gl.UNSIGNED_BYTE,
+          bytes,
+        );
+        let mask = 0,
+          color = 0,
+          opaque = 0,
+          clear = 0;
+        for (let i = 0; i < bytes.length; i += 4) {
+          mask = (Math.imul(mask, 31) + bytes[i + 3]) | 0;
+          color = (Math.imul(color, 31) + bytes[i] + bytes[i + 1] * 3) | 0;
+          if (bytes[i + 3] > 128) opaque++;
+          if (bytes[i + 3] === 0) clear++;
+        }
+        return { mask, color, opaque, clear };
+      });
+    const before = await pixels();
+    await wait(page, 1000);
+    const after = await pixels();
+    assert.ok(
+      before.opaque > 10000 && before.clear > 1000,
+      "valid filled window with transparent margins",
+    );
+    assert.equal(
+      after.mask,
+      before.mask,
+      "cloud window border stays fixed as time advances",
+    );
+    assert.notEqual(
+      after.color,
+      before.color,
+      "clouds still move inside the fixed window",
+    );
+  }
+  await page.screenshot({
+    path: `/tmp/preflight-cloud-${fallback ? "fallback" : "webgl"}.png`,
+  });
+  console.log(
+    JSON.stringify({
+      hero: fallback ? "CSS fallback" : "WebGL",
+      fixedRoundedBorder: "pass",
+      movingInterior: fallback ? "CSS animation retained" : "pass",
+    }),
+  );
+  await page.close();
 }
 (async () => {
   const browser = await chromium.launch({
@@ -65,6 +148,8 @@ async function swipe(page, session, direction) {
     args: ["--no-sandbox", "--disable-dev-shm-usage"],
   });
   try {
+    await hero(browser, false);
+    await hero(browser, true);
     for (const mobile of [false, true]) {
       const page = await browser.newPage({
         viewport: mobile
@@ -75,87 +160,163 @@ async function swipe(page, session, direction) {
       });
       await page.goto(url, { waitUntil: "networkidle" });
       await page.waitForSelector('[data-ui="annotated-run"][data-pinned]');
-      const session = await page.context().newCDPSession(page);
-      await position(page, 0);
-      const gesture = (direction, long) =>
-        mobile
-          ? swipe(page, session, direction)
-          : wheelBurst(page, direction, long);
-      for (let i = 1; i < anchors.length; i++) {
-        await gesture(1, i === 1);
-        await expectPhase(
-          page,
-          anchors[i],
-          `${mobile ? "touch" : "wheel"} forward ${i}`,
-        );
-      }
-      await gesture(1);
-      assert.equal(
-        await page.evaluate(() =>
-          document.documentElement.hasAttribute("data-run-pinned"),
-        ),
-        false,
-        "release after PR",
-      );
-      // A large gesture returning from below must land on the last scene first.
-      await gesture(-1);
-      await expectPhase(page, 7, "re-entry from below");
-      for (let i = anchors.length - 2; i >= 0; i--) {
-        await gesture(-1, i === 3);
-        await expectPhase(
-          page,
-          anchors[i],
-          `${mobile ? "touch" : "wheel"} reverse ${i}`,
-        );
-      }
-      await gesture(-1);
-      assert.equal(
-        await page.evaluate(() =>
-          document.documentElement.hasAttribute("data-run-pinned"),
-        ),
-        false,
-        "release before browser",
-      );
-      await gesture(1);
-      await expectPhase(page, 0, "re-entry from above");
-      // A held navigation key does not auto-repeat through multiple scenes.
-      await page.keyboard.down("PageDown");
-      for (let i = 0; i < 12; i++) {
-        await page.keyboard.down("PageDown");
-        await page.waitForTimeout(80);
-      }
-      await page.keyboard.up("PageDown");
-      await page.waitForTimeout(1000);
-      await expectPhase(page, 1.8, "held PageDown");
-      await page.keyboard.press("PageDown");
-      await page.waitForTimeout(1400);
-      await expectPhase(page, 2.5, "new PageDown");
-      await page.keyboard.press("PageUp");
-      await page.waitForTimeout(1400);
-      await expectPhase(page, 1.8, "PageUp");
-      // Small trackpad deltas accumulate rather than being discarded individually.
-      for (let i = 0; i < 12; i++) {
-        await page.mouse.wheel(0, 4);
-        await page.waitForTimeout(20);
-      }
-      await page.waitForTimeout(1400);
-      await expectPhase(page, 2.5, "small trackpad deltas");
-      await page.screenshot({
-        path: `/tmp/preflight-scroll-${mobile ? "mobile" : "desktop"}.png`,
+      await page.evaluate(() => {
+        window.scrollInputs = [];
+        for (const type of ["wheel", "touchmove", "keydown"])
+          window.addEventListener(
+            type,
+            (e) =>
+              window.scrollInputs.push({ type, prevented: e.defaultPrevented }),
+            { passive: true },
+          );
       });
+      const stepDistance = await page.evaluate(
+        () =>
+          (document.querySelector('[data-ui="annotated-run"]').offsetHeight -
+            innerHeight) /
+          7,
+      );
+      assert.ok(
+        stepDistance > (await page.evaluate(() => innerHeight)),
+        "a beat requires more scroll distance than a viewport",
+      );
+      const start = await position(page, 2.5);
+      const positions = [start];
+      for (let i = 0; i < 4; i++) {
+        await page.mouse.wheel(0, 120);
+        await wait(page, 150);
+        positions.push(await y(page));
+      }
+      assert.ok(
+        positions.every((value, i) => i === 0 || value > positions[i - 1] + 20),
+        "every wheel input keeps moving; no gesture is consumed",
+      );
+      await wait(page);
+      assert.ok(
+        (await y(page)) - start < stepDistance,
+        "moderate scrolling stays within one beat",
+      );
+      const beforeFast = await y(page);
+      await page.mouse.wheel(0, 2200);
+      await wait(page);
+      assert.ok(
+        (await y(page)) - beforeFast > 1800,
+        "intentional fast scrolling remains unrestricted",
+      );
+      const beforeReverse = await y(page);
+      await page.mouse.wheel(0, -240);
+      await wait(page);
+      assert.ok(
+        (await y(page)) < beforeReverse - 160,
+        "reverse scrolling is immediately available",
+      );
+
+      const center = await position(page, 2.5);
+      await position(page, 2.5, 35);
+      assert.ok(
+        Math.abs((await y(page)) - center) <= 2,
+        "small near-center offsets settle",
+      );
+      const away = await position(page, 2.5, 150);
+      await wait(page);
+      assert.ok(
+        Math.abs((await y(page)) - away) <= 2,
+        "scrolling between centers is not forced to a step",
+      );
+      await position(page, 2.5);
+      await page.evaluate(() =>
+        scrollTo({ top: scrollY + 60, behavior: "instant" }),
+      );
+      await wait(page, 290);
+      await page.mouse.wheel(0, 240);
+      await wait(page);
+      assert.ok(
+        (await y(page)) > center + 120,
+        "new input never waits for a settling animation",
+      );
+
+      const keyboardStart = await position(page, 2.5);
+      await page.keyboard.press("PageDown");
+      await wait(page);
+      assert.ok(
+        (await y(page)) > keyboardStart + 200,
+        "PageDown uses native scrolling",
+      );
+      const heldStart = await y(page);
+      for (let i = 0; i < 7; i++) {
+        await page.keyboard.down("ArrowDown");
+        await wait(page, 90);
+      }
+      await page.keyboard.up("ArrowDown");
+      await wait(page);
+      assert.ok((await y(page)) > heldStart + 80, "held keys continue moving");
+
+      if (mobile) {
+        const touchStart = await position(page, 2.5);
+        const session = await page.context().newCDPSession(page);
+        const samples = await swipe(page, session);
+        assert.ok(
+          samples[0] > touchStart + 20 && samples[1] > samples[0] + 20,
+          "touch scroll moves throughout the swipe",
+        );
+      }
+      const entry = await position(page, 0, -150);
+      await page.mouse.wheel(0, 350);
+      await wait(page);
+      assert.ok(
+        (await y(page)) > entry + 250,
+        "entry does not catch or clamp a wheel gesture",
+      );
+      const exit = await position(page, 7, -150);
+      await page.mouse.wheel(0, 350);
+      await wait(page);
+      assert.ok(
+        (await y(page)) > exit + 250,
+        "exit does not catch or clamp a wheel gesture",
+      );
+      assert.equal(
+        await page.evaluate(() =>
+          document.documentElement.hasAttribute("data-run-pinned"),
+        ),
+        false,
+      );
+      assert.equal(
+        await page.evaluate(
+          () =>
+            getComputedStyle(
+              document.querySelector('nav[aria-label="Main navigation"]'),
+            ).visibility,
+        ),
+        "visible",
+      );
+      const prevented = await page.evaluate(() =>
+        window.scrollInputs.filter((e) => e.prevented),
+      );
+      assert.deepEqual(
+        prevented,
+        [],
+        "wheel/touch/key inputs are never prevented by the sequence",
+      );
       console.log(
         JSON.stringify({
           viewport: mobile ? "390x844" : "1440x900",
-          wheelOrTouch: "pass",
+          continuousWheel: "pass",
+          unrestrictedFastScroll: "pass",
           reverse: "pass",
-          boundaries: "pass",
+          proximityOnly: "pass",
           keyboard: "pass",
-          smallDeltas: "pass",
+          touch: mobile ? "pass" : "n/a",
+          entryExit: "pass",
+          preventedInputs: 0,
         }),
       );
       await page.close();
     }
-    for (const fallback of ["reduced-motion", "short-viewport"]) {
+    for (const fallback of [
+      "reduced-motion",
+      "short-viewport",
+      "no-JavaScript",
+    ]) {
       const page = await browser.newPage({
         viewport: {
           width: 1440,
@@ -163,6 +324,7 @@ async function swipe(page, session, direction) {
         },
         reducedMotion:
           fallback === "reduced-motion" ? "reduce" : "no-preference",
+        javaScriptEnabled: fallback !== "no-JavaScript",
       });
       await page.goto(url, { waitUntil: "networkidle" });
       assert.equal(
@@ -170,13 +332,10 @@ async function swipe(page, session, direction) {
         0,
       );
       await page.locator('[data-ui="annotated-run"]').scrollIntoViewIfNeeded();
-      const before = await page.evaluate(() => scrollY);
+      const before = await y(page);
       await page.mouse.wheel(0, 300);
-      await page.waitForTimeout(500);
-      assert.ok(
-        (await page.evaluate(() => scrollY)) > before + 200,
-        `${fallback}: native scroll`,
-      );
+      await wait(page);
+      assert.ok((await y(page)) > before + 200, `${fallback}: native scroll`);
       console.log(JSON.stringify({ fallback, nativeScroll: "pass" }));
       await page.close();
     }

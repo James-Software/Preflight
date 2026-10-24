@@ -6,13 +6,12 @@ import { useEffect, useRef, useState } from "react";
 /* PlasmaSquare — the hero square as living fluid energy in the        */
 /* classic gradient's blues. Multi-scale domain-warped fBm advected   */
 /* upward (large structures drift slowly, fine detail moves faster,    */
-/* flow speed varies spatially). The silhouette is a fluid-distorted  */
-/* rounded square: dramatic waves roll along the sides, the top edge  */
-/* boils gently, and the bottom stays calm.                           */
+/* flow speed varies spatially). The window stays a regular rounded   */
+/* rectangle while the clouds move inside it.                         */
 /*                                                                     */
 /* Sizing is bulletproof by construction: the canvas is exactly the    */
-/* bubble's box (absolute inset-0), and the fluid bleed lives INSIDE   */
-/* the shader as fixed insets — the energy can never escape the box,   */
+/* window's box (absolute inset-0), with fixed insets in the shader.   */
+/* The clouds stay inside the rounded rectangle and cannot escape,    */
 /* spill past the viewport, or wash over the copy below.               */
 /*                                                                     */
 /* Perf: 3-octave fBm, resolution capped (~1.8M px, DPR <= 1.25),      */
@@ -27,7 +26,7 @@ void main() {
 }
 `;
 
-/* In-shader bleed (css px): room for waves/wisps inside the canvas. */
+/* Fixed window insets in CSS pixels, shared by WebGL and the fallback. */
 const SIDE_BLEED = 26;
 const TOP_BLEED = 46;
 const BOTTOM_BLEED = 12;
@@ -41,7 +40,6 @@ uniform float u_time;
 uniform float u_scroll; // upward texture travel in drawing-buffer pixels
 uniform vec4 u_bubble; // min.xy, max.xy in px (y-up)
 uniform float u_radius;
-uniform float u_sideAmp; // px of side-wave travel
 
 vec2 hash22(vec2 p) {
   vec3 p3 = fract(vec3(p.xyx) * vec3(0.1031, 0.1030, 0.0973));
@@ -119,15 +117,8 @@ void main() {
 
   float energy = large * 0.55 + fine * 0.30 + fil * 0.45;
 
-  /* Silhouette: top boils, sides roll in dramatic waves, bottom calm. */
-  float topness = smoothstep(center.y, u_bubble.w, px.y);
-  float vertCalm = smoothstep(u_bubble.y - 30.0, u_bubble.y + 140.0, px.y);
-  float wobTop = (fbm(vec2(px.x * 0.006, px.y * 0.004 - t * 0.07)) - 0.5)
-    * mix(8.0, 34.0, topness) * mix(0.25, 1.0, vertCalm);
-  float sideWave = vnoise(vec2(2.7, px.y * 0.0055 - t * 0.10)) - 0.5;
-  sideWave += 0.45 * (vnoise(vec2(9.1, px.y * 0.016 - t * 0.23)) - 0.5);
-  float wobSide = sideWave * 2.0 * u_sideAmp * (1.0 - topness) * vertCalm;
-  float d = sdRoundBox(q0, halfSize, u_radius) + wobTop + wobSide;
+  /* Fixed rounded rectangle; only the interior texture depends on time. */
+  float d = sdRoundBox(q0, halfSize, u_radius);
 
   /* Palette: the classic square gradient — diagonal to top-right,
      more blue. Luminosity comes from energy, not whiteness. */
@@ -157,7 +148,7 @@ void main() {
   /* Faint bright filaments — kept subtle so the clouds own the whites. */
   icol += accent * smoothstep(0.78, 0.97, fil) * 0.18;
   icol += light * 0.10 * smoothstep(u_bubble.y, u_bubble.w, px.y);
-  icol += light * exp(-abs(d) * 0.10) * 0.15; // rim light on the fluid edge
+  icol += light * exp(-abs(d) * 0.10) * 0.15; // rim light on the fixed edge
 
   /* Premultiply explicitly: transparent pixels must also have zero RGB.
      This keeps the canvas margin invisible in mobile WebKit compositors. */
@@ -226,7 +217,6 @@ function createRenderer(canvas: HTMLCanvasElement) {
     const uScroll = gl.getUniformLocation(program, "u_scroll");
     const uBubble = gl.getUniformLocation(program, "u_bubble");
     const uRadius = gl.getUniformLocation(program, "u_radius");
-    const uSideAmp = gl.getUniformLocation(program, "u_sideAmp");
 
     const draw = (time: number, scroll = 0) => {
       const rect = canvas.getBoundingClientRect();
@@ -256,7 +246,6 @@ function createRenderer(canvas: HTMLCanvasElement) {
       gl.uniform1f(uRadius, Math.max(0, Math.min(radius,
         (rect.width - SIDE_BLEED * 2) / 2,
         (rect.height - TOP_BLEED - BOTTOM_BLEED) / 2)) * scale);
-      gl.uniform1f(uSideAmp, Math.min(20, SIDE_BLEED - 6) * scale);
       gl.drawArrays(gl.TRIANGLES, 0, 3);
     };
 

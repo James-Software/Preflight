@@ -4,6 +4,8 @@ Reviewed October 24, 2026, from merged base `b828fd3`. The aim is to remove repe
 
 Follow-up: the user preferred the original purple gradient. Primary actions now retain that gradient with the refined control shape ([current phone screenshot](screenshots/after-restored-gradient-390-dark.png), [four rendered checks](gradient-verification.jsonl)). The flat-button screenshots below document the initial design pass; the other refinements remain.
 
+The later landing-motion update fixes the cloud outline and replaces one-step scroll locking with native scrolling and proximity-only settling. The older gesture checks below remain historical evidence for that initial design pass; see [current motion behavior and verification](../landing-review/README.md).
+
 ## Research and direction
 
 Sources read for this pass:
