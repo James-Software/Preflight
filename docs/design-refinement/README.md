@@ -2,6 +2,8 @@
 
 Reviewed October 24, 2026, from merged base `b828fd3`. The aim is to remove repeated generated-site defaults while keeping PreFlight's established purple identity, plasma artwork, robot summaries and scroll-controlled evidence sequence. This is a refinement of the existing product, not a replacement brand.
 
+Follow-up: the user preferred the original purple gradient. Primary actions now retain that gradient with the refined control shape ([current phone screenshot](screenshots/after-restored-gradient-390-dark.png), [four rendered checks](gradient-verification.jsonl)). The flat-button screenshots below document the initial design pass; the other refinements remain.
+
 ## Research and direction
 
 Sources read for this pass:
@@ -63,4 +65,4 @@ Before: repository names compete with repeated rounded cards, and long names wra
 - [Functional checks](functional.jsonl) pass for retained form input, repository selection, report links/artifacts, app URL saving, draft/preview/publish/unpublish, delete confirmation, unsaved changes, pending saves and access boundaries. [Additional checks](interactions.jsonl) at 320, 390, 768 and 1440px verify actual theme switching/persistence, keyboard article/project navigation and profile Escape dismissal.
 - [Final hero checks](hero.jsonl) verify two lines at six widths in both themes, visible opaque navigation outside the animation and no horizontal overflow. Selected evidence images above were manually inspected; the full render matrix supplies automated coverage beyond those selected visual checks.
 
-Public screenshots use the actual Next components. Private screens and publishing checks run against an isolated production build with synthetic users/posts/projects and substituted database/auth boundaries. No fake auth/data hooks enter application source. No production posts, settings or users were changed, no paid swarm ran, and live OAuth/task integrations were not exercised. Styling and copy changed; swarm execution, OpenAI Decisions, Trigger routing and authorization code were not modified.
+Public screenshots use the actual Next components. Private screens and publishing checks run against an isolated production build with synthetic users/posts/projects and substituted database/auth boundaries. No fake auth/data hooks enter application source. No production posts, settings or users were changed, no paid swarm ran, and live OAuth/task integrations were not exercised. The initial design pass changed styling and copy. The subsequent browser-driver failure fix is documented in [swarm setup](../swarm-setup.md#runner-failures-versus-application-findings); OpenAI Decisions, Trigger routing and authorization code remain unchanged.

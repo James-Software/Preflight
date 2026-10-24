@@ -37,6 +37,8 @@ async function postChat(args: {
   system: string;
   user: ChatContentPart[];
   maxTokens?: number;
+  schema?: Record<string, unknown>;
+  previousOutput?: string;
 }): Promise<string> {
   for (let attempt = 0; attempt < 3; attempt++) {
     const res = await fetch(OPENROUTER_CHAT, {
@@ -47,8 +49,28 @@ async function postChat(args: {
         messages: [
           { role: "system", content: args.system },
           { role: "user", content: args.user },
+          ...(args.previousOutput
+            ? [
+                { role: "assistant", content: args.previousOutput },
+                {
+                  role: "user",
+                  content:
+                    "Return exactly one corrected action object matching the schema. No prose, markdown, or additional actions.",
+                },
+              ]
+            : []),
         ],
-        response_format: { type: "json_object" },
+        response_format: args.schema
+          ? {
+              type: "json_schema",
+              json_schema: {
+                name: "browser_action",
+                strict: true,
+                schema: args.schema,
+              },
+            }
+          : { type: "json_object" },
+        ...(args.schema ? { provider: { require_parameters: true } } : {}),
         max_tokens: args.maxTokens ?? 1024,
       }),
     });
@@ -126,6 +148,7 @@ Field use:
 
 Rules:
 - reasoning is REQUIRED: one sentence on why this action moves the test forward.
+- Return exactly one action. Include all schema fields and set unused fields to null.
 - Only use role+name pairs that appear in the accessibility tree.
 - Never repeat an action that just failed; try a different target or approach.
 - Prefer clicking visible buttons and links over typing URLs.
@@ -144,6 +167,35 @@ const KNOWN_ACTIONS = new Set([
   "done",
   "report_bug",
 ]);
+
+// Root-object schema follows the strict structured-output contract. Action-specific
+// field requirements are also checked below before any browser action is executed.
+const DRIVER_ACTION_SCHEMA = {
+  type: "object",
+  additionalProperties: false,
+  properties: {
+    action: { type: "string", enum: [...KNOWN_ACTIONS] },
+    reasoning: { type: "string" },
+    role: { type: ["string", "null"] },
+    name: { type: ["string", "null"] },
+    value: { type: ["string", "number", "null"] },
+    direction: { type: ["string", "null"], enum: ["up", "down", null] },
+    key: { type: ["string", "null"] },
+    title: { type: ["string", "null"] },
+    detail: { type: ["string", "null"] },
+  },
+  required: [
+    "action",
+    "reasoning",
+    "role",
+    "name",
+    "value",
+    "direction",
+    "key",
+    "title",
+    "detail",
+  ],
+};
 
 function validateAction(raw: unknown): AgentAction {
   if (typeof raw !== "object" || raw === null) throw new Error("not an object");
@@ -179,7 +231,7 @@ function validateAction(raw: unknown): AgentAction {
       }
       break;
     case "wait":
-      if (typeof a.value !== "number")
+      if (typeof a.value !== "number" || !Number.isFinite(a.value))
         throw new Error("wait needs ms in value");
       a.value = Math.min(Math.max(0, Math.round(a.value)), 10000);
       break;
@@ -225,20 +277,24 @@ export async function driverDecide(input: {
       image_url: { url: `data:image/jpeg;base64,${input.screenshotBase64}` },
     },
   ];
-  let lastErr: unknown = null;
+  let previousOutput: string | undefined;
   for (let attempt = 0; attempt < 2; attempt++) {
     const text = await postChat({
       model: MODEL_CONFIG.driver.model,
       system: attempt === 0 ? DRIVER_SYSTEM : DRIVER_SYSTEM + REPAIR_SUFFIX,
       user,
+      schema: DRIVER_ACTION_SCHEMA,
+      previousOutput,
     });
     try {
       return validateAction(JSON.parse(text));
-    } catch (e) {
-      lastErr = e;
+    } catch {
+      previousOutput = text.slice(0, 6000);
     }
   }
-  throw lastErr instanceof Error ? lastErr : new Error("driver failed");
+  throw new Error(
+    "Browser driver returned invalid JSON or an unsupported action after 2 attempts. The test could not continue; this is not a confirmed application bug.",
+  );
 }
 
 /* ------------------------------ judge ------------------------------ */
