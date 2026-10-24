@@ -57,6 +57,10 @@ PR per action; finding titles expand evidence. Keep existing PRs, pending groups
 and findings awaiting patches visually distinct. Use the shared Git icons for
 branch creation and PR links. See [grouped fix reports](fix-reports/README.md).
 
+Use `RunArchiveButton` for archiving/restoring finished runs. Archive state is
+separate from execution status, and reports remain accessible. The runs list
+provides current/archived views; active runs must be stopped before archiving.
+
 ## Landing motion
 
 The cloud window is a regular rounded rectangle with 12px corners. It fills the space below the 80px navigation with 8px side/bottom gutters; do not add extra shader or fallback insets. Clouds can move inside it; the outline must stay fixed in both WebGL and the CSS fallback.

@@ -26,6 +26,7 @@ export interface Run {
   created_at: string;
   started_at: string | null;
   finished_at: string | null;
+  archived_at: string | null;
 }
 
 export async function ensureSchema(): Promise<void> {
@@ -56,6 +57,7 @@ export async function ensureSchema(): Promise<void> {
   // Migrate tables created before these columns existed.
   await sql`ALTER TABLE projects ALTER COLUMN app_url DROP NOT NULL`;
   await sql`ALTER TABLE runs ADD COLUMN IF NOT EXISTS target_url TEXT`;
+  await sql`ALTER TABLE runs ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ`;
   await sql`ALTER TABLE projects ADD COLUMN IF NOT EXISTS screenshot_retention_days INT`;
   await sql`
     CREATE TABLE IF NOT EXISTS agents (
@@ -188,7 +190,7 @@ export async function listRuns(projectId: number): Promise<RunSummary[]> {
   await ensureSchema();
   const sql = getSql();
   const rows = await sql`
-    SELECT id, project_id, status, plan, target_url, created_at, started_at, finished_at,
+    SELECT id, project_id, status, plan, target_url, created_at, started_at, finished_at, archived_at,
       (SELECT COUNT(*)::int FROM findings WHERE findings.run_id = runs.id AND findings.deleted_at IS NULL) AS "findingsCount"
     FROM runs
     WHERE project_id = ${projectId}
@@ -214,7 +216,7 @@ export async function createRun(
   const rows = await sql`
     INSERT INTO runs (project_id, status, target_url)
     VALUES (${projectId}, 'queued', ${targetUrl ?? null})
-    RETURNING id, project_id, status, plan, target_url, created_at, started_at, finished_at
+    RETURNING id, project_id, status, plan, target_url, created_at, started_at, finished_at, archived_at
   `;
   if (!Array.isArray(rows) || rows.length === 0) {
     throw new Error("Failed to create run");
@@ -237,6 +239,25 @@ export async function cancelRun(
     WHERE id = ${runId} AND project_id = ${projectId}
       AND status IN ('queued', 'planning', 'planned', 'running')
     RETURNING id
+  `;
+  return Array.isArray(rows) && rows.length > 0;
+}
+
+/** Archiving changes visibility only; it never stops work or removes evidence. */
+export async function setRunArchived(
+  runId: number,
+  projectId: number,
+  owner: string,
+  archived: boolean,
+): Promise<boolean> {
+  await ensureSchema();
+  const rows = await getSql()`
+    UPDATE runs r SET archived_at = CASE WHEN ${archived} THEN COALESCE(r.archived_at, NOW()) ELSE NULL END
+    FROM projects p
+    WHERE r.id = ${runId} AND r.project_id = ${projectId} AND p.id = r.project_id
+      AND p.owner_github_id = ${owner}
+      AND (${archived} = FALSE OR r.status IN ('done', 'completed', 'failed', 'cancelled'))
+    RETURNING r.id
   `;
   return Array.isArray(rows) && rows.length > 0;
 }

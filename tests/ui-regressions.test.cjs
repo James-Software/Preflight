@@ -81,6 +81,7 @@ function reportPage(user, getProject, getRunReport) {
     "@/components/RunReportRefresh": { default: () => null },
     "@/components/FixesTable": { default: () => null },
     "@/components/ProjectLogo": { default: () => null },
+    "@/components/RunArchiveButton": { default: () => null },
   }).default;
 }
 test("report redirects a signed-out visitor back through the same run URL", async () => {

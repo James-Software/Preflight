@@ -1,3 +1,4 @@
+import RunArchiveButton from "@/components/RunArchiveButton";
 import FixesTable from "@/components/FixesTable";
 import ProjectLogo from "@/components/ProjectLogo";
 import { auth } from "@/auth";
@@ -43,9 +44,23 @@ export default async function RunReportPage({
         >
           ← All runs
         </a>
-        <h1 className="mt-4 text-3xl font-semibold tracking-tight">
-          Run #{run.id}
-        </h1>
+        <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
+          <h1 className="text-3xl font-semibold tracking-tight">
+            Run #{run.id}
+          </h1>
+          <RunArchiveButton
+            projectId={projectId}
+            runId={runNumber}
+            archived={!!run.archived_at}
+            active={active}
+          />
+        </div>
+        {run.archived_at && (
+          <p role="status" className="mt-4 text-sm text-muted">
+            Archived · This report and its evidence are still available. Restore
+            it to return it to your runs list.
+          </p>
+        )}
         <div className="mt-4 flex items-center gap-3">
           <ProjectLogo
             appUrl={project.app_url || run.target_url}
@@ -87,7 +102,7 @@ export default async function RunReportPage({
             <p className="mt-3 text-muted">
               {active
                 ? "Findings will appear here as they are saved."
-                : run.status === "completed"
+                : ["completed", "done"].includes(run.status)
                   ? "This run finished without any recorded findings."
                   : "This run ended without recorded findings. You can start another run from the project."}
             </p>

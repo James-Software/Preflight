@@ -100,6 +100,7 @@ export default async function ProjectPage({
               created_at: r.created_at,
               target_url: r.target_url,
               findingsCount: r.findingsCount,
+              archived_at: r.archived_at,
             }))}
           />
         </div>
