@@ -27,8 +27,11 @@ Shared Tailwind colors are defined in `app/globals.css`:
 - `text-primary`: the theme-aware accent color.
 - `text-muted`: tested secondary text in both themes; use it for dates and helpers instead of low-opacity ink or white.
 
-Use `btn-primary` for purple gradient primary actions with an 8px corner radius.
-The original gradient is an explicit user preference; preserve it during style refinements.
+Use `btn-primary` for the original blue gradient primary actions: `#8aa5ff` →
+`#6a6df5` → `#4e2fd8`, with pill corners and the original inset/highlight shadows.
+This exact treatment is an explicit user preference; preserve it during style
+refinements. The later dark-purple stops (`#6259d5` / `#5141c7` / `#4323b8`)
+are not the requested original gradient.
 Use neutral surfaces and readable charcoal text outside the brand artwork. Keep
 navigation opaque and shadow-free; shadows belong to floating menus and dialogs.
 Choose lists for projects and articles; reserve panels for grouped form controls,

@@ -2,7 +2,7 @@
 
 Reviewed October 24, 2026, from merged base `b828fd3`. The aim is to remove repeated generated-site defaults while keeping PreFlight's established purple identity, plasma artwork, robot summaries and scroll-controlled evidence sequence. This is a refinement of the existing product, not a replacement brand.
 
-Follow-up: the user preferred the original purple gradient. Primary actions now retain that gradient with the refined control shape ([current phone screenshot](screenshots/after-restored-gradient-390-dark.png), [four rendered checks](gradient-verification.jsonl)). The flat-button screenshots below document the initial design pass; the other refinements remain.
+Follow-up: the user preferred the original blue gradient (`#8aa5ff` → `#6a6df5` → `#4e2fd8`). The earlier dark-purple restoration was the wrong historical version; the primary action now uses the original blue gradient, pill corners and highlight/shadow treatment from `b226852`. The linked dark-purple verification below is historical; [current blue-gradient verification](blue-gradient-verification.jsonl) checks both themes on desktop and phone. The earlier restoration used the refined control shape ([current phone screenshot](screenshots/after-restored-gradient-390-dark.png), [four rendered checks](gradient-verification.jsonl)). The flat-button screenshots below document the initial design pass; the other refinements remain.
 
 The later landing-motion update fixes the cloud outline and replaces one-step scroll locking with native scrolling and proximity-only settling. The older gesture checks below remain historical evidence for that initial design pass; see [current motion behavior and verification](../landing-review/README.md).
 
