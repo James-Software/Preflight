@@ -10,6 +10,7 @@ export interface Project {
   id: number;
   owner_github_id: string;
   app_url: string | null;
+  latest_target_url?: string | null;
   repo_full_name: string;
   github_installation_id: number | null;
   screenshot_retention_days: number | null;
@@ -101,6 +102,21 @@ export async function ensureSchema(): Promise<void> {
     )
   `;
   await sql`
+    CREATE TABLE IF NOT EXISTS fix_pr_groups (
+      id UUID PRIMARY KEY,
+      run_id INT NOT NULL REFERENCES runs(id),
+      finding_ids JSONB NOT NULL,
+      branch TEXT NOT NULL,
+      state TEXT NOT NULL DEFAULT 'pending',
+      pr_url TEXT,
+      pr_number INT,
+      created_at TIMESTAMPTZ DEFAULT NOW()
+    )
+  `;
+  await sql`ALTER TABLE findings ADD COLUMN IF NOT EXISTS pr_group_id UUID REFERENCES fix_pr_groups(id)`;
+  await sql`ALTER TABLE fix_pr_groups ADD COLUMN IF NOT EXISTS lease_until TIMESTAMPTZ`;
+  await sql`ALTER TABLE findings ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ`;
+  await sql`
     CREATE TABLE IF NOT EXISTS credit_ledger (
       id SERIAL PRIMARY KEY,
       owner_github_id TEXT NOT NULL,
@@ -136,7 +152,8 @@ export async function listProjects(ownerGithubId: string): Promise<Project[]> {
   const sql = getSql();
   const rows = await sql`
     SELECT id, owner_github_id, app_url, repo_full_name,
-           github_installation_id, screenshot_retention_days, created_at
+           github_installation_id, screenshot_retention_days, created_at,
+      (SELECT target_url FROM runs WHERE project_id = projects.id AND target_url IS NOT NULL ORDER BY id DESC LIMIT 1) AS latest_target_url
     FROM projects
     WHERE owner_github_id = ${ownerGithubId}
     ORDER BY created_at DESC
@@ -153,7 +170,8 @@ export async function getProject(
   const sql = getSql();
   const rows = await sql`
     SELECT id, owner_github_id, app_url, repo_full_name,
-           github_installation_id, screenshot_retention_days, created_at
+           github_installation_id, screenshot_retention_days, created_at,
+      (SELECT target_url FROM runs WHERE project_id = projects.id AND target_url IS NOT NULL ORDER BY id DESC LIMIT 1) AS latest_target_url
     FROM projects
     WHERE id = ${id} AND owner_github_id = ${ownerGithubId}
     LIMIT 1
@@ -171,7 +189,7 @@ export async function listRuns(projectId: number): Promise<RunSummary[]> {
   const sql = getSql();
   const rows = await sql`
     SELECT id, project_id, status, plan, target_url, created_at, started_at, finished_at,
-      (SELECT COUNT(*)::int FROM findings WHERE findings.run_id = runs.id) AS "findingsCount"
+      (SELECT COUNT(*)::int FROM findings WHERE findings.run_id = runs.id AND findings.deleted_at IS NULL) AS "findingsCount"
     FROM runs
     WHERE project_id = ${projectId}
     ORDER BY created_at DESC
@@ -279,6 +297,8 @@ export async function createFinding(input: {
 }
 
 export interface FindingReport {
+  pr_group_id: string | null;
+  pr_group_state: string | null;
   id: number;
   title: string;
   severity: string | null;
@@ -315,14 +335,18 @@ export async function getRunReport(
     SELECT f.id, f.title, f.severity, f.status, f.repro_steps,
       f.screenshot_url, f.console_logs, f.network_errors,
       d.root_cause, d.confidence, d.patch_diff,
-      pr.pr_url, pr.pr_number, pr.state AS pr_state
+      COALESCE(g.pr_url, pr.pr_url) AS pr_url,
+      COALESCE(g.pr_number, pr.pr_number) AS pr_number,
+      COALESCE(g.state, pr.state) AS pr_state,
+      f.pr_group_id, g.state AS pr_group_state
     FROM findings f
     LEFT JOIN diagnoses d ON d.finding_id = f.id
+    LEFT JOIN fix_pr_groups g ON g.id = f.pr_group_id
     LEFT JOIN LATERAL (
       SELECT pr_url, pr_number, state FROM pull_requests
       WHERE diagnosis_id = d.id ORDER BY id DESC LIMIT 1
     ) pr ON TRUE
-    WHERE f.run_id = ${runId}
+    WHERE f.run_id = ${runId} AND f.deleted_at IS NULL
     ORDER BY CASE f.severity WHEN 'critical' THEN 0 WHEN 'high' THEN 1
       WHEN 'medium' THEN 2 WHEN 'low' THEN 3 ELSE 4 END, f.id
   `;

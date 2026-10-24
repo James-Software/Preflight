@@ -79,6 +79,8 @@ function reportPage(user, getProject, getRunReport) {
     "@/lib/schema": { getProject, getRunReport },
     "@/components/GitIcons": load("components/GitIcons.tsx", {}),
     "@/components/RunReportRefresh": { default: () => null },
+    "@/components/FixesTable": { default: () => null },
+    "@/components/ProjectLogo": { default: () => null },
   }).default;
 }
 test("report redirects a signed-out visitor back through the same run URL", async () => {

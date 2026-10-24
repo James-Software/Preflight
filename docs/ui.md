@@ -51,6 +51,12 @@ labels and status, success reset, repeat-click timing, and timeout cleanup.
 
 Admin navigation is derived from `isAdminLogin` on the server and passed as a boolean to shared headers and profile menus. UI links are not authorization: pages, reports, and actions still check sessions and ownership. Run reports use stored artifacts; no illustrative landing data enters dashboard reports.
 
+Use `ProjectLogo` for project favicons and the repository-initial fallback. Run
+reports use `FixesTable`: selection checkboxes group ready code patches into one
+PR per action; finding titles expand evidence. Keep existing PRs, pending groups
+and findings awaiting patches visually distinct. Use the shared Git icons for
+branch creation and PR links. See [grouped fix reports](fix-reports/README.md).
+
 ## Landing motion
 
 The cloud window is a regular rounded rectangle with 12px corners. It fills the space below the 80px navigation with 8px side/bottom gutters; do not add extra shader or fallback insets. Clouds can move inside it; the outline must stay fixed in both WebGL and the CSS fallback.

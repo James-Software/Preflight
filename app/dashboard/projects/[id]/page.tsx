@@ -1,3 +1,4 @@
+import ProjectLogo from "@/components/ProjectLogo";
 import { auth } from "@/auth";
 import { redirect, notFound } from "next/navigation";
 import { revalidatePath } from "next/cache";
@@ -68,9 +69,15 @@ export default async function ProjectPage({
         >
           &larr; All projects
         </a>
-        <h1 className="font-sans mt-4 break-words text-3xl font-semibold tracking-tight text-ink dark:text-white">
-          {project.repo_full_name}
-        </h1>
+        <div className="mt-5 flex min-w-0 items-center gap-4">
+          <ProjectLogo
+            appUrl={project.app_url || project.latest_target_url || null}
+            name={project.repo_full_name}
+          />
+          <h1 className="font-sans min-w-0 break-words text-3xl font-semibold tracking-tight text-ink dark:text-white">
+            {project.repo_full_name}
+          </h1>
+        </div>
         <p className="mt-2 break-all text-sm text-muted dark:text-muted">
           {project.app_url ??
             "Runs test the default branch's latest preview deployment."}

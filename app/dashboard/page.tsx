@@ -1,3 +1,4 @@
+import ProjectLogo from "@/components/ProjectLogo";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { listProjects } from "@/lib/schema";
@@ -63,13 +64,21 @@ export default async function Dashboard() {
                   href={`/dashboard/projects/${project.id}`}
                   className="group -mx-3 grid min-w-0 items-start gap-4 rounded-lg px-3 py-6 transition-colors hover:bg-panel sm:grid-cols-[minmax(0,1fr)_auto]"
                 >
-                  <div className="min-w-0">
-                    <h2 className="break-words text-lg font-semibold tracking-tight text-ink group-hover:text-primary dark:text-white">
-                      {project.repo_full_name}
-                    </h2>
-                    <p className="mt-2 break-all text-sm leading-relaxed text-muted">
-                      {project.app_url ?? "Default branch preview deployment"}
-                    </p>
+                  <div className="flex min-w-0 items-center gap-4">
+                    <ProjectLogo
+                      appUrl={
+                        project.app_url || project.latest_target_url || null
+                      }
+                      name={project.repo_full_name}
+                    />
+                    <div className="min-w-0">
+                      <h2 className="break-words text-lg font-semibold tracking-tight text-ink group-hover:text-primary dark:text-white">
+                        {project.repo_full_name}
+                      </h2>
+                      <p className="mt-2 break-all text-sm leading-relaxed text-muted">
+                        {project.app_url ?? "Default branch preview deployment"}
+                      </p>
+                    </div>
                   </div>
                   <p className="text-sm text-muted sm:pt-1">
                     Created {formatDate(project.created_at)}
