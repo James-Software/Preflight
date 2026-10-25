@@ -1,6 +1,6 @@
 # Project profiles and cleanup navigation
 
-Projects now have Runs (default), Profiles, Cleanup, General info and Database
+Projects now have Runs (default), Profiles, General info and Database
 sidebar tabs with icons. On small screens the tabs scroll horizontally without
 widening the page. Global navigation no longer offers an account-wide Profiles
 manager. The old `/dashboard/profiles` URL presents a project chooser; old
@@ -31,12 +31,14 @@ in the old project. Historical reports remain available.
 
 ## Cleanup
 
-`/dashboard/projects/:id/cleanup` lists only database-enabled runs belonging to
+Cleanup is a section inside the Database tab.
+`/dashboard/projects/:id/database?run=:id#cleanup` lists only database-enabled runs belonging to
 that project/owner. JSON-null snapshots from browser-only runs are excluded.
 The default selection favors a run with pending review, then the latest run.
-`?run=:id` deep links are validated against the project's run list; foreign runs
+`?run=:id#cleanup` deep links are validated against the project's run list; foreign runs
 return not found. A run selector switches the review component and its state.
-Run reports link to this page instead of embedding duplicate approval controls.
+Run reports link to this section instead of embedding duplicate approval controls.
+Old `/cleanup?run=:id` bookmarks redirect here.
 Accept/Deny, Origin/auth/ownership/final-status checks and one-record transaction
 limits remain unchanged. No cleanup action happens during navigation.
 

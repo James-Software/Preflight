@@ -6,9 +6,8 @@ Each project has a sidebar with icon links in this order:
 | --- | --- | --- |
 | Runs | `/dashboard/projects/:id` | Default landing page, swarm launch, run history and archive |
 | Profiles | `/dashboard/projects/:id/profiles` | Project-specific test sessions and browser sign-in |
-| Cleanup | `/dashboard/projects/:id/cleanup?run=:runId` | Run picker, SQL previews and per-record approval |
 | General info | `/dashboard/projects/:id/general` | Display name, uploaded image, app URL and GitHub repository |
-| Database | `/dashboard/projects/:id/database` | Database connections and verification checks |
+| Database | `/dashboard/projects/:id/database` | Database connections, verification checks and cleanup approval |
 
 The sidebar includes **Back to projects**, a project logo/name, and a selected
 section state. Run reports also keep the sidebar and select Runs. Below the

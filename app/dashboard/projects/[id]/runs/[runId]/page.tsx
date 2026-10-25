@@ -134,7 +134,7 @@ export default async function RunReportPage({
         )}
         {!!run.database_snapshot && (
           <a
-            href={`/dashboard/projects/${projectId}/cleanup?run=${runNumber}`}
+            href={`/dashboard/projects/${projectId}/database?run=${runNumber}#cleanup`}
             className="pressable mt-8 inline-flex min-h-11 items-center gap-2 rounded-lg border border-line px-4 text-sm font-medium hover:bg-panel"
           >
             Review cleanup for this run →

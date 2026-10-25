@@ -6,7 +6,7 @@ import ProjectLogo from "@/components/ProjectLogo";
 export function ProjectSectionIcon({
   section,
 }: {
-  section: "runs" | "general" | "database" | "profiles" | "cleanup";
+  section: "runs" | "general" | "database" | "profiles";
 }) {
   return (
     <svg
@@ -30,10 +30,6 @@ export function ProjectSectionIcon({
         <>
           <circle cx="9" cy="8" r="3" />
           <path d="M3 20v-2a6 6 0 0 1 12 0v2M17 4a3 3 0 0 1 0 6M18 14a5 5 0 0 1 3 4v2" />
-        </>
-      ) : section === "cleanup" ? (
-        <>
-          <path d="m5 17 8-8 4 4-8 8H3l2-4ZM13 9l6-6M4 17l5 4M17 5l2 2M5 4v4M3 6h4" />
         </>
       ) : section === "general" ? (
         <>
@@ -67,7 +63,6 @@ export default function ProjectSidebar({
   const tabs = [
     { section: "runs", label: "Runs", href: base },
     { section: "profiles", label: "Profiles", href: `${base}/profiles` },
-    { section: "cleanup", label: "Cleanup", href: `${base}/cleanup` },
     { section: "general", label: "General info", href: `${base}/general` },
     { section: "database", label: "Database", href: `${base}/database` },
   ] as const;

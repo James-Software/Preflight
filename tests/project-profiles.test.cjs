@@ -59,7 +59,7 @@ test("profile reads, creation, deletion and run selection are bound to the proje
       name: "Account A",
       origin: "https://app.example.com",
       session: "[]",
-      headers: '{"Authorization":"test-token"}', 
+      headers: '{"Authorization":"test-token"}',
     },
     12,
   );
@@ -172,7 +172,7 @@ test("sign-in capture grants include the project in start, restore, save and can
   assert.match(calls.at(-1).q, /project_id=\?/);
   assert.equal(connects, 0);
 });
-test("Cleanup is a separate project section and rejects a run outside the project", async () => {
+test("Database contains cleanup and rejects a run outside the project", async () => {
   const React = require("react");
   const { renderToStaticMarkup } = require("react-dom/server");
   const Sidebar = load("components/ProjectSidebar.tsx", {
@@ -180,7 +180,7 @@ test("Cleanup is a separate project section and rejects a run outside the projec
       default: ({ children, ...props }) =>
         React.createElement("a", props, children),
     },
-    "next/navigation": { usePathname: () => "/dashboard/projects/12/cleanup" },
+    "next/navigation": { usePathname: () => "/dashboard/projects/12/database" },
     "@/components/ProjectLogo": { default: () => null },
   }).default;
   const html = renderToStaticMarkup(
@@ -190,10 +190,10 @@ test("Cleanup is a separate project section and rejects a run outside the projec
   );
   assert.match(
     html,
-    /href="\/dashboard\/projects\/12\/cleanup"[^>]*aria-current="page"/,
+    /href="\/dashboard\/projects\/12\/database"[^>]*aria-current="page"/,
   );
   assert.ok(html.indexOf(">Runs</a>") < html.indexOf(">Profiles</a>"));
-  const page = load("app/dashboard/projects/[id]/cleanup/page.tsx", {
+  const page = load("app/dashboard/projects/[id]/database/page.tsx", {
     "next/link": {},
     "next/navigation": {
       notFound: () => {
@@ -208,6 +208,8 @@ test("Cleanup is a separate project section and rejects a run outside the projec
         { id: 5, status: "done", pending_count: 1 },
       ],
     },
+    "@/lib/database-connections": { listProjectDatabases: async () => [] },
+    "@/components/DatabaseSettings": {},
     "@/components/DatabaseCleanup": {},
     "@/components/CleanupRunPicker": {},
   }).default;

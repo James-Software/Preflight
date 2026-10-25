@@ -19,7 +19,7 @@ export default function CleanupRunPicker({
         value={selected}
         onChange={(event) =>
           router.push(
-            `/dashboard/projects/${projectId}/cleanup?run=${event.target.value}`,
+            `/dashboard/projects/${projectId}/database?run=${event.target.value}#cleanup`,
           )
         }
       >

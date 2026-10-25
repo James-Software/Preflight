@@ -10,8 +10,8 @@ arbitrary existing customer data. See [supported schemas](../database-verificati
 
 ## Cleanup approval
 
-The project sidebar has a Cleanup tab with a run selector. Each run report links
-directly to its cleanup view. Each proposal shows the table,
+The Database tab includes Cleanup with a run selector. Each run report links
+directly to its cleanup section; old Cleanup URLs redirect here. Each proposal shows the table,
 record ID, exact parameterized SQL, parameter values, one-row limit and status.
 Accept cleanup executes that saved proposal; Deny keeps the record. Controls are
 unavailable until the run ends, including failed or cancelled runs. Nothing is
