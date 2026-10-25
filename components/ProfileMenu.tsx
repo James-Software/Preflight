@@ -136,7 +136,7 @@ export default function ProfileMenu({
             <a
               href="/dashboard"
               onClick={() => setOpen(false)}
-              className="block rounded-xl px-3 py-2 text-sm text-ink/70 hover:bg-panel dark:text-white/70"
+              className="pressable block rounded-xl px-3 py-2 text-sm text-ink/70 hover:bg-panel dark:text-white/70"
             >
               Dashboard
             </a>
@@ -145,14 +145,14 @@ export default function ProfileMenu({
                 <a
                   href="/dashboard/admin/blog"
                   onClick={() => setOpen(false)}
-                  className="block rounded-xl px-3 py-2 text-sm hover:bg-panel"
+                  className="pressable block rounded-xl px-3 py-2 text-sm hover:bg-panel"
                 >
                   Blog posts
                 </a>
                 <a
                   href="/dashboard/admin"
                   onClick={() => setOpen(false)}
-                  className="block rounded-xl px-3 py-2 text-sm hover:bg-panel"
+                  className="pressable block rounded-xl px-3 py-2 text-sm hover:bg-panel"
                 >
                   Waitlist
                 </a>
@@ -161,7 +161,7 @@ export default function ProfileMenu({
             <a
               href="/"
               onClick={() => setOpen(false)}
-              className="block rounded-xl px-3 py-2 text-sm text-ink/70 hover:bg-panel dark:text-white/70"
+              className="pressable block rounded-xl px-3 py-2 text-sm text-ink/70 hover:bg-panel dark:text-white/70"
             >
               Home
             </a>

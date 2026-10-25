@@ -201,7 +201,7 @@ export default function BrowserProfileSetup({
                 href={capture.liveUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="inline-flex min-h-11 items-center text-sm font-medium text-primary"
+                className="pressable inline-flex min-h-11 items-center text-sm font-medium text-primary"
               >
                 Open in new tab ↗
               </a>

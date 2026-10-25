@@ -448,7 +448,7 @@ export default function RunSwarmButton({ projectId }: { projectId: number }) {
                       onClick={(e) => {
                         if (busy) e.preventDefault();
                       }}
-                      className="inline-flex min-h-11 items-center text-sm font-medium text-primary"
+                      className="pressable inline-flex min-h-11 items-center text-sm font-medium text-primary"
                     >
                       Create profile
                     </a>

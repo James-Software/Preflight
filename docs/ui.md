@@ -43,8 +43,16 @@ signature visuals. Native controls inherit the document's color scheme.
 For icon changes such as copy → check, follow the requested Emil Kowalski-inspired
 pattern: a short opacity/scale crossfade with `filter: blur(3px)` on the outgoing
 icon, easing out over 180ms. Reuse `IconSwap` so future controls stay consistent.
-Use `.pressable` for a `scale(0.97)` press response. Animate explicit properties,
-not `transition: all`, and switch icons immediately under reduced motion.
+Every native button, button-type input, `role="button"` and disclosure summary
+inherits a pointer cursor, subtle hover brightening and a 160ms `scale(0.97)`
+press response from `app/globals.css`. The same applies to `.btn-primary` and
+`.pressable`; add `.pressable` to links or upload labels styled as controls.
+Keep ordinary prose links unanimated. Individual CSS `scale` preserves existing
+transforms and avoids layout shifts. Disabled controls have no hover/press
+response, busy controls use a wait cursor, and reduced motion removes the
+transition and press scaling. Animate explicit properties, not `transition: all`,
+and switch icons immediately under reduced motion. Preserve the blue gradient
+and avoid adding button glows.
 
 Use `CopyButton` for clipboard actions. It owns the copy/check icons, accessible
 labels and status, success reset, repeat-click timing, and timeout cleanup.

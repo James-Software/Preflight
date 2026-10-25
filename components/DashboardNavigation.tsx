@@ -42,7 +42,7 @@ export default function DashboardNavigation({ isAdmin }: { isAdmin: boolean }) {
           key={href}
           href={href}
           aria-current={active ? "page" : undefined}
-          className={`inline-flex min-h-11 items-center text-sm font-medium ${active ? "text-ink dark:text-white" : "text-muted hover:text-ink dark:hover:text-white"}`}
+          className={`pressable inline-flex min-h-11 items-center text-sm font-medium ${active ? "text-ink dark:text-white" : "text-muted hover:text-ink dark:hover:text-white"}`}
         >
           {label}
         </a>
