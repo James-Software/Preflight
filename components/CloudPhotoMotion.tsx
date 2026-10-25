@@ -68,10 +68,13 @@ export default function CloudPhotoMotion({
       let gl: WebGLRenderingContext | null = null;
       try {
         gl = surface!.getContext("webgl", {
-          alpha: false,
+          // A cleared/lost surface must reveal the photo underneath, not black.
+          alpha: true,
           antialias: false,
           depth: false,
-          preserveDrawingBuffer: false,
+          // We stop drawing while idle. Retain that frame across compositing,
+          // including mobile browser chrome expanding/collapsing during scroll.
+          preserveDrawingBuffer: true,
         });
       } catch {
         /* Photo-only fallback. */
@@ -186,9 +189,18 @@ export default function CloudPhotoMotion({
           1.5,
           Math.sqrt(1_800_000 / (width * height)),
         );
-        surface!.width = Math.round(width * ratio);
-        surface!.height = Math.round(height * ratio);
-        gl?.viewport(0, 0, surface!.width, surface!.height);
+        const pixelWidth = Math.round(width * ratio);
+        const pixelHeight = Math.round(height * ratio);
+        // Assigning either dimension clears the drawing buffer, even if the
+        // value did not change. Repaint real resizes before this callback ends.
+        if (surface!.width !== pixelWidth || surface!.height !== pixelHeight) {
+          surface!.width = pixelWidth;
+          surface!.height = pixelHeight;
+          gl?.viewport(0, 0, pixelWidth, pixelHeight);
+          cancelAnimationFrame(frame);
+          frame = 0;
+          tick(performance.now());
+        }
         scrollPosition();
       }
       function upload() {

@@ -64,3 +64,21 @@ contrast review in addition to automated checks; desktop and phone captures were
 reviewed after adding motion.
 
 [Desktop preview](desktop.png) · [Mobile preview](mobile.png)
+
+## Scroll/resize frame stability
+
+The motion canvas retains its last rendered frame while idle. Its surface is
+transparent when cleared, revealing the existing photograph instead of black.
+Resize callbacks only resize the backing buffer when its pixel dimensions
+actually change, and redraw synchronously after a real resize. This avoids an
+empty frame while the browser changes viewport/layout dimensions during scroll,
+without keeping an animation loop running at rest.
+
+The [frame stability checks](frame-stability-checks.jsonl) cover desktop and
+390px touch-phone Chromium viewports. They read actual GPU pixels after idle
+compositing and synchronously at the end of four expanding/shrinking resize
+callbacks, before another animation frame can conceal a cleared buffer. They
+also check the existing smear/glow reset, scroll zoom, offscreen pause, reduced
+motion, and context-loss/no-WebGL fallback. Production build, TypeScript and the
+three cloud-flow unit tests passed. This validation uses browser emulation,
+not a physical iPhone.
