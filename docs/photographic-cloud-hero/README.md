@@ -26,7 +26,9 @@ smoothly back to the original photo, even while the cursor remains still. A soft
 The shader lights the cloud detail using the photo's brightness, saturation and
 foreground mask; it does not draw a spotlight over the sky or text. There
 is no radial zoom/lens, cursor halo or ambient drift. A height-based foreground mask still
-lets the cloud bank move faster than the distant sky during scroll. It approximates depth from
+lets the cloud bank move faster than the distant sky during scroll. Scrolling
+down also gently zooms the photograph in, reversing naturally on upward scroll;
+WebGL and the CSS fallback share the same zoom curve. It approximates depth from
 a single photo, rather than reconstructing a 3D scene. The frame, text, controls
 and credit remain stationary relative to the page.
 

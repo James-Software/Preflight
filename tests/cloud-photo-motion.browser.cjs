@@ -94,6 +94,10 @@ const assert = require("node:assert/strict");
           const gl = e.getContext("webgl"),
             program = gl.getParameter(gl.CURRENT_PROGRAM);
           return {
+            zoom: gl.getUniform(
+              program,
+              gl.getUniformLocation(program, "u_zoom"),
+            ),
             scroll: gl.getUniform(
               program,
               gl.getUniformLocation(program, "u_scroll"),
@@ -141,6 +145,15 @@ const assert = require("node:assert/strict");
           );
         });
         assert.ok(scrollUniform > uniform.scroll + 0.1);
+        const scrollZoom = await p.locator("#top canvas").evaluate((e) => {
+          const gl = e.getContext("webgl"),
+            program = gl.getParameter(gl.CURRENT_PROGRAM);
+          return gl.getUniform(
+            program,
+            gl.getUniformLocation(program, "u_zoom"),
+          );
+        });
+        assert.ok(scrollZoom > uniform.zoom + 0.01);
         await p.screenshot({
           path: `/tmp/preflight-cloud-motion-scroll-${width}.png`,
         });
@@ -215,6 +228,7 @@ const assert = require("node:assert/strict");
                   : { touchPointerWarpDisabled: true }),
                 scrollUniformVerified: true,
                 scrollDepth: true,
+                scrollZoom: true,
                 offscreenPaused: true,
                 reentryResumed: true,
                 liveReducedMotionToggle: true,

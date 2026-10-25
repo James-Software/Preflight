@@ -20,10 +20,11 @@ uniform sampler2D u_photo;
 uniform vec2 u_cover;
 uniform sampler2D u_flow;
 uniform float u_scroll;
+uniform float u_zoom;
 varying vec2 v_uv;
 void main() {
   // Overscan makes room for parallax without exposing an edge of the photo.
-  vec2 screen = (v_uv - .5) / 1.18 + .5;
+  vec2 screen = (v_uv - .5) / u_zoom + .5;
   vec2 uv = (screen - .5) * u_cover + vec2(.5, .5 - .05 * (1. - u_cover.y));
   float foreground = 1. - smoothstep(.34, .65, uv.y);
   // The cloud bank travels faster than the distant sky as the page scrolls.
@@ -32,7 +33,7 @@ void main() {
   // Sample a persistent directional field, never a cursor-centered zoom lens.
   vec3 trail = texture2D(u_flow, v_uv).rgb;
   vec2 flow = (trail.rg * 255. - 128.) / 127. * .08;
-  uv -= flow * u_cover / 1.18;
+  uv -= flow * u_cover / u_zoom;
   vec3 photo = texture2D(u_photo, clamp(uv, .001, .999)).rgb;
   float brightness = dot(photo, vec3(.2126, .7152, .0722));
   float saturation = max(max(photo.r, photo.g), photo.b) - min(min(photo.r, photo.g), photo.b);
@@ -152,7 +153,7 @@ export default function CloudPhotoMotion({
             stepCloudFlow(flow, 0, null, 1),
           );
           uniforms = Object.fromEntries(
-            ["u_photo", "u_cover", "u_flow", "u_scroll", "u_time"].map(
+            ["u_photo", "u_cover", "u_flow", "u_scroll", "u_zoom"].map(
               (name) => [name, gl!.getUniformLocation(program!, name)],
             ),
           );
@@ -217,6 +218,7 @@ export default function CloudPhotoMotion({
         last = now;
         const blend = 1 - Math.exp(-dt * 9);
         scroll += (targetScroll - scroll) * blend;
+        const zoom = 1.18 + Math.max(0, scroll) * 0.12;
         if (gl && gpuReady && !lost) {
           const imageAspect = photo!.naturalWidth / photo!.naturalHeight,
             aspect = width / height;
@@ -244,13 +246,14 @@ export default function CloudPhotoMotion({
           pendingStroke = null;
           gl.uniform1i(uniforms.u_flow, 1);
           gl.uniform1f(uniforms.u_scroll, scroll);
+          gl.uniform1f(uniforms.u_zoom, zoom);
           gl.drawArrays(gl.TRIANGLES, 0, 6);
           layer!.dataset.motion = "webgl";
         } else {
           layer!.dataset.motion = "fallback";
           pendingStroke = null;
           flow.active = false;
-          photo!.style.transform = `scale(1.18) translate3d(0px,${scroll * height * 0.065}px,0)`;
+          photo!.style.transform = `scale(${zoom}) translate3d(0px,${scroll * height * 0.065}px,0)`;
         }
         if (
           flow.active ||
