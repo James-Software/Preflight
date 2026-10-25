@@ -1,4 +1,5 @@
 import Image from "next/image";
+import CloudPhotoMotion from "./CloudPhotoMotion";
 import clouds from "@/public/images/pero-kalimero-clouds.webp";
 
 export default function Hero() {
@@ -9,10 +10,7 @@ export default function Hero() {
     >
       <div className="flex min-w-0 flex-1 px-[calc(8px+0.5vw)] pb-2 pt-20">
         <div className="relative isolate flex min-w-0 w-full flex-1 items-center justify-center overflow-hidden rounded-xl bg-[#b7d7e8]">
-          <div
-            aria-hidden="true"
-            className="pointer-events-none absolute inset-0 -z-10"
-          >
+          <CloudPhotoMotion>
             <Image
               src={clouds}
               alt=""
@@ -22,7 +20,7 @@ export default function Hero() {
               placeholder="blur"
               className="hero-cloud-photo object-cover object-[50%_55%]"
             />
-          </div>
+          </CloudPhotoMotion>
 
           <div className="relative min-w-0 w-full px-5 pb-24 pt-20 text-center sm:px-16 sm:pb-24 sm:pt-24 md:px-12 md:pb-32 md:pt-20">
             <h1 className="hero-headline animate-hero-rise mx-auto max-w-4xl text-balance font-sans leading-[1.08] font-semibold tracking-[-0.035em] text-[#142b42]">

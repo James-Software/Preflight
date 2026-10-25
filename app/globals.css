@@ -390,14 +390,11 @@ html.dark { --run-bg: #111822; --run-fg: #e3e9f2; --run-border: #384252; --run-t
 /* Form focus remains visible even when a field uses outline-none. */
 :is(input, textarea, select):focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
 
-/* Slow photographic drift stays inside the fixed Cloud Window. */
-.hero-cloud-photo {
-  animation: hero-cloud-drift 40s ease-in-out infinite alternate;
-}
-@keyframes hero-cloud-drift {
-  from { transform: scale(1.035) translate3d(-0.4%, 0.3%, 0); }
-  to { transform: scale(1.035) translate3d(0.4%, -0.3%, 0); }
-}
+/* Motion affects only the photograph, never the Cloud Window or its copy. */
+.hero-cloud-photo { transform: scale(1.18); }
+.hero-cloud-motion canvas { opacity: 0; }
+.hero-cloud-motion[data-motion="webgl"] canvas { opacity: 1; }
 @media (prefers-reduced-motion: reduce) {
-  .hero-cloud-photo { animation: none; }
+  .hero-cloud-photo { transform: none; }
+  .hero-cloud-motion canvas { display: none; }
 }
