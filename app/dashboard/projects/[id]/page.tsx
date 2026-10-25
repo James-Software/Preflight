@@ -81,6 +81,7 @@ export default async function ProjectPage({
         </a>
         <div className="mt-5 flex min-w-0 items-center gap-4">
           <ProjectLogo
+            projectId={project.id}
             appUrl={project.app_url || project.latest_target_url || null}
             name={project.repo_full_name}
           />

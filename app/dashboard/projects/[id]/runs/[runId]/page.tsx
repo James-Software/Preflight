@@ -65,6 +65,7 @@ export default async function RunReportPage({
         )}
         <div className="mt-4 flex items-center gap-3">
           <ProjectLogo
+            projectId={project.id}
             appUrl={project.app_url || run.target_url}
             name={project.repo_full_name}
           />

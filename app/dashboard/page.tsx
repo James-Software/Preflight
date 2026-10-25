@@ -66,6 +66,7 @@ export default async function Dashboard() {
                 >
                   <div className="flex min-w-0 items-center gap-4">
                     <ProjectLogo
+                      projectId={project.id}
                       appUrl={
                         project.app_url || project.latest_target_url || null
                       }
