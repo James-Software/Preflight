@@ -1,6 +1,11 @@
 "use client";
 
 import { useEffect, useRef, type ReactNode } from "react";
+import {
+  createCloudFlow,
+  stepCloudFlow,
+  type CloudStroke,
+} from "@/lib/cloud-flow";
 
 const vertexSource = `
 attribute vec2 a_position;
@@ -13,11 +18,8 @@ const fragmentSource = `
 precision highp float;
 uniform sampler2D u_photo;
 uniform vec2 u_cover;
-uniform vec2 u_cursor;
-uniform float u_aspect;
-uniform float u_hover;
+uniform sampler2D u_flow;
 uniform float u_scroll;
-uniform float u_time;
 varying vec2 v_uv;
 void main() {
   // Overscan makes room for parallax without exposing an edge of the photo.
@@ -26,17 +28,10 @@ void main() {
   float foreground = 1. - smoothstep(.34, .65, uv.y);
   // The cloud bank travels faster than the distant sky as the page scrolls.
   uv.y -= u_scroll * (.018 + .07 * foreground) * u_cover.y;
-  uv.x += sin(u_time * .12) * .003 * u_cover.x;
 
-  vec2 delta = v_uv - u_cursor;
-  vec2 metric = delta * vec2(u_aspect, 1.);
-  float distance = length(metric);
-  float envelope = exp(-dot(metric, metric) * 11.);
-  float ripple = sin(distance * 19. - u_time * 1.8) * .012;
-  // A localized lens and soft ripples bend the photograph around the cursor.
-  uv += delta * envelope * (.17 + ripple) * u_cover * u_hover;
-  uv += vec2(sin(metric.y * 12. + u_time), cos(metric.x * 12. - u_time))
-      * envelope * .003 * u_cover * u_hover;
+  // Sample a persistent directional field, never a cursor-centered zoom lens.
+  vec2 flow = (texture2D(u_flow, v_uv).rg * 255. - 128.) / 127. * .08;
+  uv -= flow * u_cover / 1.18;
   gl_FragColor = texture2D(u_photo, clamp(uv, .001, .999));
 }`;
 
@@ -75,13 +70,18 @@ export default function CloudPhotoMotion({
       let program: WebGLProgram | null = null;
       const shaders: WebGLShader[] = [];
       let buffer: WebGLBuffer | null = null,
-        texture: WebGLTexture | null = null;
+        texture: WebGLTexture | null = null,
+        flowTexture: WebGLTexture | null = null;
+      const flow = createCloudFlow();
+      let pointer: [number, number] | null = null;
+      let pendingStroke: CloudStroke | null = null;
       let gpuReady = false,
         lost = false;
       let uniforms: Record<string, WebGLUniformLocation | null> = {};
       function releaseGpu() {
         if (!gl) return;
         if (texture) gl.deleteTexture(texture);
+        if (flowTexture) gl.deleteTexture(flowTexture);
         if (buffer) gl.deleteBuffer(buffer);
         if (program) gl.deleteProgram(program);
         shaders.forEach((shader) => gl!.deleteShader(shader));
@@ -124,16 +124,29 @@ export default function CloudPhotoMotion({
           gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
           gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
           gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+          flowTexture = gl.createTexture();
+          if (!flowTexture) throw new Error();
+          gl.activeTexture(gl.TEXTURE1);
+          gl.bindTexture(gl.TEXTURE_2D, flowTexture);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MIN_FILTER, gl.LINEAR);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_MAG_FILTER, gl.LINEAR);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE);
+          gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE);
+          gl.texImage2D(
+            gl.TEXTURE_2D,
+            0,
+            gl.RGBA,
+            flow.width,
+            flow.height,
+            0,
+            gl.RGBA,
+            gl.UNSIGNED_BYTE,
+            stepCloudFlow(flow, 0, null, 1),
+          );
           uniforms = Object.fromEntries(
-            [
-              "u_photo",
-              "u_cover",
-              "u_cursor",
-              "u_aspect",
-              "u_hover",
-              "u_scroll",
-              "u_time",
-            ].map((name) => [name, gl!.getUniformLocation(program!, name)]),
+            ["u_photo", "u_cover", "u_flow", "u_scroll", "u_time"].map(
+              (name) => [name, gl!.getUniformLocation(program!, name)],
+            ),
           );
         } catch {
           releaseGpu();
@@ -142,24 +155,18 @@ export default function CloudPhotoMotion({
       }
       let frame = 0,
         visible = true,
-        last = 0,
-        time = 0;
+        last = 0;
       let width = 1,
         height = 1,
         scroll = 0,
         targetScroll = 0;
-      let x = 0.5,
-        y = 0.5,
-        targetX = 0.5,
-        targetY = 0.5,
-        hover = 0,
-        targetHover = 0;
       function scrollPosition() {
         const bounds = host!.getBoundingClientRect();
         targetScroll = Math.max(
           -1,
           Math.min(1, -bounds.top / Math.max(bounds.height, 1)),
         );
+        wake();
       }
       function resize() {
         const bounds = host!.getBoundingClientRect();
@@ -178,6 +185,7 @@ export default function CloudPhotoMotion({
       function upload() {
         if (!gl || lost || !photo!.complete || !photo!.naturalWidth) return;
         try {
+          gl.activeTexture(gl.TEXTURE0);
           gl.bindTexture(gl.TEXTURE_2D, texture);
           gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 1);
           gl.texImage2D(
@@ -189,6 +197,7 @@ export default function CloudPhotoMotion({
             photo!,
           );
           gpuReady = true;
+          wake();
         } catch {
           gpuReady = false;
         }
@@ -198,11 +207,7 @@ export default function CloudPhotoMotion({
         if (!visible || document.hidden) return;
         const dt = last ? Math.min((now - last) / 1000, 0.05) : 1 / 60;
         last = now;
-        time += dt;
         const blend = 1 - Math.exp(-dt * 9);
-        x += (targetX - x) * blend;
-        y += (targetY - y) * blend;
-        hover += (targetHover - hover) * blend;
         scroll += (targetScroll - scroll) * blend;
         if (gl && gpuReady && !lost) {
           const imageAspect = photo!.naturalWidth / photo!.naturalHeight,
@@ -214,18 +219,37 @@ export default function CloudPhotoMotion({
             Math.min(1, aspect / imageAspect),
             Math.min(1, imageAspect / aspect),
           );
-          gl.uniform2f(uniforms.u_cursor, x, y);
-          gl.uniform1f(uniforms.u_aspect, aspect);
-          gl.uniform1f(uniforms.u_hover, hover);
+          gl.activeTexture(gl.TEXTURE1);
+          gl.bindTexture(gl.TEXTURE_2D, flowTexture);
+          gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, 0);
+          gl.texSubImage2D(
+            gl.TEXTURE_2D,
+            0,
+            0,
+            0,
+            flow.width,
+            flow.height,
+            gl.RGBA,
+            gl.UNSIGNED_BYTE,
+            stepCloudFlow(flow, dt, pendingStroke, aspect),
+          );
+          pendingStroke = null;
+          gl.uniform1i(uniforms.u_flow, 1);
           gl.uniform1f(uniforms.u_scroll, scroll);
-          gl.uniform1f(uniforms.u_time, time);
           gl.drawArrays(gl.TRIANGLES, 0, 6);
           layer!.dataset.motion = "webgl";
         } else {
           layer!.dataset.motion = "fallback";
-          photo!.style.transform = `scale(1.18) translate3d(${(x - 0.5) * -8 * hover}px,${scroll * height * 0.065}px,0)`;
+          pendingStroke = null;
+          flow.active = false;
+          photo!.style.transform = `scale(1.18) translate3d(0px,${scroll * height * 0.065}px,0)`;
         }
-        frame = requestAnimationFrame(tick);
+        if (
+          flow.active ||
+          pendingStroke ||
+          Math.abs(targetScroll - scroll) > 0.00001
+        )
+          frame = requestAnimationFrame(tick);
       }
       function wake() {
         if (visible && !document.hidden && !frame) {
@@ -234,27 +258,32 @@ export default function CloudPhotoMotion({
         } else if ((!visible || document.hidden) && frame) {
           cancelAnimationFrame(frame);
           frame = 0;
+          leave();
+          pendingStroke = null;
+          flow.values.fill(0);
         }
       }
       function move(event: PointerEvent) {
         if (!finePointer.matches || event.pointerType === "touch") return;
         const bounds = host!.getBoundingClientRect();
-        targetX = Math.max(
-          0,
-          Math.min(1, (event.clientX - bounds.left) / width),
-        );
-        targetY =
-          1 - Math.max(0, Math.min(1, (event.clientY - bounds.top) / height));
-        targetHover = 1;
+        const point: [number, number] = [
+          Math.max(0, Math.min(1, (event.clientX - bounds.left) / width)),
+          1 - Math.max(0, Math.min(1, (event.clientY - bounds.top) / height)),
+        ];
+        if (pointer)
+          pendingStroke = { from: pendingStroke?.from || pointer, to: point };
+        pointer = point;
+        wake();
       }
       function leave() {
-        targetHover = 0;
+        pointer = null; // The existing displacement continues relaxing after exit.
       }
       function contextLost(event: Event) {
         event.preventDefault();
         lost = true;
         gpuReady = false;
         layer!.dataset.motion = "fallback";
+        wake();
       }
       const observer = new IntersectionObserver((entries) => {
         visible = entries[0].isIntersecting;

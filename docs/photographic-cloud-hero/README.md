@@ -19,25 +19,34 @@ The source/standard license links above are retained for review; no claim is mad
 that the current live Unsplash page was fetched successfully.
 
 The photograph replaces procedurally generated clouds. `CloudPhotoMotion` samples
-that same photo through a small WebGL shader: a cursor-following lens and soft
-ripples displace nearby pixels, and a height-based foreground mask lets the cloud
-bank move faster than the distant sky during scroll. It approximates depth from
+that same photo through a small WebGL shader. Mouse movement paints directional
+strokes into a low-resolution displacement field, pulling nearby photo detail
+along the pointer's path. The deformation stays where it was made and decays
+smoothly back to the original photo, even while the cursor remains still. There
+is no radial zoom/lens or ambient drift. A height-based foreground mask still
+lets the cloud bank move faster than the distant sky during scroll. It approximates depth from
 a single photo, rather than reconstructing a 3D scene. The frame, text, controls
 and credit remain stationary relative to the page.
 
-The effect eases toward pointer/scroll targets, disables pointer warping for
-coarse/touch input, and pauses rendering offscreen or in a hidden tab. Drawing
+Scroll targets ease into position, while drag/hover smears relax exponentially
+and snap to an exact neutral state once imperceptible. Displacement is bounded
+for quick sweeps and narrow screens. Coarse/touch input does not paint strokes.
+Rendering pauses offscreen, in hidden tabs, and when everything has settled;
+scroll or pointer activity wakes it again. Drawing
 resolution is capped at 1.8 million pixels / DPR 1.5. GPU resources, observers and
 listeners are released on teardown or a reduced-motion preference change. The
 server-rendered Next Image remains underneath: unavailable/failed/lost WebGL uses
 ordinary CSS photo parallax, and reduced motion keeps a completely static photo.
 The image is decorative and no remote texture is loaded.
 
-Validation: production build and all 97 unit tests pass. [Browser checks](browser-checks.jsonl)
+Validation: production build and all 100 unit tests pass. [Browser checks](browser-checks.jsonl)
 exercise actual WebGL, disabled WebGL and reduced motion on desktop and touch
-phone viewports, including GPU pointer/scroll uniforms, stable copy, no horizontal
+phone viewports, including directional displacement uploads, no deformation
+from a stationary pointer, decay after movement/exit, exact before/after photo
+pixel equality, idle pause, scroll uniforms, stable copy, no horizontal
 overflow/page errors, offscreen pause/re-entry, live reduced-motion toggles and
-context-loss fallback. Desktop uses light mode and phone uses dark mode.
+context-loss fallback. Unit checks cover direction, localized influence, full
+neutral reset and bounded rapid strokes at different aspect ratios. Desktop uses light mode and phone uses dark mode.
 
 Run the browser checks against a running production build:
 

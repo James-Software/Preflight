@@ -34,6 +34,24 @@ const assert = require("node:assert/strict");
             return get.call(this, type, ...args);
           };
         } else {
+          const upload = WebGLRenderingContext.prototype.texSubImage2D;
+          WebGLRenderingContext.prototype.texSubImage2D = function (...args) {
+            const pixels = args[8];
+            if (pixels instanceof Uint8Array) {
+              let energy = 0,
+                x = 0,
+                y = 0;
+              for (let i = 0; i < pixels.length; i += 4) {
+                const dx = pixels[i] - 128,
+                  dy = pixels[i + 1] - 128;
+                energy += Math.abs(dx) + Math.abs(dy);
+                x += dx;
+                y += dy;
+              }
+              window.__cloudFlow = { energy, x, y };
+            }
+            return upload.apply(this, args);
+          };
           const draw = WebGLRenderingContext.prototype.drawArrays;
           WebGLRenderingContext.prototype.drawArrays = function (...args) {
             window.__motionDraws++;
@@ -56,6 +74,12 @@ const assert = require("node:assert/strict");
               : "fallback"),
         mode,
       );
+      await p.waitForFunction(() =>
+        document
+          .querySelector("#top h1")
+          .getAnimations()
+          .every((animation) => animation.playState === "finished"),
+      );
       const h1 = await p.locator("#top h1").boundingBox();
       await p.mouse.move(width * 0.35, 350);
       await p.waitForTimeout(350);
@@ -68,31 +92,36 @@ const assert = require("node:assert/strict");
           const gl = e.getContext("webgl"),
             program = gl.getParameter(gl.CURRENT_PROGRAM);
           return {
-            hover: gl.getUniform(
-              program,
-              gl.getUniformLocation(program, "u_hover"),
-            ),
-            cursor: Array.from(
-              gl.getUniform(
-                program,
-                gl.getUniformLocation(program, "u_cursor"),
-              ),
-            ),
             scroll: gl.getUniform(
               program,
               gl.getUniformLocation(program, "u_scroll"),
             ),
           };
         });
+        const baseline = await p.locator("#top canvas").screenshot();
+        // Entering/holding the pointer does not create a lens or displacement.
+        assert.equal(await p.evaluate(() => window.__cloudFlow.energy), 0);
+        await p.mouse.move(width * 0.72, 590, { steps: 16 });
+        await p.waitForTimeout(60);
+        const trail = await p.evaluate(() => window.__cloudFlow);
         if (width === 1440) {
-          assert.ok(uniform.hover > 0.8);
-          assert.ok(uniform.cursor[0] < 0.5);
-        } else assert.equal(uniform.hover, 0);
-        const before = await p.locator("#top canvas").screenshot();
-        await p.mouse.move(width * 0.72, 590);
-        await p.waitForTimeout(400);
-        const after = await p.locator("#top canvas").screenshot();
-        assert.ok(!before.equals(after));
+          assert.ok(trail.energy > 0);
+          assert.ok(trail.x > 0);
+          assert.ok(trail.y < 0);
+          await p.screenshot({ path: "/tmp/preflight-cloud-smear-active.png" });
+          await p.waitForTimeout(1200);
+          const relaxing = await p.evaluate(() => window.__cloudFlow.energy);
+          assert.ok(relaxing < trail.energy * 0.5);
+          await p.mouse.move(width - 2, 40);
+          await p.waitForTimeout(5000);
+          assert.equal(await p.evaluate(() => window.__cloudFlow.energy), 0);
+          const idleDraws = await p.evaluate(() => window.__motionDraws);
+          await p.waitForTimeout(150);
+          assert.equal(await p.evaluate(() => window.__motionDraws), idleDraws);
+          assert.ok(
+            baseline.equals(await p.locator("#top canvas").screenshot()),
+          );
+        } else assert.equal(trail.energy, 0);
         await p.evaluate(() => scrollTo(0, 220));
         await p.waitForTimeout(300);
         const scrollUniform = await p.locator("#top canvas").evaluate((e) => {
@@ -168,9 +197,13 @@ const assert = require("node:assert/strict");
           ...(mode === "normal"
             ? {
                 gpuRendered: true,
-                pixelsRespond: true,
+                directionalFieldRendered: true,
                 ...(width === 1440
-                  ? { pointerWarpVerified: true }
+                  ? {
+                      directionalSmearVerified: true,
+                      stationaryPointerDoesNotZoom: true,
+                      trailRelaxesAndResets: true,
+                    }
                   : { touchPointerWarpDisabled: true }),
                 scrollUniformVerified: true,
                 scrollDepth: true,
