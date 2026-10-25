@@ -3,7 +3,10 @@ const assert = require("node:assert/strict");
 const { load } = require("./load-module.cjs");
 const state = load("lib/auth-profile-state.ts", {});
 const targets = load("lib/run-targets.ts", {
-  "@/lib/github": { GithubAuthError: class extends Error {} },
+  "@/lib/github": {
+    GithubAuthError: class extends Error {},
+    fetchGithub: (_ctx, url, init) => fetch(url, init),
+  },
 });
 function key(t) {
   const previous = process.env.PROFILE_ENCRYPTION_KEY;
@@ -238,6 +241,9 @@ test("profile validation fails for revoked accounts and mismatched targets befor
     verification_text: "Workspace",
   };
   const api = load("lib/auth-profiles.ts", {
+    "@/lib/github-credentials": {
+      GithubRenewalUnavailable: class extends Error {},
+    },
     "@/lib/auth-profile-state": state,
     "@/lib/schema": { ensureSchema: async () => {} },
     "@/lib/db": { getSql: () => async () => (row ? [row] : []) },
@@ -360,6 +366,9 @@ test("run start saves target/profile metadata and sends no credentials in the Tr
   const route = load("app/api/projects/[id]/runs/route.ts", {
     "@/auth": { auth: async () => ({ user: { githubId: "100" } }) },
     "@/lib/auth-profiles": { profileForRun: async () => profile },
+    "@/lib/github-credentials": {
+      GithubRenewalUnavailable: class extends Error {},
+    },
     "@/lib/auth-profile-state": state,
     "@/lib/run-targets": {
       ...targets,
@@ -369,7 +378,10 @@ test("run start saves target/profile metadata and sends no credentials in the Tr
         sha: "commit-sha",
       }),
     },
-    "@/lib/github": { getGithubContext: async () => ctx },
+    "@/lib/github": {
+      GithubAuthError: class extends Error {},
+      getGithubContext: async () => ctx,
+    },
     "@/lib/trigger-client": {
       getTriggerClientConfig: () => ({}),
       swarmStartError: () => "worker error",

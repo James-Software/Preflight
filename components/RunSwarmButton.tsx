@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import { reconnectGithub, githubReconnected } from "@/lib/github-reconnect";
 import { BranchIcon, PullRequestIcon } from "@/components/GitIcons";
 import type { TargetOption } from "@/lib/run-targets";
 import type { AuthProfile } from "@/lib/auth-profiles";
@@ -23,6 +24,31 @@ export default function RunSwarmButton({ projectId }: { projectId: number }) {
     [targetUrl, setTargetUrl] = useState(""),
     [resolving, setResolving] = useState(false),
     [truncated, setTruncated] = useState(false);
+  const [reconnecting, setReconnecting] = useState(false);
+  const [reauthFailed, setReauthFailed] = useState(false);
+  const redirecting = useRef(false);
+  function renewConnection(force = false) {
+    if (redirecting.current && !force) return true;
+    const back = new URL(window.location.href);
+    back.searchParams.set("configureRun", "1");
+    if (selected) back.searchParams.set("target", optionKey(selected));
+    const chosenProfile = selected
+      ? profileId
+      : back.searchParams.get("profileId");
+    if (chosenProfile) back.searchParams.set("profileId", chosenProfile);
+    else back.searchParams.delete("profileId");
+    if (reconnectGithub(back.pathname + back.search, force)) {
+      redirecting.current = true;
+      setReconnecting(true);
+      setError("");
+      return true;
+    }
+    setReauthFailed(true);
+    setError(
+      "GitHub couldn’t reconnect this account. Reconnect once more or check your GitHub app access.",
+    );
+    return false;
+  }
   const draftKey = `preflight:run-setup:${projectId}`;
   async function load() {
     setLoading(true);
@@ -36,14 +62,22 @@ export default function RunSwarmButton({ projectId }: { projectId: number }) {
     try {
       const response = await fetch(`/api/projects/${projectId}/run-options`);
       const data = await response.json();
+      if (response.status === 401) {
+        renewConnection();
+        return;
+      }
       if (!response.ok)
         throw new Error(data.error || "Could not load run options.");
+      githubReconnected();
       setOptions(data.options);
       setProfiles(data.profiles);
       setTruncated(data.truncated);
       let key = "";
       try {
-        key = sessionStorage.getItem(draftKey) || "";
+        key =
+          new URLSearchParams(location.search).get("target") ||
+          sessionStorage.getItem(draftKey) ||
+          "";
       } catch {}
       const initial =
         data.options.find((t: TargetOption) => optionKey(t) === key) ||
@@ -102,6 +136,10 @@ export default function RunSwarmButton({ projectId }: { projectId: number }) {
           { signal: controller.signal },
         );
         const data = await response.json();
+        if (response.status === 401) {
+          if (!controller.signal.aborted) renewConnection();
+          return;
+        }
         if (!response.ok)
           throw new Error(data.error || "This deployment is unavailable.");
         if (!controller.signal.aborted) {
@@ -161,6 +199,10 @@ export default function RunSwarmButton({ projectId }: { projectId: number }) {
         }),
       });
       const data = await response.json();
+      if (response.status === 401) {
+        if (!renewConnection()) setBusy(false);
+        return;
+      }
       if (!response.ok)
         throw new Error(data.error || "Could not start the run.");
       window.location.assign(
@@ -229,9 +271,11 @@ export default function RunSwarmButton({ projectId }: { projectId: number }) {
             </button>
           </div>
           <div className="space-y-6 px-6 pb-6 pt-6">
-            {loading ? (
+            {loading || reconnecting ? (
               <p role="status" className="py-8 text-sm text-muted">
-                Loading branches, PRs and profiles…
+                {reconnecting
+                  ? "Reconnecting GitHub…"
+                  : "Loading branches, PRs and profiles…"}
               </p>
             ) : options.length > 0 ? (
               <>
@@ -426,13 +470,15 @@ export default function RunSwarmButton({ projectId }: { projectId: number }) {
                 className="rounded-lg border border-red-500/40 p-3 text-sm"
               >
                 {error}
-                {!options.length && (
+                {(reauthFailed || !options.length) && (
                   <button
                     type="button"
                     className="ml-2 min-h-11 font-medium text-primary underline"
-                    onClick={() => void load()}
+                    onClick={() =>
+                      reauthFailed ? renewConnection(true) : void load()
+                    }
                   >
-                    Try again
+                    {reauthFailed ? "Reconnect GitHub" : "Try again"}
                   </button>
                 )}
               </div>
@@ -449,7 +495,14 @@ export default function RunSwarmButton({ projectId }: { projectId: number }) {
             </button>
             <button
               type="submit"
-              disabled={loading || busy || resolving || !selected || !targetUrl}
+              disabled={
+                loading ||
+                reconnecting ||
+                busy ||
+                resolving ||
+                !selected ||
+                !targetUrl
+              }
               className="btn-primary min-h-11 rounded-full px-5 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
             >
               {busy ? "Starting…" : "Start swarm"}

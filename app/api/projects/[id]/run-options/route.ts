@@ -1,3 +1,4 @@
+import { GithubRenewalUnavailable } from "@/lib/github-credentials";
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { getProject } from "@/lib/schema";
@@ -16,7 +17,10 @@ export async function GET(
   const owner = (await auth())?.user?.githubId;
   if (!owner)
     return NextResponse.json(
-      { error: "Sign in again to configure a run." },
+      {
+        error: "Sign in again to configure a run.",
+        code: "GITHUB_REAUTH_REQUIRED",
+      },
       { status: 401 },
     );
   const { id } = await params;
@@ -32,7 +36,10 @@ export async function GET(
     const ctx = await getGithubContext(req);
     if (!ctx)
       return NextResponse.json(
-        { error: "GitHub session expired. Sign in again." },
+        {
+          error: "Reconnecting GitHub is required.",
+          code: "GITHUB_REAUTH_REQUIRED",
+        },
         { status: 401 },
       );
     const query = req.nextUrl.searchParams;
@@ -59,14 +66,26 @@ export async function GET(
   } catch (error) {
     return NextResponse.json(
       {
+        ...(error instanceof GithubAuthError
+          ? { code: "GITHUB_REAUTH_REQUIRED" }
+          : {}),
         error:
-          error instanceof GithubAuthError
-            ? "GitHub session expired. Sign in again."
-            : error instanceof RunTargetError
-              ? error.message
-              : "Could not load run options. Try again.",
+          error instanceof GithubRenewalUnavailable
+            ? error.message
+            : error instanceof GithubAuthError
+              ? "GitHub session expired. Sign in again."
+              : error instanceof RunTargetError
+                ? error.message
+                : "Could not load run options. Try again.",
       },
-      { status: error instanceof GithubAuthError ? 401 : 502 },
+      {
+        status:
+          error instanceof GithubAuthError
+            ? 401
+            : error instanceof GithubRenewalUnavailable
+              ? 503
+              : 502,
+      },
     );
   }
 }

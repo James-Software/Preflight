@@ -3,7 +3,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { signIn } from "next-auth/react";
 
-export default function LoginHandoff({ returnTo }: { returnTo: string }) {
+export default function LoginHandoff({
+  returnTo,
+  reconnect = false,
+}: {
+  returnTo: string;
+  reconnect?: boolean;
+}) {
   const [busy, setBusy] = useState(true);
   const [error, setError] = useState("");
   const started = useRef(false);
@@ -33,7 +39,7 @@ export default function LoginHandoff({ returnTo }: { returnTo: string }) {
     <main className="flex min-h-svh items-center justify-center bg-page px-6 pb-16 pt-28">
       <div className="w-full max-w-sm text-center">
         <h1 className="text-3xl font-semibold tracking-tight">
-          Sign in to PreFlight
+          {reconnect ? "Reconnecting GitHub" : "Sign in to PreFlight"}
         </h1>
         <p role="status" className="mt-4 leading-relaxed text-muted">
           {busy

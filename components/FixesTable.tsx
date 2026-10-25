@@ -1,6 +1,7 @@
 "use client";
 
 import { Fragment, useEffect, useRef, useState } from "react";
+import { reconnectGithub, githubReconnected } from "@/lib/github-reconnect";
 import { useRouter } from "next/navigation";
 import type { FindingReport } from "@/lib/schema";
 import { BranchIcon, PullRequestIcon } from "@/components/GitIcons";
@@ -192,6 +193,11 @@ export default function FixesTable({
         },
       );
       const data = await response.json();
+      if (
+        response.status === 401 &&
+        reconnectGithub(window.location.pathname + window.location.search)
+      )
+        return;
       if (!response.ok) {
         if (data.groupId)
           setReserved((previous) => ({
@@ -202,6 +208,7 @@ export default function FixesTable({
           data.error || "Could not complete the action. Try again.",
         );
       }
+      if (kind === "open-pr") githubReconnected();
       if (kind === "delete") {
         setDeleted((previous) => [...previous, ...ids]);
         setNotice({

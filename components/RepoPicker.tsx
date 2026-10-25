@@ -1,5 +1,6 @@
 "use client";
 
+import { reconnectGithub, githubReconnected } from "@/lib/github-reconnect";
 import { useEffect, useMemo, useState } from "react";
 
 type Repo = {
@@ -82,11 +83,16 @@ export default function RepoPicker({
         };
         if (cancelled) return;
         if (!res.ok) {
+          if (res.status === 401) {
+            if (reconnectGithub("/dashboard/projects/new")) return;
+            setNeedsLogin(true);
+          }
           if (data.tokenMissing || data.tokenExpired) setNeedsLogin(true);
           setLoadError(data.error ?? "Could not load your repositories.");
           setRepos([]);
           return;
         }
+        githubReconnected();
         setRepos(data.repos ?? []);
         // If the app isn't installed on their account, private repos are
         // invisible to the token — offer a one-click install.
@@ -130,7 +136,13 @@ export default function RepoPicker({
       );
       const data = (await res.json()) as VerifyResponse;
       if (!res.ok) {
-        if ("tokenMissing" in data || "tokenExpired" in data) {
+        if (res.status === 401 && reconnectGithub("/dashboard/projects/new"))
+          return;
+        if (
+          res.status === 401 ||
+          "tokenMissing" in data ||
+          "tokenExpired" in data
+        ) {
           setNeedsLogin(true);
         }
         setVerifyError(errorMessage(data, "Could not verify the repository."));
@@ -173,12 +185,13 @@ export default function RepoPicker({
       {needsLogin ? (
         <div className="rounded-xl border px-4 py-3 text-sm text-ink/70 dark:text-white/70 border-line bg-panel">
           Your GitHub session expired.{" "}
-          <a
-            href="/login?callbackUrl=%2Fdashboard%2Fprojects%2Fnew"
+          <button
+            type="button"
+            onClick={() => reconnectGithub("/dashboard/projects/new", true)}
             className="font-medium text-ink underline underline-offset-2 dark:text-white"
           >
-            Log in again
-          </a>{" "}
+            Reconnect GitHub
+          </button>{" "}
           to pick a repository.
         </div>
       ) : repos === null ? (

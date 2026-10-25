@@ -161,7 +161,13 @@ function githubMock(t, options = {}) {
   return { refs, prs, trees, calls };
 }
 const prModule = () =>
-  load("lib/fix-pull-request.ts", { "@/lib/fix-patches": patches });
+  load("lib/fix-pull-request.ts", {
+    "@/lib/fix-patches": patches,
+    "@/lib/github": {
+      GithubAuthError: class extends Error {},
+      fetchGithub: (_ctx, url, init) => fetch(url, init),
+    },
+  });
 const ctx = { login: "owner", accessToken: "test-token" };
 const fix = (id) => ({
   id,
@@ -302,6 +308,9 @@ function actionRoute(options = {}) {
     "@/lib/schema": {},
   });
   const POST = load("app/api/projects/[id]/runs/[runId]/findings/route.ts", {
+    "@/lib/github-credentials": {
+      GithubRenewalUnavailable: class extends Error {},
+    },
     "next/cache": { revalidatePath: () => {} },
     "@/auth": {
       auth: async () =>
@@ -316,7 +325,10 @@ function actionRoute(options = {}) {
         findings: [fix(1), fix(2), fix(3), fix(4)],
       }),
     },
-    "@/lib/github": { getGithubContext: async () => ctx },
+    "@/lib/github": {
+      GithubAuthError: class extends Error {},
+      getGithubContext: async () => ctx,
+    },
     "@/lib/fix-groups": {
       acquireFixGroup: async () => {},
       releaseFixGroupLease: async () => {},

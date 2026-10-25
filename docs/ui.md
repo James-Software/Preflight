@@ -75,3 +75,10 @@ profile selection. Keep its primary action disabled until a deployment resolves.
 Credential fields wait for initialization and use POST even for native submission;
 never let a fallback form place session values in a URL. Secret values are not
 returned after saving. See [authenticated testing](authenticated-testing.md).
+
+GitHub credential expiry is handled on the server through background token
+renewal. If reconnect is required, use `reconnectGithub` and preserve the user's
+internal return path. The run panel restores its target/profile on return.
+Explicit `/login?reauth=github` must bypass the signed-in shortcut; bound automatic
+retries so a rejected OAuth connection cannot loop. See
+[GitHub session renewal](github-session-renewal/README.md).

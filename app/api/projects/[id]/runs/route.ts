@@ -1,3 +1,4 @@
+import { GithubRenewalUnavailable } from "@/lib/github-credentials";
 import { profileForRun } from "@/lib/auth-profiles";
 import { ProfileError } from "@/lib/auth-profile-state";
 import {
@@ -24,7 +25,10 @@ export async function GET(
   const session = await auth();
   const githubId = session?.user?.githubId;
   if (!githubId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      { error: "Unauthorized", code: "GITHUB_REAUTH_REQUIRED" },
+      { status: 401 },
+    );
   }
   const { id } = await params;
   if (!Number.isSafeInteger(Number(id)) || Number(id) <= 0)
@@ -55,7 +59,10 @@ export async function POST(
   const session = await auth();
   const githubId = session?.user?.githubId;
   if (!githubId) {
-    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+    return NextResponse.json(
+      { error: "Unauthorized", code: "GITHUB_REAUTH_REQUIRED" },
+      { status: 401 },
+    );
   }
   const { id } = await params;
   if (!Number.isSafeInteger(Number(id)) || Number(id) <= 0)
@@ -106,7 +113,10 @@ export async function POST(
       const ctx = await getGithubContext(req);
       if (!ctx)
         return NextResponse.json(
-          { error: "GitHub session expired. Sign in again." },
+          {
+            error: "Reconnecting GitHub is required.",
+            code: "GITHUB_REAUTH_REQUIRED",
+          },
           { status: 401 },
         );
       const resolved = await resolveRunTarget(
@@ -121,19 +131,42 @@ export async function POST(
     } catch (error) {
       return NextResponse.json(
         {
+          ...(error instanceof GithubAuthError
+            ? { code: "GITHUB_REAUTH_REQUIRED" }
+            : {}),
           error:
-            error instanceof RunTargetError
+            error instanceof GithubRenewalUnavailable
               ? error.message
-              : error instanceof GithubAuthError
-                ? "GitHub session expired. Sign in again."
-                : "Could not resolve this deployment. Try again.",
+              : error instanceof RunTargetError
+                ? error.message
+                : error instanceof GithubAuthError
+                  ? "GitHub session expired. Sign in again."
+                  : "Could not resolve this deployment. Try again.",
         },
-        { status: 400 },
+        {
+          status:
+            error instanceof GithubAuthError
+              ? 401
+              : error instanceof GithubRenewalUnavailable
+                ? 503
+                : 400,
+        },
       );
     }
   }
   if (!targetUrl) {
-    const ctx = await getGithubContext(req);
+    let ctx;
+    try {
+      ctx = await getGithubContext(req);
+    } catch {
+      return NextResponse.json(
+        {
+          error:
+            "GitHub connection renewal is temporarily unavailable. Try again shortly.",
+        },
+        { status: 503 },
+      );
+    }
     if (!ctx) {
       return NextResponse.json(
         {

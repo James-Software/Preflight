@@ -6,10 +6,13 @@ import LoginHandoff from "@/components/LoginHandoff";
 export default async function Login({
   searchParams,
 }: {
-  searchParams: Promise<{ callbackUrl?: string }>;
+  searchParams: Promise<{ callbackUrl?: string; reauth?: string }>;
 }) {
-  const returnTo = safeReturnTo((await searchParams).callbackUrl);
+  const params = await searchParams;
+  const returnTo = safeReturnTo(params.callbackUrl);
   const session = await auth();
-  if (session?.user) redirect(returnTo);
-  return <LoginHandoff returnTo={returnTo} />;
+  if (session?.user && params.reauth !== "github") redirect(returnTo);
+  return (
+    <LoginHandoff returnTo={returnTo} reconnect={params.reauth === "github"} />
+  );
 }

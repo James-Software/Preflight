@@ -74,3 +74,12 @@ this key. `/dashboard/profiles` stores encrypted cookie/local-storage/header
 profiles. The Run swarm panel chooses a profile and resolves the selected branch
 or PR deployment. See [authentication profiles](authenticated-testing.md) for
 supported formats, deployment resolution, origin scoping and verification limits.
+
+## GitHub connection renewal
+
+GitHub access/refresh credentials now live encrypted in `github_connections` and
+renew on the web server before access expiry. This uses existing Vercel
+**AUTH_SECRET**, **AUTH_GITHUB_ID** and **AUTH_GITHUB_SECRET**; no worker variable
+is needed. Legacy sessions may make one automatic GitHub round trip because their
+refresh token was previously discarded. Run setup preserves the chosen target and
+profile. See [renewal behavior and verification](github-session-renewal/README.md).

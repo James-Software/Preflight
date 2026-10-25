@@ -1,9 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import {
-  getGithubContext,
-  verifyRepo,
-  GithubAuthError,
-} from "@/lib/github";
+import { getGithubContext, verifyRepo, GithubAuthError } from "@/lib/github";
 
 /**
  * GET /api/github/repos/verify?repo=owner/name — verifies a repo for project
@@ -11,11 +7,25 @@ import {
  * GitHub App is installed on it (needed later for fix PRs).
  */
 export async function GET(req: NextRequest) {
-  const ctx = await getGithubContext(req);
+  let ctx;
+  try {
+    ctx = await getGithubContext(req);
+  } catch {
+    return NextResponse.json(
+      {
+        error:
+          "GitHub connection renewal is temporarily unavailable. Try again shortly.",
+      },
+      { status: 503 },
+    );
+  }
   if (!ctx) {
     return NextResponse.json(
-      { error: "GitHub session expired. Please log in again.", tokenMissing: true },
-      { status: 401 }
+      {
+        error: "GitHub session expired. Please log in again.",
+        tokenMissing: true,
+      },
+      { status: 401 },
     );
   }
   const fullName = (req.nextUrl.searchParams.get("repo") ?? "").trim();
@@ -32,8 +42,11 @@ export async function GET(req: NextRequest) {
   } catch (e) {
     if (e instanceof GithubAuthError) {
       return NextResponse.json(
-        { error: "GitHub session expired. Please log in again.", tokenExpired: true },
-        { status: 401 }
+        {
+          error: "GitHub session expired. Please log in again.",
+          tokenExpired: true,
+        },
+        { status: 401 },
       );
     }
     return NextResponse.json({

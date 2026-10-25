@@ -1,10 +1,14 @@
+import {
+  loadGithubCredentials,
+  GithubReconnectRequired,
+} from "@/lib/github-credentials";
 import { getToken } from "next-auth/jwt";
 import type { NextRequest } from "next/server";
 
 /* ------------------------------------------------------------------ */
-/* Server-side GitHub API helpers. The user's access token lives only  */
-/* in the encrypted JWT (never on the session), so it never reaches    */
-/* the browser. Every repo surfaced here is hard-gated on ownership:  */
+/* Server-side GitHub API helpers. Rotating credentials live encrypted */
+/* in the database; legacy encrypted JWT tokens remain compatible.     */
+/* Every repo surfaced here is hard-gated on ownership:                */
 /* the repo's owner login must match the signed-in user's login.       */
 /* ------------------------------------------------------------------ */
 
@@ -13,10 +17,11 @@ export class GithubAuthError extends Error {}
 export type GithubContext = {
   accessToken: string;
   login: string;
+  ownerGithubId?: string;
 };
 
 export async function getGithubContext(
-  req: NextRequest
+  req: NextRequest,
 ): Promise<GithubContext | null> {
   // Production uses the __Secure- cookie prefix; getToken must be told.
   const token = await getToken({
@@ -25,6 +30,16 @@ export async function getGithubContext(
     secureCookie: process.env.NODE_ENV === "production",
   });
   const t = token as unknown as Record<string, unknown> | null;
+  if (typeof t?.sub === "string") {
+    try {
+      const saved = await loadGithubCredentials(t.sub);
+      if (saved) return { ...saved, ownerGithubId: t.sub };
+      if (t.githubConnection) return null;
+    } catch (error) {
+      if (error instanceof GithubReconnectRequired) return null;
+      throw error;
+    }
+  }
   const accessToken = t?.githubAccessToken;
   const login = t?.githubLogin;
   if (
@@ -35,7 +50,11 @@ export async function getGithubContext(
   ) {
     return null;
   }
-  return { accessToken, login };
+  return {
+    accessToken,
+    login,
+    ...(typeof t?.sub === "string" ? { ownerGithubId: t.sub } : {}),
+  };
 }
 
 const API_BASE = "https://api.github.com";
@@ -51,18 +70,22 @@ export const GITHUB_APP_SLUG = "preflight-qa";
  * closed to false.
  */
 export async function isAppInstalledForUser(
-  ctx: GithubContext
+  ctx: GithubContext,
 ): Promise<boolean> {
   try {
-    const res = await fetch(`${API_BASE}/user/installations?per_page=100`, {
-      headers: apiHeaders(ctx.accessToken),
-    });
+    const res = await fetchGithub(
+      ctx,
+      `${API_BASE}/user/installations?per_page=100`,
+      {
+        headers: apiHeaders(ctx.accessToken),
+      },
+    );
     if (!res.ok) return false;
     const data = (await res.json()) as {
       installations?: { app_slug?: string }[];
     };
     return (data.installations ?? []).some(
-      (i) => i.app_slug === GITHUB_APP_SLUG
+      (i) => i.app_slug === GITHUB_APP_SLUG,
     );
   } catch {
     return false;
@@ -75,6 +98,45 @@ function apiHeaders(accessToken: string): HeadersInit {
     Accept: "application/vnd.github+json",
     "X-GitHub-Api-Version": API_VERSION,
   };
+}
+
+/** Retry a 401 once if another request just rotated this connection's token. */
+export async function fetchGithub(
+  ctx: GithubContext,
+  url: string,
+  init: RequestInit = {},
+): Promise<Response> {
+  if (new URL(url).origin !== API_BASE)
+    throw new Error("Invalid GitHub API URL.");
+  const request = (token: string) => {
+    const headers = new Headers(init.headers);
+    headers.set("Authorization", `Bearer ${token}`);
+    if (!headers.has("Accept"))
+      headers.set("Accept", "application/vnd.github+json");
+    if (!headers.has("X-GitHub-Api-Version"))
+      headers.set("X-GitHub-Api-Version", API_VERSION);
+    return fetch(url, {
+      ...init,
+      headers,
+      cache: init.cache ?? "no-store",
+      signal: init.signal ?? AbortSignal.timeout(15_000),
+    });
+  };
+  let response = await request(ctx.accessToken);
+  if (response.status === 401 && ctx.ownerGithubId) {
+    let current;
+    try {
+      current = await loadGithubCredentials(ctx.ownerGithubId);
+    } catch (error) {
+      if (!(error instanceof GithubReconnectRequired)) throw error;
+    }
+    if (current && current.accessToken !== ctx.accessToken) {
+      await response.body?.cancel();
+      ctx.accessToken = current.accessToken;
+      response = await request(current.accessToken);
+    }
+  }
+  return response;
 }
 
 export type SlimRepo = {
@@ -107,15 +169,16 @@ const ownsRepo = (ctx: GithubContext, ownerLogin: string | undefined) =>
   (ownerLogin ?? "").toLowerCase() === ctx.login.toLowerCase();
 
 /** Repos owned by the caller, most recently pushed first (max ~300). */
-export async function listOwnedRepos(
-  ctx: GithubContext
-): Promise<SlimRepo[]> {
+export async function listOwnedRepos(ctx: GithubContext): Promise<SlimRepo[]> {
   const out: SlimRepo[] = [];
-  let url: string | null = `${API_BASE}/user/repos?type=owner&sort=pushed&direction=desc&per_page=100`;
+  let url: string | null =
+    `${API_BASE}/user/repos?type=owner&sort=pushed&direction=desc&per_page=100`;
   let pages = 0;
   while (url && pages < 3) {
     pages += 1;
-    const res = await fetch(url, { headers: apiHeaders(ctx.accessToken) });
+    const res = await fetchGithub(ctx, url, {
+      headers: apiHeaders(ctx.accessToken),
+    });
     if (res.status === 401) throw new GithubAuthError();
     if (!res.ok) throw new Error(`GitHub API error: ${res.status}`);
     const data = (await res.json()) as GhRepoJson[];
@@ -155,9 +218,9 @@ export type VerifyResult =
 export async function resolveDefaultBranchPreview(
   ctx: GithubContext,
   owner: string,
-  repo: string
+  repo: string,
 ): Promise<{ url: string; branch: string } | null> {
-  const repoRes = await fetch(`${API_BASE}/repos/${owner}/${repo}`, {
+  const repoRes = await fetchGithub(ctx, `${API_BASE}/repos/${owner}/${repo}`, {
     headers: apiHeaders(ctx.accessToken),
   });
   if (repoRes.status === 401) throw new GithubAuthError();
@@ -165,11 +228,12 @@ export async function resolveDefaultBranchPreview(
   const repoData = (await repoRes.json()) as { default_branch?: string };
   const branch = repoData.default_branch || "main";
 
-  const depRes = await fetch(
+  const depRes = await fetchGithub(
+    ctx,
     `${API_BASE}/repos/${owner}/${repo}/deployments?ref=${encodeURIComponent(
-      branch
+      branch,
     )}&per_page=10`,
-    { headers: apiHeaders(ctx.accessToken) }
+    { headers: apiHeaders(ctx.accessToken) },
   );
   if (depRes.status === 401) throw new GithubAuthError();
   if (!depRes.ok) return null;
@@ -182,9 +246,10 @@ export async function resolveDefaultBranchPreview(
   for (const d of deployments.slice(0, 5)) {
     if (!d.environment_url) continue;
     try {
-      const stRes = await fetch(
+      const stRes = await fetchGithub(
+        ctx,
         `${API_BASE}/repos/${owner}/${repo}/deployments/${d.id}/statuses?per_page=1`,
-        { headers: apiHeaders(ctx.accessToken) }
+        { headers: apiHeaders(ctx.accessToken) },
       );
       if (stRes.status === 401) throw new GithubAuthError();
       if (!stRes.ok) continue;
@@ -208,12 +273,12 @@ export async function resolveDefaultBranchPreview(
 export async function verifyRepo(
   ctx: GithubContext,
   owner: string,
-  repo: string
+  repo: string,
 ): Promise<VerifyResult> {
   if (!ownsRepo(ctx, owner)) {
     return { ok: false, error: "You can only connect repositories you own." };
   }
-  const res = await fetch(`${API_BASE}/repos/${owner}/${repo}`, {
+  const res = await fetchGithub(ctx, `${API_BASE}/repos/${owner}/${repo}`, {
     headers: apiHeaders(ctx.accessToken),
   });
   if (res.status === 401) throw new GithubAuthError();
@@ -238,9 +303,10 @@ export async function verifyRepo(
   }
   let appInstalled: boolean | null = null;
   try {
-    const inst = await fetch(
+    const inst = await fetchGithub(
+      ctx,
       `${API_BASE}/repos/${owner}/${repo}/installation`,
-      { headers: apiHeaders(ctx.accessToken) }
+      { headers: apiHeaders(ctx.accessToken) },
     );
     if (inst.status === 200) appInstalled = true;
     else if (inst.status === 404) appInstalled = false;

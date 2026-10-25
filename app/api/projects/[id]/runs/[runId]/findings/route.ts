@@ -1,8 +1,9 @@
+import { GithubRenewalUnavailable } from "@/lib/github-credentials";
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { getProject, getRunReport } from "@/lib/schema";
-import { getGithubContext } from "@/lib/github";
+import { getGithubContext, GithubAuthError } from "@/lib/github";
 import {
   acquireFixGroup,
   completeFixGroup,
@@ -96,6 +97,15 @@ export async function POST(
     } catch (error) {
       if (error instanceof FixPatchError)
         await releaseInvalidFixGroup(group.id);
+      if (error instanceof GithubAuthError)
+        return NextResponse.json(
+          {
+            error: "Reconnect GitHub to resume this PR group.",
+            code: "GITHUB_REAUTH_REQUIRED",
+            groupId: group.id,
+          },
+          { status: 401 },
+        );
       // Reservation stays durable. Retrying resumes the same group/branch, including after a timeout.
       revalidatePath(path);
       return NextResponse.json(
@@ -115,6 +125,8 @@ export async function POST(
     revalidatePath(path);
     return NextResponse.json({ prUrl: pr.html_url, prNumber: pr.number });
   } catch (error) {
+    if (error instanceof GithubRenewalUnavailable)
+      return NextResponse.json({ error: error.message }, { status: 503 });
     if (error instanceof FixActionError)
       return NextResponse.json(
         { error: error.message },

@@ -1,4 +1,4 @@
-import { GithubAuthError, type GithubContext } from "@/lib/github";
+import { fetchGithub, GithubAuthError, type GithubContext } from "@/lib/github";
 
 export type RunTarget =
   | { type: "branch"; ref: string }
@@ -18,7 +18,8 @@ function github(ctx: GithubContext, repo: string) {
   )
     throw new RunTargetError("You can only test repositories you own.");
   return async (path: string) => {
-    const response = await fetch(
+    const response = await fetchGithub(
+      ctx,
       `https://api.github.com/repos/${repo}${path}`,
       {
         headers: {

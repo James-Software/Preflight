@@ -244,6 +244,9 @@ function swarmRoute(trigger, config, changes = {}) {
     },
     "@/lib/github": {},
     "@/lib/auth-profiles": {},
+    "@/lib/github-credentials": {
+      GithubRenewalUnavailable: class extends Error {},
+    },
     "@/lib/auth-profile-state": {},
     "@/lib/run-targets": {},
   });

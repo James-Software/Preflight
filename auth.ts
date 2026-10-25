@@ -1,11 +1,17 @@
+import { headers } from "next/headers";
+import { getToken } from "next-auth/jwt";
+import {
+  savedGithubOwner,
+  saveGithubCredentials,
+} from "@/lib/github-credentials";
 import NextAuth, { type DefaultSession } from "next-auth";
 import GitHub from "next-auth/providers/github";
 import { isLoginAllowed, addToWaitlist } from "@/lib/access";
 import { claimInvite, INVITE_COOKIE } from "@/lib/invites";
 
-// The GitHub numeric user id rides on the JWT as token.sub; the username
-// rides as token.githubLogin. Both are exposed on the session so server
-// code can scope database rows and gate admin pages to the caller.
+// token.sub is a stable app owner linked to GitHub's numeric account ID.
+// Existing signed-in owners are retained when linking legacy sessions.
+// The username supports ownership checks and admin navigation.
 declare module "next-auth" {
   interface Session {
     user: {
@@ -15,8 +21,8 @@ declare module "next-auth" {
   }
 }
 
-// GitHub-only login for now. JWT sessions mean no database tables are
-// needed for auth itself — the session lives in an encrypted cookie.
+// App sessions use encrypted JWT cookies. GitHub's rotating connection
+// credentials live encrypted on the server so requests can renew them together.
 // Required env: AUTH_GITHUB_ID, AUTH_GITHUB_SECRET, AUTH_SECRET, AUTH_URL.
 export const { handlers, auth, signIn, signOut } = NextAuth({
   providers: [GitHub],
@@ -75,12 +81,58 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (p?.login) {
         t.githubLogin = p.login.toLowerCase();
       }
-      // Persist the GitHub user access token for server-side API calls
-      // (repo listing, verification). It lives only in the encrypted JWT;
-      // it is never copied onto the session, so it never reaches the browser.
-      // Present on `account` at sign-in; the JWT keeps it across refreshes.
       if (account?.access_token) {
-        t.githubAccessToken = account.access_token;
+        const providerId = String(account.providerAccountId || "");
+        let owner = await savedGithubOwner(providerId);
+        if (!owner) {
+          // Older Auth.js sessions can use a random app ID. Keep the current
+          // signed-in owner's projects when linking their same GitHub account.
+          const previous = await getToken({
+            req: { headers: await headers() },
+            secret: process.env.AUTH_SECRET,
+            secureCookie: process.env.NODE_ENV === "production",
+          });
+          const sameAccount =
+            previous?.githubProviderId === providerId ||
+            (!previous?.githubProviderId &&
+              typeof previous?.githubLogin === "string" &&
+              previous.githubLogin.toLowerCase() ===
+                String(t.githubLogin || "").toLowerCase());
+          owner =
+            sameAccount && typeof previous?.sub === "string"
+              ? previous.sub
+              : providerId;
+        }
+        const login = typeof t.githubLogin === "string" ? t.githubLogin : "";
+        if (!owner || !providerId || !login)
+          throw new Error("GitHub connection identity is missing.");
+        const expiresAt =
+          typeof account.expires_at === "number"
+            ? account.expires_at * 1000
+            : null;
+        const refreshSeconds = account.refresh_token_expires_in;
+        owner = await saveGithubCredentials(
+          owner,
+          login,
+          {
+            accessToken: account.access_token,
+            refreshToken:
+              typeof account.refresh_token === "string"
+                ? account.refresh_token
+                : null,
+            expiresAt,
+            refreshExpiresAt:
+              typeof refreshSeconds === "number"
+                ? Date.now() + refreshSeconds * 1000
+                : null,
+          },
+          providerId,
+        );
+        token.sub = owner;
+        t.githubProviderId = providerId;
+        t.githubConnection = true;
+        delete t.githubAccessToken;
+        delete t.githubRefreshToken;
       }
       return token;
     },

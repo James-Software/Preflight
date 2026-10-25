@@ -1,4 +1,4 @@
-import type { GithubContext } from "@/lib/github";
+import { fetchGithub, GithubAuthError, type GithubContext } from "@/lib/github";
 import { mergePatches, parsePatch, type PatchFile } from "@/lib/fix-patches";
 
 type Fix = { id: number; title: string; patch_diff: string | null };
@@ -29,7 +29,7 @@ export async function openFixPullRequest(
     body?: unknown,
     allow404 = false,
   ): Promise<any> => {
-    const response = await fetch(`${base}${path}`, {
+    const response = await fetchGithub(ctx, `${base}${path}`, {
       method,
       headers: {
         Authorization: `Bearer ${ctx.accessToken}`,
@@ -43,10 +43,7 @@ export async function openFixPullRequest(
     });
     if (allow404 && response.status === 404) return null;
     if (!response.ok) {
-      if (response.status === 401)
-        throw new Error(
-          "Your GitHub session expired. Sign in again, then retry this group.",
-        );
+      if (response.status === 401) throw new GithubAuthError();
       if (response.status === 403 || response.status === 404)
         throw new Error(
           "Allow the PreFlight GitHub App access to this repository with Contents and Pull requests write permissions, then sign in again.",
