@@ -39,14 +39,14 @@ export function stepCloudFlow(
         );
         const distanceSquared =
           (px - t * dx * aspect) ** 2 + (py - t * dy) ** 2;
-        push = Math.exp(-distanceSquared / 0.012) * gain * 0.9;
+        push = Math.exp(-distanceSquared / 0.012) * gain * 0.4;
       }
       const vx = flow.values[index] * decay + dx * push;
       const vy = flow.values[index + 1] * decay + dy * push;
       // Bound physical displacement in screen space, including narrow windows.
       const limit = Math.min(
         1,
-        0.055 / Math.max(Math.hypot(vx * aspect, vy), 0.00001),
+        0.025 / Math.max(Math.hypot(vx * aspect, vy), 0.00001),
       );
       flow.values[index] = Math.abs(vx * limit) < 0.0001 ? 0 : vx * limit;
       flow.values[index + 1] = Math.abs(vy * limit) < 0.0001 ? 0 : vy * limit;

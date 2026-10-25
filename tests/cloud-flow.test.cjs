@@ -45,7 +45,7 @@ test("fast repeated strokes remain bounded for wide and narrow windows", () => {
       );
     for (let i = 0; i < flow.values.length; i += 2)
       assert.ok(
-        Math.hypot(flow.values[i] * aspect, flow.values[i + 1]) <= 0.055001,
+        Math.hypot(flow.values[i] * aspect, flow.values[i + 1]) <= 0.025001,
       );
   }
 });
