@@ -1,6 +1,6 @@
 import { serializeJsonLd } from "@/lib/structured-data";
 import type { Metadata } from "next";
-import { publicAlternates, SITE_URL } from "@/lib/site";
+import { publicAlternates, SITE_URL, SITE_PREVIEW_IMAGE } from "@/lib/site";
 import { notFound } from "next/navigation";
 import { getPostBySlug } from "@/lib/blog";
 import Markdown from "@/components/Markdown";
@@ -28,6 +28,7 @@ export async function generateMetadata({
     alternates: publicAlternates(`/blog/${encodeURIComponent(slug)}`),
     openGraph: {
       type: "article",
+      images: [SITE_PREVIEW_IMAGE],
       title: post.title,
       publishedTime: new Date(post.created_at).toISOString(),
       modifiedTime: new Date(post.updated_at).toISOString(),

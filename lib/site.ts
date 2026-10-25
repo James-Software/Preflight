@@ -1,5 +1,11 @@
 export const SITE_URL = "https://www.trypreflight.dev";
 export const SITE_DESCRIPTION = "Run AI agents through your app in real browsers. Review findings with screenshots, console logs and network traces.";
+export const SITE_PREVIEW_IMAGE = {
+  url: `${SITE_URL}/images/social-preview.png`,
+  width: 1200,
+  height: 631,
+  alt: "PreFlight logo above sunlit clouds.",
+};
 // Keep robots.txt and public response headers aligned on content-use preferences.
 export const CONTENT_SIGNALS = "ai-train=yes, search=yes, ai-input=yes";
 

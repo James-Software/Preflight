@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 import Providers from "@/components/Providers";
-import { SITE_URL, SITE_DESCRIPTION } from "@/lib/site";
+import { SITE_URL, SITE_DESCRIPTION, SITE_PREVIEW_IMAGE } from "@/lib/site";
 
 const display = localFont({
   src: [
@@ -39,9 +39,11 @@ export const metadata: Metadata = {
     url: SITE_URL,
     siteName: "PreFlight",
     type: "website",
+    images: [SITE_PREVIEW_IMAGE],
   },
   twitter: {
     card: "summary_large_image",
+    images: [SITE_PREVIEW_IMAGE],
     title: "PreFlight: AI Agents That Test Your App Like Real Users",
     description:
       SITE_DESCRIPTION,
