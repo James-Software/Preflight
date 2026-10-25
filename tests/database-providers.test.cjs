@@ -448,3 +448,63 @@ test("unrelated Neon request errors do not trigger organization discovery or lea
   );
   assert.equal(calls, 1);
 });
+
+test("selecting Neon again replaces a locked zero-check URI without decrypting it, while preserving configured checks", async () => {
+  const { NextRequest } = require("next/server");
+  for (const count of [0, 1]) {
+    let reads = 0,
+      saved = 0;
+    const route = load("app/api/database-providers/[provider]/route.ts", {
+      "@/auth": { auth: async () => ({ user: { githubId: "100" } }) },
+      "@/lib/schema": { getProject: async () => ({ id: 7 }) },
+      "@/lib/database-check-config": config,
+      "@/lib/auth-profile-state": state,
+      "@/lib/database-provider-api": {
+        ...api,
+        providerConnectionString: async () =>
+          "postgresql://fresh:private@db.example.com/app",
+      },
+      "@/lib/database-provider-accounts": {
+        providerAccessToken: async () => "private-provider-token",
+      },
+      "@/lib/database-connections": {
+        listProjectDatabases: async () => [
+          { id: 9, origin: "https://app.test", check_count: count },
+        ],
+        projectDatabaseSettings: async () => {
+          reads++;
+          throw new config.DatabaseConnectionLocked(
+            "Could not unlock the database connection.",
+          );
+        },
+        saveProjectDatabase: async (project, owner, input) => {
+          saved++;
+          assert.equal(project, 7);
+          assert.equal(owner, "100");
+          assert.deepEqual(input.checks, []);
+          return { id: 9, check_count: 0 };
+        },
+      },
+      "next/cache": { revalidatePath: () => {} },
+    });
+    const response = await route.POST(
+      new NextRequest("https://preflight.test/api/database-providers/neon", {
+        method: "POST",
+        headers: { origin: "https://preflight.test" },
+        body: JSON.stringify({
+          action: "select",
+          projectId: 7,
+          origin: "https://app.test",
+          project: "neon-project",
+          branch: "branch",
+          database: "app",
+          role: "test",
+        }),
+      }),
+      { params: Promise.resolve({ provider: "neon" }) },
+    );
+    assert.equal(response.status, count === 0 ? 200 : 400);
+    assert.equal(reads, count === 0 ? 0 : 1);
+    assert.equal(saved, count === 0 ? 1 : 0);
+  }
+});

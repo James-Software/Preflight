@@ -236,9 +236,13 @@ export async function POST(req: NextRequest, context: Context) {
       const existing = (await listProjectDatabases(projectId, owner)).find(
         (c) => c.origin === new URL(input.origin).origin,
       );
-      const checks = existing
-        ? (await projectDatabaseSettings(projectId, owner, existing.id)).checks
-        : [];
+      // No encrypted settings need recovering when no custom checks exist.
+      // This lets a fresh provider selection replace a stale encrypted URI.
+      const checks =
+        existing && existing.check_count > 0
+          ? (await projectDatabaseSettings(projectId, owner, existing.id))
+              .checks
+          : [];
       const connection = await saveProjectDatabase(projectId, owner, {
         origin: input.origin,
         connectionString,

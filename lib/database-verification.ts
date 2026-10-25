@@ -48,6 +48,9 @@ export async function preflightRunDatabase(runId: number) {
         ? error.message
         : "Database verification could not be initialized. Check the connection and encryption key.";
     await getSql()`UPDATE run_database_checks SET status='error',summary=${message},completed_at=NOW() WHERE run_id=${runId} AND status IN ('pending','running')`;
+    await getSql()`INSERT INTO run_database_checks(run_id,check_id,title,button_label,status,summary,completed_at)
+      VALUES (${runId},'database-preflight','Database connection','Setup','error',${message},NOW())
+      ON CONFLICT(run_id,check_id) DO UPDATE SET status='error',summary=EXCLUDED.summary,completed_at=NOW()`;
     throw new DatabaseCheckError(message);
   }
 }

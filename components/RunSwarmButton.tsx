@@ -28,6 +28,7 @@ export default function RunSwarmButton({ projectId }: { projectId: number }) {
     null,
   );
   const [verifyDatabase, setVerifyDatabase] = useState(false);
+  const [databaseLocked, setDatabaseLocked] = useState(false);
   const [reconnecting, setReconnecting] = useState(false);
   const [reauthFailed, setReauthFailed] = useState(false);
   const redirecting = useRef(false);
@@ -62,6 +63,7 @@ export default function RunSwarmButton({ projectId }: { projectId: number }) {
     setError("");
     setTargetUrl("");
     setDatabase(null);
+    setDatabaseLocked(false);
     setVerifyDatabase(false);
     setTargetError("");
     setSearch("");
@@ -129,6 +131,7 @@ export default function RunSwarmButton({ projectId }: { projectId: number }) {
     setResolving(true);
     setTargetUrl("");
     setDatabase(null);
+    setDatabaseLocked(false);
     setVerifyDatabase(false);
     setTargetError("");
     const query = new URLSearchParams({
@@ -214,8 +217,10 @@ export default function RunSwarmButton({ projectId }: { projectId: number }) {
         if (!renewConnection()) setBusy(false);
         return;
       }
-      if (!response.ok)
+      if (!response.ok) {
+        setDatabaseLocked(data.code === "DATABASE_CONNECTION_LOCKED");
         throw new Error(data.error || "Could not start the run.");
+      }
       window.location.assign(
         `/dashboard/projects/${projectId}/runs/${data.run.id}`,
       );
@@ -502,6 +507,14 @@ export default function RunSwarmButton({ projectId }: { projectId: number }) {
                 className="rounded-lg border border-red-500/40 p-3 text-sm"
               >
                 {error}
+                {databaseLocked && (
+                  <a
+                    className="pressable mt-2 inline-flex min-h-11 items-center rounded-lg px-2 font-medium text-primary hover:bg-panel"
+                    href={`/dashboard/projects/${projectId}/database#database-settings`}
+                  >
+                    Reconnect database →
+                  </a>
+                )}
                 {(reauthFailed || !options.length) && (
                   <button
                     type="button"

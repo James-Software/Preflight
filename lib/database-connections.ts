@@ -1,9 +1,15 @@
-import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
+import {
+  createCipheriv,
+  createDecipheriv,
+  createHash,
+  randomBytes,
+} from "node:crypto";
 import { getSql } from "@/lib/db";
 import { ensureSchema, getProject } from "@/lib/schema";
 import { profileKey, profileOrigin } from "@/lib/auth-profile-state";
 import {
   DatabaseCheckError,
+  DatabaseConnectionLocked,
   parseDatabaseChecks,
   type DatabaseCheck,
 } from "@/lib/database-check-config";
@@ -17,6 +23,7 @@ export type DatabaseSnapshot = {
   id: number;
   origin: string;
   encryptedConfig: string;
+  encryptionKeyId?: string;
 };
 export type DatabaseMetadata = {
   id: number;
@@ -24,6 +31,13 @@ export type DatabaseMetadata = {
   check_count: number;
   updated_at: string;
 };
+function encryptionKeyId() {
+  return createHash("sha256")
+    .update("preflight:database:key-id:v1:")
+    .update(profileKey())
+    .digest("hex")
+    .slice(0, 24);
+}
 function aad(owner: string, projectId: number, origin: string) {
   return Buffer.from(
     `preflight:database:v1\n${owner}\n${projectId}\n${origin}`,
@@ -73,8 +87,8 @@ function unseal(
       ]).toString("utf8"),
     );
   } catch {
-    throw new DatabaseCheckError(
-      "Could not unlock the database connection. Check the shared encryption key or reconnect the database.",
+    throw new DatabaseConnectionLocked(
+      "Could not unlock the database connection. Reconnect it in this project’s Database tab. Keep PROFILE_ENCRYPTION_KEY unchanged and identical in Vercel and Trigger.dev.",
     );
   }
 }
@@ -213,6 +227,7 @@ export async function databaseForRun(
       id: row.id,
       origin,
       encryptedConfig: row.encrypted_config,
+      encryptionKeyId: encryptionKeyId(),
     } as DatabaseSnapshot,
     checks: config.checks.map((c) => ({
       id: c.id,
@@ -249,6 +264,13 @@ export async function runDatabaseConfig(runId: number, forCleanup = false) {
       "This database connection was disconnected. Reconnect it and start a new run.",
     );
   const snapshot = row.database_snapshot;
+  if (
+    snapshot.encryptionKeyId &&
+    snapshot.encryptionKeyId !== encryptionKeyId()
+  )
+    throw new DatabaseCheckError(
+      "This run’s database snapshot uses a different PROFILE_ENCRYPTION_KEY. Set the same original key in Vercel Production and Trigger.dev Production, then redeploy both. Reconnecting only applies to new runs.",
+    );
   if (snapshot.origin !== profileOrigin(row.target_url))
     throw new DatabaseCheckError(
       "The database connection does not match the tested origin.",

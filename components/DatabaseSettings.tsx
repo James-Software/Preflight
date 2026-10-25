@@ -83,6 +83,43 @@ export default function DatabaseSettings({
     setError("");
     setEditing(true);
   }
+  async function reconnect(connection: DatabaseMetadata) {
+    setError("");
+    setNotice("");
+    let savedChecks: DraftCheck[] = [];
+    if (connection.check_count > 0) {
+      setBusy(true);
+      try {
+        const response = await fetch(`${endpoint}?connection=${connection.id}`);
+        const data = await response.json();
+        if (!response.ok)
+          throw new Error(
+            "Restore the original encryption key to keep this connection’s advanced checks. To replace those checks, disconnect this saved connection first, then reconnect.",
+          );
+        savedChecks = data.settings.checks.map((check: any) => ({
+          ...check,
+          expectedText: JSON.stringify(check.expected),
+        }));
+      } catch (error) {
+        setError(
+          error instanceof Error
+            ? error.message
+            : "Could not load existing checks.",
+        );
+        return;
+      } finally {
+        setBusy(false);
+      }
+    }
+    setId(null);
+    setOrigin(connection.origin);
+    setUrl("");
+    setChecks(savedChecks);
+    setEditing(true);
+    setNotice(
+      "Select your database again or enter a fresh connection URL. This replaces PreFlight’s saved connection without deleting database records.",
+    );
+  }
   async function edit(connection: number) {
     setBusy(true);
     setError("");
@@ -239,6 +276,14 @@ export default function DatabaseSettings({
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-3">
+                  <button
+                    type="button"
+                    disabled={busy}
+                    onClick={() => void reconnect(connection)}
+                    className="min-h-11 px-2 text-sm font-medium text-primary"
+                  >
+                    Reconnect
+                  </button>
                   <button
                     type="button"
                     disabled={busy}

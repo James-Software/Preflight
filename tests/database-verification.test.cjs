@@ -448,3 +448,92 @@ test("database settings enforce request origin and ownership before touching a c
     }
   }
 });
+
+test("locked database connections return a specific startup error before creating or triggering a run", async () => {
+  let created = 0;
+  const { POST } = load("app/api/projects/[id]/runs/route.ts", {
+    "@/auth": { auth: async () => ({ user: { githubId: "100" } }) },
+    "@/lib/database-connections": {
+      databaseForRun: async () => {
+        throw new config.DatabaseConnectionLocked(
+          "Could not unlock the database connection.",
+        );
+      },
+    },
+    "@/lib/database-check-config": config,
+    "@/lib/auth-profiles": {},
+    "@/lib/auth-profile-state": {},
+    "@/lib/github-credentials": {},
+    "@/lib/github": {},
+    "@/lib/run-targets": {},
+    "@/lib/trigger-client": { getTriggerClientConfig: () => ({}) },
+    "@/lib/schema": {
+      getProject: async () => ({ id: 7, app_url: "https://app.test" }),
+      createRun: async () => {
+        created++;
+      },
+    },
+    "@trigger.dev/sdk": {
+      tasks: {
+        trigger: async () => {
+          created++;
+        },
+      },
+    },
+  });
+  const response = await POST(
+    new Request("https://preflight.test/api/projects/7/runs", {
+      method: "POST",
+      headers: { origin: "https://preflight.test" },
+      body: JSON.stringify({ verifyDatabase: true }),
+    }),
+    { params: Promise.resolve({ id: "7" }) },
+  );
+  assert.equal(response.status, 400);
+  assert.equal((await response.json()).code, "DATABASE_CONNECTION_LOCKED");
+  assert.equal(created, 0);
+});
+
+test("worker encryption setup failures are persisted even when a run has no advanced checks", async () => {
+  const statements = [];
+  const api = load("lib/database-verification.ts", {
+    "@/lib/db": {
+      getSql:
+        () =>
+        async (parts, ...values) => {
+          statements.push({ q: parts.join("?"), values });
+          return [];
+        },
+    },
+    "@/lib/database-connections": {
+      runDatabaseConfig: async () => {
+        throw new config.DatabaseCheckError("Shared encryption key differs.");
+      },
+    },
+    "@/lib/postgres-verification": {},
+    "@/lib/database-check-config": config,
+  });
+  await assert.rejects(
+    api.preflightRunDatabase(12),
+    /Shared encryption key differs/,
+  );
+  assert.ok(
+    statements.some(
+      (s) =>
+        s.q.includes("INSERT INTO run_database_checks") &&
+        s.values.includes("Shared encryption key differs."),
+    ),
+  );
+});
+
+test("workers distinguish a mismatched snapshot key from a stale saved connection",async(t)=>{
+  const previous=process.env.PROFILE_ENCRYPTION_KEY;
+  process.env.PROFILE_ENCRYPTION_KEY=Buffer.alloc(32,8).toString('base64');
+  t.after(()=>{if(previous===undefined)delete process.env.PROFILE_ENCRYPTION_KEY;else process.env.PROFILE_ENCRYPTION_KEY=previous});
+  const state=load('lib/auth-profile-state.ts',{});
+  const api=load('lib/database-connections.ts',{
+    '@/lib/db':{getSql:()=>async()=>[{database_snapshot:{id:1,origin:'https://app.test',encryptedConfig:'unreadable',encryptionKeyId:'a-different-deployment-key'},status:'running',project_id:7,target_url:'https://app.test',owner_github_id:'100',connection_id:1,revoked_at:null}]},
+    '@/lib/schema':{},'@/lib/auth-profile-state':state,'@/lib/database-check-config':config,'@/lib/postgres-verification':{},
+  });
+  await assert.rejects(api.runDatabaseConfig(12),/different PROFILE_ENCRYPTION_KEY/);
+});

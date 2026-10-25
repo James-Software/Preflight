@@ -1,5 +1,8 @@
 import { databaseForRun } from "@/lib/database-connections";
-import { DatabaseCheckError } from "@/lib/database-check-config";
+import {
+  DatabaseCheckError,
+  DatabaseConnectionLocked,
+} from "@/lib/database-check-config";
 import { GithubRenewalUnavailable } from "@/lib/github-credentials";
 import { profileForRun } from "@/lib/auth-profiles";
 import { ProfileError } from "@/lib/auth-profile-state";
@@ -221,6 +224,9 @@ export async function POST(
     } catch (error) {
       return NextResponse.json(
         {
+          ...(error instanceof DatabaseConnectionLocked
+            ? { code: "DATABASE_CONNECTION_LOCKED" }
+            : {}),
           error:
             error instanceof DatabaseCheckError || error instanceof ProfileError
               ? error.message
