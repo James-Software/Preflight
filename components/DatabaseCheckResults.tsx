@@ -5,6 +5,17 @@ export default function DatabaseCheckResults({
   checks: DatabaseCheckReport[];
 }) {
   if (!checks.length) return null;
+  const isSetup = (check: DatabaseCheckReport) =>
+    check.status === "error" &&
+    (check.button_label === "Automatic" || check.button_label === "Setup");
+  const setup = [
+    ...new Map(
+      checks
+        .filter(isSetup)
+        .map((check) => [check.summary || check.title, check]),
+    ).values(),
+  ];
+  const assertions = checks.filter((check) => !isSetup(check));
   const labels: Record<string, string> = {
     passed: "Confirmed",
     failed: "Not confirmed",
@@ -21,51 +32,70 @@ export default function DatabaseCheckResults({
         Database verification
       </h2>
       <p className="mt-2 text-sm text-muted">
-        {checks.filter((check) => check.status === "passed").length} of{" "}
-        {checks.length} checks confirmed a saved change after the button click.
+        {assertions.length
+          ? `${assertions.filter((check) => check.status === "passed").length} of ${assertions.length} database checks confirmed the expected change.`
+          : "No database assertions completed. Database setup prevented verification."}
       </p>
-      <div className="mt-4 overflow-hidden rounded-lg border border-line">
-        <table className="w-full table-fixed text-left text-sm">
-          <caption className="sr-only">
-            Database checks and persistence results
-          </caption>
-          <thead className="bg-panel text-xs text-muted">
-            <tr>
-              <th className="px-4 py-4 font-medium" scope="col">
-                Check
-              </th>
-              <th className="w-32 px-4 py-4 font-medium" scope="col">
-                Result
-              </th>
-            </tr>
-          </thead>
-          <tbody className="divide-y divide-line">
-            {checks.map((check) => (
-              <tr key={check.check_id}>
-                <td className="min-w-0 px-4 py-5">
-                  <p className="break-words font-medium">{check.title}</p>
-                  <p className="mt-1 break-words text-xs text-muted">
-                    Button: {check.button_label}
-                  </p>
-                  {check.summary && (
-                    <p className="mt-3 break-words text-xs leading-relaxed text-muted">
-                      {check.summary}
-                    </p>
-                  )}
-                </td>
-                <td
-                  className={`px-4 py-5 align-top ${check.status === "passed" ? "text-green-700 dark:text-green-300" : check.status === "failed" ? "text-red-700 dark:text-red-300" : "text-muted"}`}
-                >
-                  <span>
-                    {check.status === "passed" ? "✓ " : ""}
-                    {labels[check.status] || check.status}
-                  </span>
-                </td>
-              </tr>
+      {setup.length > 0 && (
+        <div className="mt-4 rounded-lg border border-line bg-panel p-4">
+          <h3 className="text-sm font-semibold">
+            Database verification needs attention
+          </h3>
+          <ul className="mt-2 space-y-2 text-sm text-muted">
+            {setup.map((check) => (
+              <li key={check.check_id}>{check.summary || check.title}</li>
             ))}
-          </tbody>
-        </table>
-      </div>
+          </ul>
+          <p className="mt-3 text-xs text-muted">
+            These are verification setup issues, not application bugs. Start a
+            new run after resolving them.
+          </p>
+        </div>
+      )}
+      {assertions.length > 0 && (
+        <div className="mt-4 overflow-hidden rounded-lg border border-line">
+          <table className="w-full table-fixed text-left text-sm">
+            <caption className="sr-only">
+              Database checks and persistence results
+            </caption>
+            <thead className="bg-panel text-xs text-muted">
+              <tr>
+                <th className="px-4 py-4 font-medium" scope="col">
+                  Check
+                </th>
+                <th className="w-32 px-4 py-4 font-medium" scope="col">
+                  Result
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-line">
+              {assertions.map((check) => (
+                <tr key={check.check_id}>
+                  <td className="min-w-0 px-4 py-5">
+                    <p className="break-words font-medium">{check.title}</p>
+                    <p className="mt-1 break-words text-xs text-muted">
+                      Button: {check.button_label}
+                    </p>
+                    {check.summary && (
+                      <p className="mt-3 break-words text-xs leading-relaxed text-muted">
+                        {check.summary}
+                      </p>
+                    )}
+                  </td>
+                  <td
+                    className={`px-4 py-5 align-top ${check.status === "passed" ? "text-green-700 dark:text-green-300" : check.status === "failed" ? "text-red-700 dark:text-red-300" : "text-muted"}`}
+                  >
+                    <span>
+                      {check.status === "passed" ? "✓ " : ""}
+                      {labels[check.status] || check.status}
+                    </span>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
     </section>
   );
 }

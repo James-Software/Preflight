@@ -328,6 +328,9 @@ test("database setup fails before browser allocation, and configured workflows r
     const payloads = [],
       statuses = [];
     const task = load("src/trigger/run-swarm.ts", {
+      "@/lib/automatic-database": {
+        preflightAutomaticDatabase: async () => true,
+      },
       "@/lib/auth-profiles": {},
       "@/lib/model-config": { assertSwarmModelConfig: () => {} },
       "@/lib/db": {
@@ -526,14 +529,40 @@ test("worker encryption setup failures are persisted even when a run has no adva
   );
 });
 
-test("workers distinguish a mismatched snapshot key from a stale saved connection",async(t)=>{
-  const previous=process.env.PROFILE_ENCRYPTION_KEY;
-  process.env.PROFILE_ENCRYPTION_KEY=Buffer.alloc(32,8).toString('base64');
-  t.after(()=>{if(previous===undefined)delete process.env.PROFILE_ENCRYPTION_KEY;else process.env.PROFILE_ENCRYPTION_KEY=previous});
-  const state=load('lib/auth-profile-state.ts',{});
-  const api=load('lib/database-connections.ts',{
-    '@/lib/db':{getSql:()=>async()=>[{database_snapshot:{id:1,origin:'https://app.test',encryptedConfig:'unreadable',encryptionKeyId:'a-different-deployment-key'},status:'running',project_id:7,target_url:'https://app.test',owner_github_id:'100',connection_id:1,revoked_at:null}]},
-    '@/lib/schema':{},'@/lib/auth-profile-state':state,'@/lib/database-check-config':config,'@/lib/postgres-verification':{},
+test("workers distinguish a mismatched snapshot key from a stale saved connection", async (t) => {
+  const previous = process.env.PROFILE_ENCRYPTION_KEY;
+  process.env.PROFILE_ENCRYPTION_KEY = Buffer.alloc(32, 8).toString("base64");
+  t.after(() => {
+    if (previous === undefined) delete process.env.PROFILE_ENCRYPTION_KEY;
+    else process.env.PROFILE_ENCRYPTION_KEY = previous;
   });
-  await assert.rejects(api.runDatabaseConfig(12),/different PROFILE_ENCRYPTION_KEY/);
+  const state = load("lib/auth-profile-state.ts", {});
+  const api = load("lib/database-connections.ts", {
+    "@/lib/db": {
+      getSql: () => async () => [
+        {
+          database_snapshot: {
+            id: 1,
+            origin: "https://app.test",
+            encryptedConfig: "unreadable",
+            encryptionKeyId: "a-different-deployment-key",
+          },
+          status: "running",
+          project_id: 7,
+          target_url: "https://app.test",
+          owner_github_id: "100",
+          connection_id: 1,
+          revoked_at: null,
+        },
+      ],
+    },
+    "@/lib/schema": {},
+    "@/lib/auth-profile-state": state,
+    "@/lib/database-check-config": config,
+    "@/lib/postgres-verification": {},
+  });
+  await assert.rejects(
+    api.runDatabaseConfig(12),
+    /different PROFILE_ENCRYPTION_KEY/,
+  );
 });

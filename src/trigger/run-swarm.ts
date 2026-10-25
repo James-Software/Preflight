@@ -1,3 +1,4 @@
+import { preflightAutomaticDatabase } from "@/lib/automatic-database";
 import {
   preflightRunDatabase,
   databaseVerificationError,
@@ -81,6 +82,9 @@ export const runSwarm = task({
       throw error;
     }
 
+    const automaticReady = run.database_snapshot
+      ? await preflightAutomaticDatabase(payload.runId)
+      : false;
     const cancelled = async () => {
       const current =
         await sql`SELECT status FROM runs WHERE id = ${payload.runId}`;
@@ -134,7 +138,7 @@ export const runSwarm = task({
             agentIndex: i,
             assignment,
             appUrl: targetUrl,
-            verifyDatabase: !!run.database_snapshot,
+            verifyDatabase: automaticReady,
             ...(run.auth_profile_id
               ? { authProfileId: run.auth_profile_id }
               : {}),
@@ -148,7 +152,7 @@ export const runSwarm = task({
       }
       if (await cancelled())
         return { runId: payload.runId, status: "cancelled" };
-      if (run.database_snapshot) {
+      if (automaticReady) {
         const automatic = await tasks.triggerAndWait("browser-agent", {
           runId: payload.runId,
           agentIndex: assignments.length,

@@ -196,6 +196,7 @@ test("automatic verification proposes cleanup only for newly observed marked rec
     end: async () => {},
   };
   const api = load("lib/automatic-database.ts", {
+    "@/lib/database-check-config": config,
     "@/lib/db": {
       getSql:
         () =>

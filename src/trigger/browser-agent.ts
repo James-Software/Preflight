@@ -1,6 +1,7 @@
 import {
   automaticDatabase,
   automaticDatabaseUnavailable,
+  inspectionFailure,
 } from "@/lib/automatic-database";
 import {
   runDatabaseVerifier,
@@ -17,6 +18,7 @@ import {
   driverDecide,
   judgeStep,
   assessSeverity,
+  summarizeFinding,
   type AgentAction,
 } from "@/lib/models";
 import { uploadScreenshot } from "@/lib/evidence";
@@ -169,7 +171,16 @@ export const browserAgent = task({
           if (MODEL_CONFIG.judge.provider === "openai-decisions") throw error;
           // Legacy providers retain the default severity when triage is unavailable.
         }
+        let fixSummary = `${title}. Investigate the failing interaction, correct its handler or validation, and add a regression check for the observed behavior.`;
+        try {
+          fixSummary = redact(
+            await summarizeFinding({ title, detail: detail.slice(0, 3000) }),
+          );
+        } catch {
+          /* Evidence remains useful if summarization is unavailable. */
+        }
         await createFinding({
+          fixSummary,
           runId: payload.runId,
           agentId: agent.id,
           severity,
@@ -277,11 +288,12 @@ export const browserAgent = task({
               payload.agentIndex,
               stepIndex,
             );
-          } catch {
+          } catch (error) {
             await automaticDatabaseUnavailable(
               payload.runId,
               payload.agentIndex,
               stepIndex,
+              inspectionFailure(error),
             );
           }
         }
@@ -396,11 +408,12 @@ export const browserAgent = task({
           if (observe && automatic) {
             try {
               before = await automatic.before();
-            } catch {
+            } catch (error) {
               await automaticDatabaseUnavailable(
                 payload.runId,
                 payload.agentIndex,
                 stepIndex,
+                inspectionFailure(error),
               );
               await automatic.close();
               automatic = null;
@@ -417,11 +430,12 @@ export const browserAgent = task({
                 before,
                 action.action === "click" ? action.name : "Enter",
               );
-            } catch {
+            } catch (error) {
               await automaticDatabaseUnavailable(
                 payload.runId,
                 payload.agentIndex,
                 stepIndex,
+                inspectionFailure(error),
               );
             }
           }

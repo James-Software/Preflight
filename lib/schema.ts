@@ -151,6 +151,7 @@ export async function ensureSchema(): Promise<void> {
       created_at TIMESTAMPTZ DEFAULT NOW()
     )
   `;
+  await sql`ALTER TABLE findings ADD COLUMN IF NOT EXISTS fix_summary TEXT`;
   await sql`
     CREATE TABLE IF NOT EXISTS diagnoses (
       id SERIAL PRIMARY KEY,
@@ -187,6 +188,10 @@ export async function ensureSchema(): Promise<void> {
   await sql`ALTER TABLE findings ADD COLUMN IF NOT EXISTS pr_group_id UUID REFERENCES fix_pr_groups(id)`;
   await sql`ALTER TABLE fix_pr_groups ADD COLUMN IF NOT EXISTS lease_until TIMESTAMPTZ`;
   await sql`ALTER TABLE findings ADD COLUMN IF NOT EXISTS deleted_at TIMESTAMPTZ`;
+  await sql`ALTER TABLE fix_pr_groups ADD COLUMN IF NOT EXISTS error_summary TEXT`;
+  await sql`ALTER TABLE fix_pr_groups ADD COLUMN IF NOT EXISTS github_grant TEXT`;
+  await sql`ALTER TABLE fix_pr_groups ADD COLUMN IF NOT EXISTS worker_token UUID`;
+  await sql`ALTER TABLE fix_pr_groups ADD COLUMN IF NOT EXISTS worker_lease_until TIMESTAMPTZ`;
   await sql`
     CREATE TABLE IF NOT EXISTS credit_ledger (
       id SERIAL PRIMARY KEY,
@@ -392,16 +397,17 @@ export async function createFinding(input: {
   screenshotUrl: string | null;
   consoleLogs: string | null;
   networkErrors: unknown;
+  fixSummary?: string;
 }): Promise<void> {
   await ensureSchema();
   await getSql()`
     INSERT INTO findings
       (run_id, agent_id, severity, title, repro_steps, screenshot_url,
-       console_logs, network_errors, status)
+       console_logs, network_errors, status, fix_summary)
     VALUES
       (${input.runId}, ${input.agentId}, ${input.severity}, ${input.title},
        ${input.reproSteps}, ${input.screenshotUrl}, ${input.consoleLogs},
-       ${JSON.stringify(input.networkErrors)}::jsonb, 'open')
+       ${JSON.stringify(input.networkErrors)}::jsonb, 'open', ${input.fixSummary ?? null})
   `;
 }
 
@@ -415,6 +421,8 @@ export interface DatabaseCheckReport {
 }
 
 export interface FindingReport {
+  fix_summary?: string | null;
+  pr_error?: string | null;
   pr_group_id: string | null;
   pr_group_state: string | null;
   id: number;
@@ -454,13 +462,13 @@ export async function getRunReport(
   `;
   if (!Array.isArray(runs) || !runs.length) return null;
   const findings = await sql`
-    SELECT f.id, f.title, f.severity, f.status, f.repro_steps,
+    SELECT f.id, f.title, f.severity, f.status, f.repro_steps, f.fix_summary,
       f.screenshot_url, f.console_logs, f.network_errors,
       d.root_cause, d.confidence, d.patch_diff,
       COALESCE(g.pr_url, pr.pr_url) AS pr_url,
       COALESCE(g.pr_number, pr.pr_number) AS pr_number,
       COALESCE(g.state, pr.state) AS pr_state,
-      f.pr_group_id, g.state AS pr_group_state
+      f.pr_group_id, g.state AS pr_group_state, g.error_summary AS pr_error
     FROM findings f
     LEFT JOIN diagnoses d ON d.finding_id = f.id
     LEFT JOIN fix_pr_groups g ON g.id = f.pr_group_id

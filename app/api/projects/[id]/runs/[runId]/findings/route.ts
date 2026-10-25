@@ -1,3 +1,6 @@
+import { saveFixGithubGrant } from "@/lib/fix-github-grant";
+import { tasks } from "@trigger.dev/sdk";
+import { getTriggerClientConfig } from "@/lib/trigger-client";
 import { GithubRenewalUnavailable } from "@/lib/github-credentials";
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
@@ -71,6 +74,16 @@ export async function POST(
         "Your GitHub session expired. Sign in again to open a PR.",
         401,
       );
+    if (
+      ids.length > 10 &&
+      ids.some(
+        (id) => !report.findings.find((f) => f.id === id)?.patch_diff?.trim(),
+      )
+    )
+      throw new FixActionError(
+        "Prepare up to 10 fixes per PR. Select a smaller group.",
+        400,
+      );
     const group = await reserveFixGroup(
       owner,
       projectId,
@@ -84,6 +97,38 @@ export async function POST(
         prNumber: group.pr_number,
       });
     const fixes = ids.map((id) => report.findings.find((f) => f.id === id)!);
+    if (fixes.some((f) => !f.patch_diff?.trim())) {
+      const config = getTriggerClientConfig();
+      try {
+        await acquireFixGroup(group.id);
+      } catch (error) {
+        if (error instanceof FixActionError)
+          return NextResponse.json(
+            { queued: true, groupId: group.id },
+            { status: 202 },
+          );
+        throw error;
+      }
+      try {
+        await saveFixGithubGrant(group.id, owner, ctx);
+        await tasks.trigger(
+          "prepare-fix-pr",
+          { groupId: group.id, runId: runNumber, projectId, owner },
+          config,
+        );
+      } catch {
+        await releaseFixGroupLease(group.id);
+        throw new FixActionError(
+          "Could not queue fix preparation. Check the Trigger.dev deployment and retry this group.",
+          503,
+        );
+      }
+      revalidatePath(path);
+      return NextResponse.json(
+        { queued: true, groupId: group.id },
+        { status: 202 },
+      );
+    }
     await acquireFixGroup(group.id);
     let pr;
     try {
@@ -93,6 +138,7 @@ export async function POST(
         group.branch,
         fixes,
         new URL(path, req.nextUrl.origin).href,
+        fixes.some((f) => f.confidence === "proposed"),
       );
     } catch (error) {
       if (error instanceof FixPatchError)

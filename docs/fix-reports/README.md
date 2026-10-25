@@ -49,11 +49,22 @@ non-UTF-8 and CRLF changes require manual review. Invalid patches release their
 reservation so they remain manageable; transient API failures preserve the group
 for retry. Existing executable file modes are retained.
 
-**Scope:** this adds report management and PR creation from stored
-`diagnoses.patch_diff` values. The current swarm still collects findings only;
-it does not automatically diagnose findings or generate code patches. Those
-findings correctly display **Awaiting fix** and cannot open an empty PR. No
-illustrative landing-page fixes are substituted into real reports.
+**Fix preparation:** findings without a stored patch can now be selected for a PR.
+The action queues `prepare-fix-pr` in Trigger.dev, which reads bounded source
+files from the saved repository, generates exact validated edits and opens a
+**draft** PR. Existing patches retain their current direct PR path; generated
+patches remain draft on retries. Each selection stays one group/branch/PR.
+Generation failures stay visible beside the finding with a retry action. No empty
+PR or illustrative landing-page patch is substituted. Generated changes are not
+executed or tested automatically and need review before merging.
+
+Copy Prompt works for selected findings or all visible findings. Each bug gets a
+heading and one concise paragraph, with blank lines/separators between bugs.
+New findings save an evidence-based issue/fix paragraph; older findings use their
+stored diagnosis or a bounded reproduction-based repair prompt. Expanded evidence
+shows the same paragraph so it remains manually copyable if clipboard access fails.
+
+See [fix preparation validation](../finding-fix-preparation/README.md).
 
 ## Verification
 

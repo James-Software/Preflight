@@ -239,7 +239,9 @@ function parentTask({
   const statuses = [];
   let batches = 0;
   const task = load("src/trigger/run-swarm.ts", {
-    "@/lib/automatic-database": {},
+    "@/lib/automatic-database": {
+      preflightAutomaticDatabase: async () => true,
+    },
     "@/lib/database-verification": {},
     "@/lib/auth-profiles": {},
     "@trigger.dev/sdk": {

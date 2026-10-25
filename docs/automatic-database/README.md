@@ -66,3 +66,17 @@ PROFILE_ENCRYPTION_KEY stable and identical in web/worker deployments.
 - Production build and TypeScript checks. No customer database was modified and
   no paid swarm/model request was made during validation. Deploy both web and
   Trigger workers before testing a live run.
+
+## Schema decoding and setup reports
+
+The metadata query casts column names to `text` before `array_agg`: PostgreSQL’s
+`name[]` (OID 1003) is returned as a string by node-postgres, while `text[]`
+(OID 1009) is parsed as an array. The old string reached `.map` during inspection
+and caused one generic unavailable row per browser step. A parent preflight now
+validates schema/observation once and disables automatic inspection for that run
+when setup is unavailable, preserving normal browser testing. Runtime setup
+failures share one run-level error ID and retain sanitized permission/timeout
+messages. Historical identical setup rows collapse in the UI and are excluded
+from assertion totals. They are never presented as confirmed application bugs.
+The corrected worker requires a new run to obtain real verification evidence;
+previous failures are not retroactively converted to passes.

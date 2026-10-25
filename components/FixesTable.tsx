@@ -1,4 +1,5 @@
 "use client";
+import { findingsPrompt, findingFixParagraph } from "@/lib/finding-prompts";
 
 import { Fragment, useEffect, useRef, useState } from "react";
 import { reconnectGithub, githubReconnected } from "@/lib/github-reconnect";
@@ -20,8 +21,7 @@ function safeUrl(raw: string | null, github = false) {
 }
 const pendingGroup = (f: FindingReport) =>
   !!f.pr_group_id && f.pr_group_state !== "open";
-const ready = (f: FindingReport) =>
-  !!f.patch_diff?.trim() && !f.pr_url && !f.pr_group_id;
+const ready = (f: FindingReport) => !f.pr_url && !f.pr_group_id;
 
 function Evidence({ finding: f }: { finding: FindingReport }) {
   const screenshot = safeUrl(f.screenshot_url);
@@ -44,11 +44,11 @@ function Evidence({ finding: f }: { finding: FindingReport }) {
             </p>
           </section>
         )}
-        {f.root_cause && (
+        {
           <section>
-            <h3 className="font-semibold">Root cause</h3>
+            <h3 className="font-semibold">Issue & suggested fix</h3>
             <p className="mt-2 whitespace-pre-wrap break-words text-sm leading-relaxed">
-              {f.root_cause}
+              {findingFixParagraph(f)}
             </p>
             {f.confidence && (
               <p className="mt-2 text-sm text-muted">
@@ -56,11 +56,11 @@ function Evidence({ finding: f }: { finding: FindingReport }) {
               </p>
             )}
           </section>
-        )}
+        }
         {!f.patch_diff && (
           <p className="text-sm text-muted">
-            No proposed code change yet. This finding can be reviewed or
-            deleted; a PR requires a fix.
+            Opening a PR prepares a code patch from the repository first. Review
+            and test the resulting PR before merging.
           </p>
         )}
         {(
@@ -156,14 +156,55 @@ export default function FixesTable({
         : {}),
       pr_group_id: f.pr_group_id || reserved[f.id] || null,
     }));
-  const selectable = rows.filter((f) => !pendingGroup(f));
-  const selection = rows.filter(
-    (f) => selected.includes(f.id) && !pendingGroup(f),
-  );
+  const selectable = rows;
+  const selection = rows.filter((f) => selected.includes(f.id));
   const allSelected =
     !!selectable.length && selection.length === selectable.length;
   const readyRows = rows.filter(ready);
   const canOpen = !!selection.length && selection.every(ready);
+  const waiting = rows.some((f) => pendingGroup(f) && !f.pr_error);
+  useEffect(() => {
+    if (!waiting) return;
+    const timer = setInterval(() => router.refresh(), 8000);
+    return () => clearInterval(timer);
+  }, [waiting, router]);
+  useEffect(() => {
+    setReserved((previous) =>
+      Object.fromEntries(
+        Object.entries(previous).filter(([id]) =>
+          findings.some((f) => f.id === Number(id) && !!f.pr_group_id),
+        ),
+      ),
+    );
+  }, [findings]);
+  const preparingNotice = !!notice?.text.startsWith("Preparing code fixes");
+  useEffect(() => {
+    if (!preparingNotice) return;
+    const tracked = findings.filter((f) => reserved[f.id]);
+    if (!tracked.length) return;
+    if (tracked.some((f) => f.pr_error))
+      setNotice({
+        text: "Fix preparation needs attention. Review the finding’s message, retry the PR, or copy its prompt.",
+      });
+    else if (tracked.every((f) => safeUrl(f.pr_url, true)))
+      setNotice({
+        text: "Your PR is ready for review.",
+        url: safeUrl(tracked[0].pr_url, true),
+      });
+  }, [findings, reserved, preparingNotice]);
+  async function copyPrompts(chosen: FindingReport[]) {
+    try {
+      await navigator.clipboard.writeText(findingsPrompt(chosen));
+      setNotice({
+        text: `Copied ${chosen.length} bug prompt${chosen.length === 1 ? "" : "s"}.`,
+      });
+      setError("");
+    } catch {
+      setError(
+        "Could not access the clipboard. Expand a finding and copy its issue and suggested fix.",
+      );
+    }
+  }
   useEffect(() => {
     if (selectAll.current)
       selectAll.current.indeterminate = !!selection.length && !allSelected;
@@ -207,6 +248,17 @@ export default function FixesTable({
         throw new Error(
           data.error || "Could not complete the action. Try again.",
         );
+      }
+      if (data.queued) {
+        setReserved((previous) => ({
+          ...previous,
+          ...Object.fromEntries(ids.map((id) => [id, data.groupId])),
+        }));
+        setNotice({
+          text: "Preparing code fixes and opening your PR. This report updates automatically.",
+        });
+        setSelected([]);
+        return;
       }
       if (kind === "open-pr") githubReconnected();
       if (kind === "delete") {
@@ -261,15 +313,25 @@ export default function FixesTable({
             evidence.
           </p>
         </div>
-        <button
-          type="button"
-          className={`${secondary} shrink-0`}
-          disabled={busy || !readyRows.length}
-          onClick={() => void action("open-pr", readyRows)}
-        >
-          <PullRequestIcon />
-          Open PR for all{readyRows.length ? ` (${readyRows.length})` : ""}
-        </button>
+        <div className="flex flex-wrap gap-3">
+          <button
+            type="button"
+            className={secondary}
+            disabled={busy || !rows.length}
+            onClick={() => void copyPrompts(rows)}
+          >
+            Copy Prompt for all
+          </button>
+          <button
+            type="button"
+            className={`${secondary} shrink-0`}
+            disabled={busy || !readyRows.length}
+            onClick={() => void action("open-pr", readyRows)}
+          >
+            <PullRequestIcon />
+            Open PR for all{readyRows.length ? ` (${readyRows.length})` : ""}
+          </button>
+        </div>
       </div>
       <div
         style={{ top: headerHeight }}
@@ -278,7 +340,7 @@ export default function FixesTable({
         <p className="mr-auto text-sm text-muted" aria-live="polite">
           {selection.length
             ? `${selection.length} selected`
-            : `${readyRows.length} ready for PR`}
+            : `${readyRows.length} available for PR`}
         </p>
         {!!selection.length && (
           <button
@@ -293,6 +355,14 @@ export default function FixesTable({
           type="button"
           className={secondary}
           disabled={busy || !selection.length}
+          onClick={() => void copyPrompts(selection)}
+        >
+          Copy Prompt of selected
+        </button>
+        <button
+          type="button"
+          className={secondary}
+          disabled={busy || !selection.length || selection.some(pendingGroup)}
           onClick={() => dialog.current?.showModal()}
         >
           Delete selected
@@ -312,8 +382,8 @@ export default function FixesTable({
         </button>
         {selection.length > 0 && !canOpen && (
           <p className="w-full text-xs text-muted">
-            A new PR can include only fixes marked Ready for PR. Existing PRs
-            and findings awaiting a fix are excluded.
+            Findings already included in a PR or a pending PR group cannot be
+            grouped again.
           </p>
         )}
       </div>
@@ -405,7 +475,7 @@ export default function FixesTable({
                         <input
                           type="checkbox"
                           checked={selection.some((row) => row.id === f.id)}
-                          disabled={busy || pendingGroup(f)}
+                          disabled={busy}
                           aria-label={`Select ${f.title}`}
                           className="size-4 cursor-pointer accent-primary"
                           onChange={(e) =>
@@ -485,13 +555,22 @@ export default function FixesTable({
                           }
                         >
                           <BranchIcon />
-                          Resume PR
+                          {f.pr_error ? "Retry PR" : "Resume PR"}
                         </button>
                       ) : (
                         <span className="inline-flex min-h-11 items-center gap-2 text-muted">
                           {ready(f) && <BranchIcon />}
-                          {ready(f) ? "Ready for PR" : "Awaiting fix"}
+                          {ready(f)
+                            ? f.patch_diff?.trim()
+                              ? "Ready for PR"
+                              : "Prepare fix on request"
+                            : "In a PR group"}
                         </span>
+                      )}
+                      {f.pr_error && (
+                        <p className="mt-2 max-w-xs break-words text-xs text-red-700 dark:text-red-300">
+                          {f.pr_error}
+                        </p>
                       )}
                     </td>
                   </tr>

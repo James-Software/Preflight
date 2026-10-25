@@ -9,6 +9,7 @@ export interface FixGroup {
   state: string;
   pr_url: string | null;
   pr_number: number | null;
+  github_grant?: string | null;
 }
 
 export class FixActionError extends Error {
@@ -63,9 +64,9 @@ export async function reserveFixGroup(
   if (group.state === "open") return group;
   const claimed = await sql`
     WITH candidates AS MATERIALIZED (
-      SELECT f.id FROM findings f JOIN diagnoses d ON d.finding_id = f.id
+      SELECT f.id FROM findings f LEFT JOIN diagnoses d ON d.finding_id = f.id
       WHERE f.run_id = ${runId} AND f.id = ANY(${ids}::int[])
-        AND f.deleted_at IS NULL AND NULLIF(TRIM(d.patch_diff), '') IS NOT NULL
+        AND f.deleted_at IS NULL
         AND (f.pr_group_id IS NULL OR f.pr_group_id = ${key}::uuid)
         AND NOT EXISTS (SELECT 1 FROM pull_requests pr WHERE pr.diagnosis_id = d.id)
       ORDER BY f.id FOR UPDATE OF f
@@ -88,7 +89,7 @@ export async function completeFixGroup(
   url: string,
   number: number,
 ): Promise<void> {
-  await getSql()`UPDATE fix_pr_groups SET state = 'open', pr_url = ${url}, pr_number = ${number} WHERE id = ${key}::uuid`;
+  await getSql()`UPDATE fix_pr_groups SET state = 'open', pr_url = ${url}, pr_number = ${number}, github_grant=NULL WHERE id = ${key}::uuid`;
 }
 
 export async function releaseInvalidFixGroup(key: string): Promise<void> {
@@ -99,7 +100,7 @@ export async function releaseInvalidFixGroup(key: string): Promise<void> {
 /** Only one request may build a group at a time; crashed requests expire. */
 export async function acquireFixGroup(key: string): Promise<void> {
   const rows =
-    await getSql()`UPDATE fix_pr_groups SET lease_until = NOW() + INTERVAL '330 seconds'
+    await getSql()`UPDATE fix_pr_groups SET lease_until = NOW() + INTERVAL '330 seconds', error_summary=NULL
     WHERE id = ${key}::uuid AND state = 'pending' AND (lease_until IS NULL OR lease_until < NOW()) RETURNING id`;
   if (!Array.isArray(rows) || !rows.length)
     throw new FixActionError(
@@ -139,4 +140,17 @@ export async function deleteFindings(
     throw new FixActionError(
       "Some findings are unavailable or have a PR in progress. Refresh and try again.",
     );
+}
+
+export async function failFixGroup(key: string, message: string) {
+  await getSql()`UPDATE fix_pr_groups SET error_summary=${message} WHERE id=${key}::uuid AND state='pending'`;
+}
+
+export async function claimFixWork(group: string, token: string) {
+  const rows =
+    await getSql()`UPDATE fix_pr_groups SET worker_token=${token}::uuid,worker_lease_until=NOW()+INTERVAL '330 seconds' WHERE id=${group}::uuid AND state='pending' AND (worker_lease_until IS NULL OR worker_lease_until<NOW()) RETURNING id`;
+  return Array.isArray(rows) && rows.length === 1;
+}
+export async function releaseFixWork(group: string, token: string) {
+  await getSql()`UPDATE fix_pr_groups SET worker_token=NULL,worker_lease_until=NULL WHERE id=${group}::uuid AND worker_token=${token}::uuid`;
 }

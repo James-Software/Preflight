@@ -13,7 +13,7 @@ export const identifier = (name: string) => `"${name.replaceAll('"', '""')}"`;
 export async function recordTargets(client: Client): Promise<RecordTarget[]> {
   const result = await client.query(`
     SELECT c.relname AS table, pk.attname AS key,
-      array_agg(a.attname ORDER BY a.attnum) AS columns
+      array_agg(a.attname::text ORDER BY a.attnum) AS columns
     FROM pg_class c JOIN pg_namespace n ON n.oid=c.relnamespace
     JOIN pg_index i ON i.indrelid=c.oid AND i.indisprimary AND i.indnatts=1
     JOIN pg_attribute pk ON pk.attrelid=c.oid AND pk.attnum=i.indkey[0]
@@ -24,10 +24,16 @@ export async function recordTargets(client: Client): Promise<RecordTarget[]> {
       AND a.attname ~* '^(name|title|slug|label|display_name|project_name|description)$'
       AND has_table_privilege(c.oid,'SELECT')
     GROUP BY c.relname,pk.attname ORDER BY c.relname LIMIT 24`);
-  return result.rows.map((row) => ({
-    ...row,
-    columns: row.columns.slice(0, 6),
-  }));
+  return result.rows.map((row) => {
+    if (
+      !Array.isArray(row.columns) ||
+      row.columns.some((column: unknown) => typeof column !== "string")
+    )
+      throw new DatabaseCheckError(
+        "Database schema metadata could not be decoded. Update the PreFlight worker and retry.",
+      );
+    return { ...row, columns: row.columns.slice(0, 6) };
+  });
 }
 
 export function markerPredicate(target: RecordTarget) {
@@ -62,8 +68,19 @@ export async function observeRecords(
     }
     await client.query("COMMIT");
     return records;
-  } catch {
+  } catch (error) {
     await client.query("ROLLBACK").catch(() => {});
+    if (error instanceof DatabaseCheckError) throw error;
+    const code =
+      typeof error === "object" && error && "code" in error ? error.code : null;
+    if (code === "42501")
+      throw new DatabaseCheckError(
+        "The database role cannot SELECT from the test tables. Grant read access and start a new run.",
+      );
+    if (code === "57014")
+      throw new DatabaseCheckError(
+        "Database inspection timed out. Use a smaller test dataset or an indexed advanced check.",
+      );
     throw new DatabaseCheckError(
       "Could not inspect uniquely marked test records. Check database permissions or add an advanced verification check.",
     );

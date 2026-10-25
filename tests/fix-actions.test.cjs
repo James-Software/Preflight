@@ -308,6 +308,15 @@ function actionRoute(options = {}) {
     "@/lib/schema": {},
   });
   const POST = load("app/api/projects/[id]/runs/[runId]/findings/route.ts", {
+    "@/lib/fix-github-grant": { saveFixGithubGrant: async () => {} },
+    "@trigger.dev/sdk": {
+      tasks: {
+        trigger: async (...args) => {
+          calls.push(["queue", ...args]);
+        },
+      },
+    },
+    "@/lib/trigger-client": { getTriggerClientConfig: () => ({}) },
     "@/lib/github-credentials": {
       GithubRenewalUnavailable: class extends Error {},
     },
@@ -323,7 +332,9 @@ function actionRoute(options = {}) {
       },
       getRunReport: async () => ({
         run: { repo_full_name: options.runRepo || "owner/app" },
-        findings: [fix(1), fix(2), fix(3), fix(4)],
+        findings: [fix(1), fix(2), fix(3), fix(4)].map((f) =>
+          options.noPatch ? { ...f, patch_diff: null } : f,
+        ),
       }),
     },
     "@/lib/github": {
@@ -455,4 +466,24 @@ test("fix PRs keep the run's original repository after the project repository ch
     route.calls.find((c) => c[0] === "repo"),
     ["repo", "owner/original"],
   );
+});
+
+test("unpatched selected findings queue fix preparation rather than requiring a pre-existing patch", async () => {
+  const route = actionRoute({ noPatch: true });
+  const response = await route.post({
+    action: "open-pr",
+    findingIds: [1, 2],
+    groupId: key,
+  });
+  assert.equal(response.status, 202);
+  assert.equal((await response.json()).queued, true);
+  const queued = route.calls.find((call) => call[0] === "queue");
+  assert.equal(queued[1], "prepare-fix-pr");
+  assert.deepEqual(queued[2], {
+    groupId: key,
+    runId: 2,
+    projectId: 1,
+    owner: "100",
+  });
+  assert.ok(!route.calls.some((call) => call[0] === "pr"));
 });

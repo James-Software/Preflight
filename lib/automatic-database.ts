@@ -1,3 +1,4 @@
+import { DatabaseCheckError } from "@/lib/database-check-config";
 import { randomBytes, randomUUID, createHash } from "node:crypto";
 import { setTimeout as delay } from "node:timers/promises";
 import { getSql } from "@/lib/db";
@@ -94,8 +95,37 @@ export async function automaticDatabaseUnavailable(
   summary = "Could not inspect the database. Check the connection, permissions and shared encryption key. This workflow has not been verified.",
 ) {
   await getSql()`UPDATE run_database_checks SET status='error',summary=${summary},completed_at=NOW() WHERE run_id=${runId} AND check_id LIKE ${`auto-${agent}-${step}-%`} AND status='running'`;
-  const id = `auto-unavailable-${agent}-${step}`;
+  const id = "automatic-unavailable";
   await getSql()`INSERT INTO run_database_checks(run_id,check_id,title,button_label,status,summary,completed_at)
     VALUES (${runId},${id},'Automatic database verification','Automatic','error',${summary},NOW())
     ON CONFLICT(run_id,check_id) DO NOTHING`;
+}
+
+export function inspectionFailure(error: unknown) {
+  if (error instanceof DatabaseCheckError) return error.message;
+  const code =
+    typeof error === "object" && error && "code" in error ? error.code : null;
+  if (code === "42501")
+    return "The database role cannot read schema metadata or test rows. Grant SELECT access to the test tables and retry.";
+  if (code === "57014")
+    return "Database inspection exceeded its query timeout. Limit verification to smaller test tables or add an indexed advanced check.";
+  return "Database inspection could not initialize. Check the saved connection and worker deployment; database changes were not verified.";
+}
+export async function preflightAutomaticDatabase(runId: number) {
+  try {
+    const verifier = await automaticDatabase(runId, -1, -1);
+    const supported = !!verifier?.supported;
+    await verifier?.close();
+    if (!supported)
+      await automaticDatabaseUnavailable(
+        runId,
+        -1,
+        -1,
+        "No supported test tables were found. Automatic verification needs a public table with a numeric/UUID primary key and a name, title, slug, label or description column.",
+      );
+    return supported;
+  } catch (error) {
+    await automaticDatabaseUnavailable(runId, -1, -1, inspectionFailure(error));
+    return false;
+  }
 }

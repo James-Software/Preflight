@@ -13,6 +13,7 @@ export async function openFixPullRequest(
   branch: string,
   fixes: Fix[],
   reportUrl: string,
+  draft = false,
 ): Promise<PullRequest> {
   const [owner, name] = repo.split("/");
   if (
@@ -204,7 +205,8 @@ export async function openFixPullRequest(
           : `Fix ${fixes.length} findings from PreFlight`,
       head: branch,
       base: baseBranch,
-      body: `Proposed fixes from a PreFlight run. Review and test these changes before merging.\n\n${fixes.map((f) => `- #${f.id}: ${f.title.replace(/[\r\n]/g, " ")}`).join("\n")}\n\n[View run report](${reportUrl})`,
+      ...(draft ? { draft: true } : {}),
+      body: `Proposed fixes from a PreFlight run. Review and test these changes before merging.${draft ? " These generated changes have not been executed or tested." : ""}\n\n${fixes.map((f) => `- #${f.id}: ${f.title.replace(/[\r\n]/g, " ")}`).join("\n")}\n\n[View run report](${reportUrl})`,
     });
   } catch (error) {
     const retry = await findExisting();
