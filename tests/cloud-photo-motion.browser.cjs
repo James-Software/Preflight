@@ -40,15 +40,17 @@ const assert = require("node:assert/strict");
             if (pixels instanceof Uint8Array) {
               let energy = 0,
                 x = 0,
-                y = 0;
+                y = 0,
+                glow = 0;
               for (let i = 0; i < pixels.length; i += 4) {
                 const dx = pixels[i] - 128,
                   dy = pixels[i + 1] - 128;
                 energy += Math.abs(dx) + Math.abs(dy);
+                glow += pixels[i + 2];
                 x += dx;
                 y += dy;
               }
-              window.__cloudFlow = { energy, x, y };
+              window.__cloudFlow = { energy, x, y, glow };
             }
             return upload.apply(this, args);
           };
@@ -106,15 +108,21 @@ const assert = require("node:assert/strict");
         const trail = await p.evaluate(() => window.__cloudFlow);
         if (width === 1440) {
           assert.ok(trail.energy > 0);
+          assert.ok(trail.glow > 0);
           assert.ok(trail.x > 0);
           assert.ok(trail.y < 0);
           await p.screenshot({ path: "/tmp/preflight-cloud-smear-active.png" });
           await p.waitForTimeout(1200);
           const relaxing = await p.evaluate(() => window.__cloudFlow.energy);
           assert.ok(relaxing < trail.energy * 0.5);
+          assert.ok(
+            (await p.evaluate(() => window.__cloudFlow.glow)) <
+              trail.glow * 0.5,
+          );
           await p.mouse.move(width - 2, 40);
           await p.waitForTimeout(5000);
           assert.equal(await p.evaluate(() => window.__cloudFlow.energy), 0);
+          assert.equal(await p.evaluate(() => window.__cloudFlow.glow), 0);
           const idleDraws = await p.evaluate(() => window.__motionDraws);
           await p.waitForTimeout(150);
           assert.equal(await p.evaluate(() => window.__motionDraws), idleDraws);

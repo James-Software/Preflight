@@ -10,6 +10,8 @@ test("cloud smears follow the direction of a stroke and stay local to its path",
   assert.ok(flow.values[center] > 0);
   assert.equal(flow.values[center + 1], 0);
   assert.equal(flow.values[corner], 0);
+  assert.ok(flow.light[center / 2] > 0);
+  assert.equal(flow.light[corner], 0);
   const reverse = createCloudFlow();
   stepCloudFlow(reverse, 1 / 60, { from: [0.65, 0.5], to: [0.35, 0.5] }, 1.5);
   assert.ok(reverse.values[center] < 0);
@@ -25,13 +27,16 @@ test("holding or leaving the pointer relaxes a smear to its exact neutral state"
   assert.ok(Math.max(...flow.values) < peak * 0.3);
   for (let i = 0; i < 360; i++) stepCloudFlow(flow, 1 / 60, null, 1.5);
   assert.ok(flow.values.every((v) => v === 0));
+  assert.ok(flow.light.every((v) => v === 0));
   for (let i = 0; i < flow.pixels.length; i += 4) {
     assert.equal(flow.pixels[i], 128);
     assert.equal(flow.pixels[i + 1], 128);
+    assert.equal(flow.pixels[i + 2], 0);
   }
   const stationary = createCloudFlow();
   stepCloudFlow(stationary, 1, { from: [0.5, 0.5], to: [0.5, 0.5] }, 1.5);
   assert.ok(stationary.values.every((v) => v === 0));
+  assert.ok(stationary.light.every((v) => v === 0));
 });
 test("fast repeated strokes remain bounded for wide and narrow windows", () => {
   for (const aspect of [0.45, 2.5]) {

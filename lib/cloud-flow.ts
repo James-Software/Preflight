@@ -7,6 +7,7 @@ export function createCloudFlow() {
     height,
     active: false,
     values: new Float32Array(width * height * 2),
+    light: new Float32Array(width * height),
     pixels: new Uint8Array(width * height * 4),
   };
 }
@@ -29,7 +30,8 @@ export function stepCloudFlow(
   for (let y = 0; y < flow.height; y++)
     for (let x = 0; x < flow.width; x++) {
       const index = (y * flow.width + x) * 2;
-      let push = 0;
+      let push = 0,
+        light = 0;
       if (lengthSquared > 0.000001) {
         const px = (x / (flow.width - 1) - ax) * aspect;
         const py = y / (flow.height - 1) - ay;
@@ -39,7 +41,10 @@ export function stepCloudFlow(
         );
         const distanceSquared =
           (px - t * dx * aspect) ** 2 + (py - t * dy) ** 2;
-        push = Math.exp(-distanceSquared / 0.012) * gain * 0.4;
+        const influence = Math.exp(-distanceSquared / 0.012);
+        push = influence * gain * 0.4;
+        light =
+          influence * Math.min(1, Math.sqrt(lengthSquared) / 0.015) * 0.35;
       }
       const vx = flow.values[index] * decay + dx * push;
       const vy = flow.values[index + 1] * decay + dy * push;
@@ -50,13 +55,19 @@ export function stepCloudFlow(
       );
       flow.values[index] = Math.abs(vx * limit) < 0.0001 ? 0 : vx * limit;
       flow.values[index + 1] = Math.abs(vy * limit) < 0.0001 ? 0 : vy * limit;
-      if (flow.values[index] || flow.values[index + 1]) flow.active = true;
+      const illumination = Math.min(
+        0.75,
+        flow.light[index / 2] * decay + light,
+      );
+      flow.light[index / 2] = illumination < 0.001 ? 0 : illumination;
+      if (flow.values[index] || flow.values[index + 1] || flow.light[index / 2])
+        flow.active = true;
       const pixel = index * 2;
       flow.pixels[pixel] = Math.round(128 + (flow.values[index] / 0.08) * 127);
       flow.pixels[pixel + 1] = Math.round(
         128 + (flow.values[index + 1] / 0.08) * 127,
       );
-      flow.pixels[pixel + 2] = 0;
+      flow.pixels[pixel + 2] = Math.round(flow.light[index / 2] * 255);
       flow.pixels[pixel + 3] = 255;
     }
   return flow.pixels;

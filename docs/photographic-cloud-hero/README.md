@@ -22,8 +22,10 @@ The photograph replaces procedurally generated clouds. `CloudPhotoMotion` sample
 that same photo through a small WebGL shader. Mouse movement paints directional
 strokes into a low-resolution displacement field, pulling nearby photo detail
 along the pointer's path. The deformation stays where it was made and decays
-smoothly back to the original photo, even while the cursor remains still. There
-is no radial zoom/lens or ambient drift. A height-based foreground mask still
+smoothly back to the original photo, even while the cursor remains still. A soft light trail is painted into the same field and fades at the same rate.
+The shader lights the cloud detail using the photo's brightness, saturation and
+foreground mask; it does not draw a spotlight over the sky or text. There
+is no radial zoom/lens, cursor halo or ambient drift. A height-based foreground mask still
 lets the cloud bank move faster than the distant sky during scroll. It approximates depth from
 a single photo, rather than reconstructing a 3D scene. The frame, text, controls
 and credit remain stationary relative to the page.
@@ -42,7 +44,7 @@ The image is decorative and no remote texture is loaded.
 Validation: production build and all 100 unit tests pass. [Browser checks](browser-checks.jsonl)
 exercise actual WebGL, disabled WebGL and reduced motion on desktop and touch
 phone viewports, including directional displacement uploads, no deformation
-from a stationary pointer, decay after movement/exit, exact before/after photo
+from a stationary pointer, decay of displacement and cloud illumination after movement/exit, exact before/after photo
 pixel equality, idle pause, scroll uniforms, stable copy, no horizontal
 overflow/page errors, offscreen pause/re-entry, live reduced-motion toggles and
 context-loss fallback. Unit checks cover direction, localized influence, full
