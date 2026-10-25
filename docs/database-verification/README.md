@@ -1,9 +1,24 @@
 # PostgreSQL persistence checks
 
-Database verification pairs an owner-configured browser workflow/button with a
-read-only SQL assertion. It verifies stored state after that action; it does not
-infer every button's database semantics automatically, accept a toast as proof,
-or prove unrelated effects such as email delivery.
+Database verification automatically inspects uniquely marked test records after
+browser actions. No SQL setup is needed for supported create workflows. Optional
+advanced checks pair a specific workflow/button with a read-only SQL assertion.
+A toast alone never proves persistence, and database evidence does not prove
+unrelated effects such as email delivery.
+
+Automatic verification currently supports ordinary `public` tables with a single
+numeric or UUID primary key and text columns named `name`, `title`, `slug`,
+`label`, `display_name`, `project_name` or `description`. Up to 24 tables and six
+label columns per table are inspected, with bounded queries/results. The agent
+receives only these schema labels and a random per-step test marker, not database
+credentials, SQL, customer rows or record fingerprints. It fills a suitable app
+field with the marker; before/after reads correlate changes to that record.
+Unsupported schemas, missing workflows and absent observed changes are explicitly
+Unverified. They are not automatically classified as app bugs. Use advanced
+checks for exact business assertions, other schemas and existing customer data.
+
+See [automatic verification and cleanup](../automatic-database/README.md) for
+approval behavior and execution boundaries.
 
 ## Setup
 
@@ -12,14 +27,16 @@ or prove unrelated effects such as email delivery.
    connection URL instead**. Supabase needs its existing database password; Neon
    can retrieve the chosen role's URI. See [account autofill setup](../database-provider-autofill/README.md).
 3. Connecting tests a read-only `SELECT 1` and saves the encrypted URI. SQL and
-   browser workflows are optional at this stage. Use **Add checks** later to pair
-   an exact button label/workflow with a scalar SELECT and expectation. Test and
-   save validates these queries; Edit checks reuses the stored URI without
-   returning its password to the browser.
-4. In Run swarm, **Verify database changes** appears/defaults on only when the
-   resolved deployment origin has a configured database with at least one check.
-   Connections with no checks do not claim verification. The toggle can be turned
-   off for a browser-only run. Feature/PR origins never borrow another origin's DB.
+   browser workflows are optional. **Advanced checks** pairs an exact button
+   label/workflow with a scalar SELECT and expectation. Test and save validates
+   these queries; editing reuses the URI without exposing its password.
+4. In Run swarm, **Verify database changes** appears/defaults on when the resolved
+   deployment origin has a connected database, including one without advanced
+   checks. The toggle can be turned off for a browser-only run. Feature/PR origins
+   never borrow another origin's DB. Results describe observed evidence, not a
+   guarantee that every button was verified.
+5. After the run, review **Cleanup** in its report. Accept or deny each proposed
+   one-record deletion. Nothing is automatically removed.
 
 Example create-task check:
 
@@ -54,8 +71,9 @@ confused by independent concurrent runs; marker-based checks are preferable.
   pending report rows. Changing a connection's checks does not change an already
   created run's snapshot.
 - Workers preflight the connection, SELECT shapes and observable baseline before
-  allocating browser agents. Normal browser checks finish first; database
-  workflows run sequentially to reduce shared-account interference.
+  allocating browser agents. Automatic observation surrounds marked form actions;
+  an additional agent attempts a safe create workflow. Advanced configured
+  workflows then run sequentially to reduce shared-account interference.
 - Immediately before the configured exact button click, the worker rechecks the
   connection grant/cancellation and reads the baseline. It activates that button
   through the real browser and polls the database for approximately five seconds.

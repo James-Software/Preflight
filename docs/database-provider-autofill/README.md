@@ -16,7 +16,7 @@ instead** preserves manual setup and other PostgreSQL providers.
   session mode. A Supabase project has the standard `postgres` database. Supabase
   cannot return an existing database password through its management API.
 - Connecting needs no workflows, SQL or expectations. A read-only `SELECT 1`
-  validates a connection with no checks. **Add checks** is available later.
+  validates a connection with no checks. Automatic verification is ready immediately; advanced checks are optional.
   Connections with zero checks are excluded from Run swarm's database-verification
   checkbox and cannot be submitted as a verified run. Connecting is not evidence
   that arbitrary app buttons have been verified.

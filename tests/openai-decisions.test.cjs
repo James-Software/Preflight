@@ -239,6 +239,7 @@ function parentTask({
   const statuses = [];
   let batches = 0;
   const task = load("src/trigger/run-swarm.ts", {
+    "@/lib/automatic-database": {},
     "@/lib/database-verification": {},
     "@/lib/auth-profiles": {},
     "@trigger.dev/sdk": {
@@ -317,6 +318,7 @@ function browserTask({ verdictError = false, severityError = false } = {}) {
     locator: () => ({ ariaSnapshot: async () => "button Pay" }),
   };
   const task = load("src/trigger/browser-agent.ts", {
+    "@/lib/automatic-database": {},
     "@/lib/database-verification": {},
     "@/lib/database-check-config": {},
     "@/lib/auth-profiles": {},

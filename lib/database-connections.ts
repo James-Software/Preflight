@@ -95,7 +95,7 @@ export async function databaseSummary(
   const origin = profileOrigin(targetUrl);
   return (
     (await listProjectDatabases(projectId, owner)).find(
-      (d) => d.origin === origin && d.check_count > 0,
+      (d) => d.origin === origin,
     ) || null
   );
 }
@@ -208,10 +208,6 @@ export async function databaseForRun(
       "Connect a database for this deployment origin before enabling database verification.",
     );
   const config = unseal(row.encrypted_config, owner, projectId, origin);
-  if (!config.checks.length)
-    throw new DatabaseCheckError(
-      "This database is connected. Add a verification check before enabling database verification.",
-    );
   return {
     snapshot: {
       id: row.id,
@@ -225,7 +221,7 @@ export async function databaseForRun(
     })),
   };
 }
-export async function runDatabaseConfig(runId: number) {
+export async function runDatabaseConfig(runId: number, forCleanup = false) {
   const rows =
     await getSql()`SELECT r.database_snapshot,r.status,r.project_id,r.target_url,p.owner_github_id,d.revoked_at,d.id AS connection_id
     FROM runs r JOIN projects p ON p.id=r.project_id LEFT JOIN project_database_connections d ON d.id=(r.database_snapshot->>'id')::int AND d.project_id=r.project_id
@@ -244,7 +240,7 @@ export async function runDatabaseConfig(runId: number) {
         | undefined)
     : null;
   if (!row?.database_snapshot) return null;
-  if (row.status === "cancelled")
+  if (row.status === "cancelled" && !forCleanup)
     throw new DatabaseCheckError(
       "The run was cancelled before database verification.",
     );

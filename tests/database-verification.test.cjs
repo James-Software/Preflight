@@ -384,12 +384,17 @@ test("database setup fails before browser allocation, and configured workflows r
     } else {
       await task.run({ runId: 1 });
       assert.equal(batches, 1);
-      assert.equal(payloads.length, 2);
+      assert.equal(payloads.length, 3);
+      assert.equal(payloads[0].verifyDatabase, true);
+      assert.equal(
+        payloads[0].assignment.steps[0].id,
+        "automatic-database-create",
+      );
       assert.equal(maxInFlight, 1);
       assert.ok(
-        payloads.every(
-          (payload) => payload.assignment.steps[0].databaseCheckId,
-        ),
+        payloads
+          .slice(1)
+          .every((payload) => payload.assignment.steps[0].databaseCheckId),
       );
       assert.ok(!JSON.stringify(payloads).includes("postgresql://"));
       assert.equal(statuses.at(-1), "done");

@@ -1,4 +1,8 @@
 import {
+  automaticDatabase,
+  automaticDatabaseUnavailable,
+} from "@/lib/automatic-database";
+import {
   runDatabaseVerifier,
   databaseVerificationError,
 } from "@/lib/database-verification";
@@ -118,6 +122,7 @@ export const browserAgent = task({
     assignment: Assignment;
     appUrl: string;
     authProfileId?: number;
+    verifyDatabase?: boolean;
   }) => {
     const agent = await createAgent(payload.runId, payload.assignment);
     const consoleLogs: string[] = [];
@@ -129,6 +134,7 @@ export const browserAgent = task({
       ReturnType<typeof runDatabaseVerifier>
     > | null = null;
     let databaseCheckId: string | null = null;
+    let automatic: Awaited<ReturnType<typeof automaticDatabase>> = null;
     let redact = (text: string) => text;
     let findingsCount = 0;
     let actionsUsed = 0;
@@ -263,13 +269,38 @@ export const browserAgent = task({
             step.databaseCheckId,
           );
         }
+        let markerUsed = false;
+        if (payload.verifyDatabase && !step.databaseCheckId) {
+          try {
+            automatic = await automaticDatabase(
+              payload.runId,
+              payload.agentIndex,
+              stepIndex,
+            );
+          } catch {
+            await automaticDatabaseUnavailable(
+              payload.runId,
+              payload.agentIndex,
+              stepIndex,
+            );
+          }
+        }
         let databaseObserved = false;
-        let finished = false;
+        let finished =
+          payload.verifyDatabase === true &&
+          step.id === "automatic-database-create" &&
+          !automatic?.supported;
         for (
           let attempt = 0;
-          attempt < MAX_ACTIONS_PER_STEP && actionsUsed < MAX_ACTIONS;
+          !finished &&
+          attempt <
+            (step.id === "automatic-database-create"
+              ? 12
+              : MAX_ACTIONS_PER_STEP) &&
+          actionsUsed < MAX_ACTIONS;
           attempt++
         ) {
+          await automatic?.assertActive();
           const screenshot = await page.screenshot({
             type: "jpeg",
             quality: 50,
@@ -282,7 +313,7 @@ export const browserAgent = task({
           let action: AgentAction;
           try {
             action = await driverDecide({
-              goal: `Step: ${step.title}. ${step.detail}`,
+              goal: `Step: ${step.title}. ${step.detail} ${automatic?.instructions || ""}`,
               history: actionLog.slice(stepLogStart).slice(-10),
               axTree: redact(axTree),
               consoleLogs: consoleLogs.slice(stepConsoleStart).slice(-10),
@@ -343,12 +374,74 @@ export const browserAgent = task({
               );
             break;
           }
+          await automatic?.assertActive();
+          if (
+            automatic &&
+            action.action === "fill" &&
+            action.value.includes(automatic.marker)
+          )
+            markerUsed = true;
+          const observe =
+            automatic &&
+            markerUsed &&
+            ((action.action === "click" &&
+              action.role.toLowerCase() === "button" &&
+              /create|save|add|submit|update|delete|remove|confirm|publish|send|done|finish/i.test(
+                action.name,
+              )) ||
+              (action.action === "press" && action.key === "Enter"));
+          let before: Awaited<
+            ReturnType<NonNullable<typeof automatic>["before"]>
+          > | null = null;
+          if (observe && automatic) {
+            try {
+              before = await automatic.before();
+            } catch {
+              await automaticDatabaseUnavailable(
+                payload.runId,
+                payload.agentIndex,
+                stepIndex,
+              );
+              await automatic.close();
+              automatic = null;
+              throw new DatabaseCheckError(
+                "Database verification became unavailable before the action. No further test changes were attempted.",
+              );
+            }
+          }
           const result = await executeAction(page, action);
           actionLog.push(redact(`  → ${result}`));
+          if (before && automatic) {
+            try {
+              await automatic.after(
+                before,
+                action.action === "click" ? action.name : "Enter",
+              );
+            } catch {
+              await automaticDatabaseUnavailable(
+                payload.runId,
+                payload.agentIndex,
+                stepIndex,
+              );
+            }
+          }
           // Gentle on free-tier rate limits.
           await delay(1000);
         }
 
+        if (
+          payload.verifyDatabase &&
+          !markerUsed &&
+          step.id === "automatic-database-create"
+        )
+          await automaticDatabaseUnavailable(
+            payload.runId,
+            payload.agentIndex,
+            stepIndex,
+            "No supported create workflow was exercised with a unique test marker. Database persistence has not been verified.",
+          );
+        await automatic?.close();
+        automatic = null;
         if (!finished) {
           throw new Error(
             `Browser agent reached its action budget during "${step.title}". This test step was not evaluated.`,
@@ -423,6 +516,7 @@ export const browserAgent = task({
       await updateAgentStatus(agent.id, "failed").catch(() => {});
       throw e;
     } finally {
+      await automatic?.close().catch(() => {});
       await databaseVerifier?.close().catch(() => {});
       if (sessionId) await closeBrowserSession(sessionId).catch(() => {});
     }

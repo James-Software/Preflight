@@ -82,6 +82,7 @@ function reportPage(user, getProject, getRunReport) {
     "@/components/FixesTable": { default: () => null },
     "@/components/ProjectLogo": { default: () => null },
     "@/components/RunArchiveButton": { default: () => null },
+    "@/components/DatabaseCleanup": { default: () => null },
     "@/components/DatabaseCheckResults": { default: () => null },
   }).default;
 }

@@ -84,7 +84,7 @@ export function publicDatabaseAddress(address: string): boolean {
   }
   return false;
 }
-export async function postgresReader(connectionString: string) {
+export async function postgresClient(connectionString: string) {
   const config = parsePostgresUrl(connectionString);
   let addresses;
   try {
@@ -124,6 +124,11 @@ export async function postgresReader(connectionString: string) {
       "Could not connect to PostgreSQL. Check the read-only credentials, TLS and network access.",
     );
   }
+  return client;
+}
+
+export async function postgresReader(connectionString: string) {
+  const client = await postgresClient(connectionString);
   return {
     async read(raw: string, marker: string): Promise<Scalar> {
       const query = checkedQuery(raw);

@@ -487,9 +487,9 @@ export default function RunSwarmButton({ projectId }: { projectId: number }) {
                     <span>
                       Verify database changes
                       <span className="mt-1 block text-xs leading-relaxed text-muted">
-                        {database.check_count} configured check
-                        {database.check_count === 1 ? "" : "s"} will confirm
-                        saved state after the button clicks.
+                        Agents automatically inspect uniquely marked test
+                        records after app actions. Review cleanup SQL at the
+                        end. Any advanced checks also run.
                       </span>
                     </span>
                   </label>

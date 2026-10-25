@@ -134,6 +134,7 @@ export const runSwarm = task({
             agentIndex: i,
             assignment,
             appUrl: targetUrl,
+            verifyDatabase: !!run.database_snapshot,
             ...(run.auth_profile_id
               ? { authProfileId: run.auth_profile_id }
               : {}),
@@ -145,12 +146,40 @@ export const runSwarm = task({
           "A browser agent failed. Check its Trigger.dev task log for model or browser errors.",
         );
       }
+      if (await cancelled())
+        return { runId: payload.runId, status: "cancelled" };
+      if (run.database_snapshot) {
+        const automatic = await tasks.triggerAndWait("browser-agent", {
+          runId: payload.runId,
+          agentIndex: assignments.length,
+          appUrl: targetUrl,
+          verifyDatabase: true,
+          assignment: {
+            goal: "Create a test record and verify it was saved",
+            steps: [
+              {
+                id: "automatic-database-create",
+                title: "Create a test record",
+                detail:
+                  "Find a safe create workflow available to this test account, such as creating a project or draft. Use the provided unique test marker for its name or title, submit through the app, and inspect the result. If no such workflow is accessible, stop and explain why. Do not create accounts, send messages, make payments, delete existing records or change security settings.",
+              },
+            ],
+          },
+          ...(run.auth_profile_id
+            ? { authProfileId: run.auth_profile_id }
+            : {}),
+        });
+        if (!automatic.ok)
+          throw new Error(
+            "The automatic database workflow could not complete. Review the run report before cleaning up test records.",
+          );
+      }
       for (const [index, check] of databaseChecks.entries()) {
         if (await cancelled())
           return { runId: payload.runId, status: "cancelled" };
         const verified = await tasks.triggerAndWait("browser-agent", {
           runId: payload.runId,
-          agentIndex: assignments.length + index,
+          agentIndex: assignments.length + 1 + index,
           assignment: {
             goal: check.title,
             steps: [
@@ -183,6 +212,7 @@ export const runSwarm = task({
       throw e;
     }
 
+    if (await cancelled()) return { runId: payload.runId, status: "cancelled" };
     const frows = await sql`
       SELECT COUNT(*)::int AS c FROM findings WHERE run_id = ${payload.runId}
     `;

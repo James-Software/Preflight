@@ -156,7 +156,7 @@ export default function DatabaseSettings({
       setNotice(
         data.connection.check_count
           ? "Connection and read-only queries checked. Database verification is available for this origin when you start a swarm."
-          : "Database connected. You can add verification checks whenever you’re ready.",
+          : "Database connected. Automatic verification is ready for your next run.",
       );
     } catch (e) {
       setError(
@@ -203,7 +203,9 @@ export default function DatabaseSettings({
       <div className="pb-4 pt-3">
         <p className="max-w-2xl text-sm leading-relaxed text-muted">
           Choose a database from Supabase or Neon, or paste a connection URL.
-          Verification checks can be added later.
+          Agents automatically verify uniquely marked test records after app
+          actions. Cleanup requires your approval in the run report. Advanced
+          checks are optional.
         </p>
         {error && (
           <p
@@ -232,7 +234,7 @@ export default function DatabaseSettings({
                   <p className="mt-1 text-xs text-muted">
                     {connection.check_count
                       ? `${connection.check_count} check${connection.check_count === 1 ? "" : "s"}`
-                      : "Connected · No checks configured"}{" "}
+                      : "Automatic verification ready"}{" "}
                     · Connection details hidden
                   </p>
                 </div>
@@ -243,7 +245,7 @@ export default function DatabaseSettings({
                     onClick={() => void edit(connection.id)}
                     className="min-h-11 px-2 text-sm font-medium text-primary"
                   >
-                    {connection.check_count ? "Edit checks" : "Add checks"}
+                    Advanced checks
                   </button>
                   {remove === connection.id ? (
                     <>
@@ -318,7 +320,7 @@ export default function DatabaseSettings({
                   setNotice(
                     connection.check_count
                       ? "Database connected. Your verification checks are ready."
-                      : "Database connected. You can add verification checks whenever you’re ready.",
+                      : "Database connected. Automatic verification is ready for your next run.",
                   );
                 }}
               />
@@ -326,7 +328,7 @@ export default function DatabaseSettings({
             <details className="mt-5" open={!!id || undefined}>
               <summary className="min-h-11 cursor-pointer py-3 text-sm font-medium">
                 {id
-                  ? "Connection and verification checks"
+                  ? "Connection and advanced checks"
                   : "Paste a connection URL instead"}
               </summary>
               <form

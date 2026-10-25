@@ -33,6 +33,7 @@ export interface Run {
   target_sha?: string | null;
   auth_profile_name?: string | null;
   database_check_count?: number;
+  database_snapshot?: unknown;
   repo_full_name?: string | null;
 }
 
@@ -103,6 +104,13 @@ export async function ensureSchema(): Promise<void> {
     id SERIAL PRIMARY KEY, run_id INT NOT NULL REFERENCES runs(id), check_id TEXT NOT NULL,
     title TEXT NOT NULL, button_label TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'pending',
     summary TEXT, completed_at TIMESTAMPTZ, UNIQUE(run_id, check_id)
+  )`;
+  await sql`CREATE TABLE IF NOT EXISTS run_database_cleanup (
+    id UUID PRIMARY KEY, run_id INT NOT NULL REFERENCES runs(id),
+    record_key TEXT NOT NULL, proposal JSONB NOT NULL,
+    status TEXT NOT NULL DEFAULT 'pending', summary TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), decided_at TIMESTAMPTZ,
+    UNIQUE(run_id, record_key)
   )`;
   await sql`ALTER TABLE runs ADD COLUMN IF NOT EXISTS target_ref TEXT`;
   await sql`ALTER TABLE runs ADD COLUMN IF NOT EXISTS target_sha TEXT`;

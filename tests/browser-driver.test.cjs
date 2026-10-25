@@ -102,6 +102,7 @@ function agent({
   authentication = null,
   authenticationError = null,
   setupError = null,
+  automatic = null,
 }) {
   let currentUrl = "about:blank",
     call = 0;
@@ -142,12 +143,23 @@ function agent({
     },
     waitForTimeout: async () => {},
     screenshot: async () => Buffer.from("test-image"),
+    getByRole: () => ({
+      first: () => ({
+        fill: async () => {},
+        click: async () => {},
+        press: async () => {},
+      }),
+    }),
     locator: () => ({
       ariaSnapshot: async () =>
         `heading: ${currentUrl.endsWith("/terms") ? "Terms of Service" : "Sign in"}`,
     }),
   };
   const task = load("src/trigger/browser-agent.ts", {
+    "@/lib/automatic-database": {
+      automaticDatabase: async () => automatic,
+      automaticDatabaseUnavailable: async () => {},
+    },
     "@/lib/database-verification": {},
     "@/lib/database-check-config": {},
     "@/lib/auth-profiles": {
@@ -216,6 +228,7 @@ function agent({
         agentIndex: 0,
         assignment: { steps },
         appUrl: "https://target.example/",
+        ...(automatic ? { verifyDatabase: true } : {}),
         ...(authentication || authenticationError || setupError
           ? { authProfileId: 1 }
           : {}),
@@ -354,4 +367,47 @@ test("authentication setup failures never become app findings or model judgments
   await assert.rejects(unavailable.run(), /revoked/);
   assert.deepEqual(unavailable.closed, []);
   assert.equal(unavailable.findings.length, 0);
+});
+
+test("automatic verification brackets a real marked form submission and closes its connection", async () => {
+  const order = [];
+  const a = agent({
+    steps: [
+      {
+        id: "automatic-database-create",
+        title: "Create project",
+        detail: "Create a safe test project",
+      },
+    ],
+    automatic: {
+      marker: "preflight-test",
+      supported: true,
+      instructions: "Use preflight-test",
+      assertActive: async () => {},
+      before: async () => {
+        order.push("before");
+        return [];
+      },
+      after: async (_before, button) => {
+        order.push(button);
+      },
+      close: async () => {
+        order.push("close");
+      },
+    },
+    actions: [
+      {
+        ...done,
+        action: "fill",
+        role: "textbox",
+        name: "Name",
+        value: "preflight-test",
+      },
+      { ...done, action: "click", role: "button", name: "Create project" },
+      done,
+    ],
+  });
+  await a.run();
+  assert.deepEqual(order, ["before", "Create project", "close"]);
+  assert.match(a.driverInputs[0].goal, /Use preflight-test/);
 });
