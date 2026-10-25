@@ -55,6 +55,7 @@ export default function CloudPhotoMotion({
     function configure() {
       dispose();
       layer!.dataset.motion = "static";
+      layer!.dataset.lit = "false";
       if (reduced.matches) return;
       let gl: WebGLRenderingContext | null = null;
       try {
@@ -252,6 +253,7 @@ export default function CloudPhotoMotion({
           frame = requestAnimationFrame(tick);
       }
       function wake() {
+        if (!visible || document.hidden) layer!.dataset.lit = "false";
         if (visible && !document.hidden && !frame) {
           last = 0;
           frame = requestAnimationFrame(tick);
@@ -270,12 +272,16 @@ export default function CloudPhotoMotion({
           Math.max(0, Math.min(1, (event.clientX - bounds.left) / width)),
           1 - Math.max(0, Math.min(1, (event.clientY - bounds.top) / height)),
         ];
+        layer!.style.setProperty("--cloud-glow-x", `${point[0] * 100}%`);
+        layer!.style.setProperty("--cloud-glow-y", `${(1 - point[1]) * 100}%`);
+        layer!.dataset.lit = "true";
         if (pointer)
           pendingStroke = { from: pendingStroke?.from || pointer, to: point };
         pointer = point;
         wake();
       }
       function leave() {
+        layer!.dataset.lit = "false";
         pointer = null; // The existing displacement continues relaxing after exit.
       }
       function contextLost(event: Event) {
@@ -316,6 +322,7 @@ export default function CloudPhotoMotion({
         document.removeEventListener("visibilitychange", wake);
         photo!.removeEventListener("load", upload);
         surface!.removeEventListener("webglcontextlost", contextLost);
+        layer!.dataset.lit = "false";
         photo!.style.removeProperty("transform");
         releaseGpu();
       };
@@ -335,6 +342,7 @@ export default function CloudPhotoMotion({
     >
       {children}
       <canvas ref={canvas} className="absolute inset-0 h-full w-full" />
+      <div className="hero-cloud-glow absolute inset-0" />
     </div>
   );
 }

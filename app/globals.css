@@ -398,3 +398,17 @@ html.dark { --run-bg: #111822; --run-fg: #e3e9f2; --run-border: #384252; --run-t
   .hero-cloud-photo { transform: none; }
   .hero-cloud-motion canvas { display: none; }
 }
+
+/* A little light on the photograph, strongest at the pointer and feathered out. */
+.hero-cloud-glow {
+  background: radial-gradient(circle 180px at var(--cloud-glow-x, 50%) var(--cloud-glow-y, 50%), rgb(255 249 235 / 16%) 0%, rgb(255 249 235 / 6%) 40%, transparent 100%);
+  opacity: 0;
+  transition: opacity 650ms ease-out;
+}
+.hero-cloud-motion[data-lit="true"] .hero-cloud-glow {
+  opacity: 1;
+  transition-duration: 250ms;
+}
+@media (prefers-reduced-motion: reduce), (hover: none), (pointer: coarse) {
+  .hero-cloud-glow { display: none; }
+}
