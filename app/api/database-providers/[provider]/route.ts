@@ -3,7 +3,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { getProject } from "@/lib/schema";
-import { DatabaseCheckError } from "@/lib/database-check-config";
+import {
+  DatabaseCheckError,
+  DatabaseProviderReconnectRequired,
+} from "@/lib/database-check-config";
 import { ProfileError } from "@/lib/auth-profile-state";
 import {
   databaseProvider,
@@ -36,6 +39,12 @@ const headers = {
 function fail(error: unknown) {
   return NextResponse.json(
     {
+      ...(error instanceof DatabaseProviderReconnectRequired ||
+      (error instanceof DatabaseCheckError &&
+        "status" in error &&
+        error.status === 401)
+        ? { code: "DATABASE_PROVIDER_RECONNECT_REQUIRED" }
+        : {}),
       error:
         error instanceof DatabaseCheckError || error instanceof ProfileError
           ? error.message

@@ -2,7 +2,10 @@ import { createCipheriv, createDecipheriv, randomBytes } from "node:crypto";
 import { getSql } from "@/lib/db";
 import { ensureSchema } from "@/lib/schema";
 import { profileKey } from "@/lib/auth-profile-state";
-import { DatabaseCheckError } from "@/lib/database-check-config";
+import {
+  DatabaseCheckError,
+  DatabaseProviderReconnectRequired,
+} from "@/lib/database-check-config";
 import {
   exchangeProviderTokens,
   type DatabaseProvider,
@@ -58,8 +61,8 @@ export function unsealProvider<T>(
       ]).toString("utf8"),
     );
   } catch {
-    throw new DatabaseCheckError(
-      "Could not unlock this provider account. Connect it again.",
+    throw new DatabaseProviderReconnectRequired(
+      "Could not unlock this provider account. Enter its API key or sign in again to reconnect.",
     );
   }
 }
@@ -69,8 +72,19 @@ export async function providerAccountConnected(
 ) {
   await ensureSchema();
   const rows =
-    await getSql()`SELECT provider FROM database_provider_accounts WHERE owner_github_id=${owner} AND provider=${provider}`;
-  return Array.isArray(rows) && rows.length > 0;
+    await getSql()`SELECT encrypted_tokens FROM database_provider_accounts WHERE owner_github_id=${owner} AND provider=${provider}`;
+  if (!Array.isArray(rows) || !rows.length) return false;
+  try {
+    const tokens = unsealProvider<ProviderTokens>(
+      (rows[0] as { encrypted_tokens: string }).encrypted_tokens,
+      owner,
+      provider,
+    );
+    return typeof tokens.accessToken === "string" && !!tokens.accessToken;
+  } catch (error) {
+    if (error instanceof DatabaseProviderReconnectRequired) return false;
+    throw error;
+  }
 }
 export async function saveProviderAccount(
   owner: string,
@@ -100,7 +114,9 @@ export async function providerAccessToken(
     ? (rows[0] as { encrypted_tokens: string } | undefined)
     : null;
   if (!row)
-    throw new DatabaseCheckError("Connect your provider account first.");
+    throw new DatabaseProviderReconnectRequired(
+      "Connect your provider account first.",
+    );
   const tokens = unsealProvider<ProviderTokens>(
     row.encrypted_tokens,
     owner,
@@ -109,7 +125,7 @@ export async function providerAccessToken(
   if (!tokens.expiresAt || tokens.expiresAt > Date.now() + 60_000)
     return tokens.accessToken;
   if (!tokens.refreshToken)
-    throw new DatabaseCheckError(
+    throw new DatabaseProviderReconnectRequired(
       "Account authorization expired. Connect it again.",
     );
   const lock =

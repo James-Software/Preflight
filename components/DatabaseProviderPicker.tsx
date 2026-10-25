@@ -36,6 +36,18 @@ export default function DatabaseProviderPicker({
   const field =
     "mt-2 min-h-11 w-full rounded-lg border border-line bg-page px-3 py-2 text-sm";
   const endpoint = provider ? `/api/database-providers/${provider}` : "";
+  function requireReconnect() {
+    setStatus((current) => ({ connected: false, oauth: !!current?.oauth }));
+    setProjects([]);
+    setBranches([]);
+    setDatabases([]);
+    setRoles([]);
+    setProject("");
+    setBranch("");
+    setDatabase("");
+    setRole("");
+    setPassword("");
+  }
   async function read(
     action?: string,
     extra: Record<string, string> = {},
@@ -51,8 +63,14 @@ export default function DatabaseProviderPicker({
       signal,
     });
     const data = await response.json();
-    if (!response.ok)
+    if (!response.ok) {
+      if (
+        !signal?.aborted &&
+        data.code === "DATABASE_PROVIDER_RECONNECT_REQUIRED"
+      )
+        requireReconnect();
       throw new Error(data.error || "Could not load this account.");
+    }
     return data;
   }
   async function post(action: string, values: object = {}) {
@@ -62,8 +80,11 @@ export default function DatabaseProviderPicker({
       body: JSON.stringify({ action, projectId, ...values }),
     });
     const data = await response.json();
-    if (!response.ok)
+    if (!response.ok) {
+      if (data.code === "DATABASE_PROVIDER_RECONNECT_REQUIRED")
+        requireReconnect();
       throw new Error(data.error || "Could not connect this account.");
+    }
     return data;
   }
   useEffect(() => {

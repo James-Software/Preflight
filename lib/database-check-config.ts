@@ -12,6 +12,7 @@ export type DatabaseCheck = {
 };
 export class DatabaseCheckError extends Error {}
 export class DatabaseConnectionLocked extends DatabaseCheckError {}
+export class DatabaseProviderReconnectRequired extends DatabaseCheckError {}
 
 export function scalar(value: unknown): value is Scalar {
   return (

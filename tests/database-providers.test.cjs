@@ -508,3 +508,87 @@ test("selecting Neon again replaces a locked zero-check URI without decrypting i
     assert.equal(saved, count === 0 ? 1 : 0);
   }
 });
+
+test("locked provider accounts show disconnected without deleting credentials, and a fresh key reconnects them", async (t) => {
+  environment(t);
+  let encrypted;
+  const queries = [];
+  const accounts = store({
+    "@/lib/db": {
+      getSql:
+        () =>
+        async (parts, ...values) => {
+          const q = parts.join("?");
+          queries.push(q);
+          if (q.startsWith("INSERT INTO database_provider_accounts")) {
+            encrypted = values[2];
+            return [];
+          }
+          return encrypted ? [{ encrypted_tokens: encrypted }] : [];
+        },
+    },
+  });
+  encrypted = accounts.sealProvider(
+    { accessToken: "old-provider-token" },
+    "100",
+    "neon",
+  );
+  assert.equal(await accounts.providerAccountConnected("100", "neon"), true);
+  process.env.PROFILE_ENCRYPTION_KEY = Buffer.alloc(32, 9).toString("base64");
+  const preserved = encrypted;
+  assert.equal(await accounts.providerAccountConnected("100", "neon"), false);
+  assert.equal(encrypted, preserved);
+  assert.ok(!queries.some((q) => /^DELETE|UPDATE/.test(q)));
+  await assert.rejects(
+    accounts.providerAccessToken("100", "neon"),
+    config.DatabaseProviderReconnectRequired,
+  );
+  await accounts.saveProviderAccount("100", "neon", {
+    accessToken: "fresh-provider-token",
+  });
+  assert.equal(await accounts.providerAccountConnected("100", "neon"), true);
+  assert.equal(
+    await accounts.providerAccessToken("100", "neon"),
+    "fresh-provider-token",
+  );
+});
+
+test("provider authorization errors request sign-in recovery while transient and permission errors remain retryable", async () => {
+  const { NextRequest } = require("next/server");
+  for (const error of [
+    new config.DatabaseProviderReconnectRequired("Reconnect"),
+    new api.ProviderRequestError("Expired", 401),
+    new api.ProviderRequestError("Permission", 403),
+    new config.DatabaseCheckError("Temporary provider outage"),
+  ]) {
+    const route = load("app/api/database-providers/[provider]/route.ts", {
+      "@/auth": { auth: async () => ({ user: { githubId: "100" } }) },
+      "@/lib/schema": { getProject: async () => ({ id: 7 }) },
+      "@/lib/database-check-config": config,
+      "@/lib/auth-profile-state": state,
+      "@/lib/database-provider-api": api,
+      "@/lib/database-provider-accounts": {
+        providerAccessToken: async () => {
+          throw error;
+        },
+      },
+      "@/lib/database-connections": {},
+      "next/cache": {},
+    });
+    const response = await route.GET(
+      new NextRequest(
+        "https://preflight.test/api/database-providers/neon?projectId=7&action=projects",
+      ),
+      { params: Promise.resolve({ provider: "neon" }) },
+    );
+    const data = await response.json();
+    assert.equal(response.status, 400);
+    assert.equal(
+      data.code,
+      error instanceof config.DatabaseProviderReconnectRequired ||
+        error.status === 401
+        ? "DATABASE_PROVIDER_RECONNECT_REQUIRED"
+        : undefined,
+    );
+  }
+});
