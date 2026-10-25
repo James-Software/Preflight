@@ -18,9 +18,11 @@ function bbKey(): string {
 
 export async function createBrowserSession(
   privateSession = false,
+  interactive = false,
 ): Promise<BrowserSession> {
   const key = bbKey();
   const body: Record<string, unknown> = {};
+  if (interactive) Object.assign(body, { keepAlive: true, timeout: 600 });
   if (privateSession)
     body.browserSettings = { recordSession: false, logSession: false };
   if (process.env.BROWSERBASE_PROJECT_ID) {
@@ -62,4 +64,30 @@ export async function closeBrowserSession(sessionId: string): Promise<void> {
       `Browserbase close error ${res.status}: ${t.slice(0, 200)}`,
     );
   }
+}
+
+// The CDP endpoint is server-only: it contains the Browserbase API key.
+export function browserConnectUrl(sessionId: string) {
+  return `wss://connect.browserbase.com?apiKey=${encodeURIComponent(bbKey())}&sessionId=${encodeURIComponent(sessionId)}`;
+}
+export async function browserLiveUrl(sessionId: string) {
+  const response = await fetch(
+    `${BB_API}/${encodeURIComponent(sessionId)}/debug`,
+    {
+      headers: { "x-bb-api-key": bbKey() },
+      cache: "no-store",
+    },
+  );
+  if (!response.ok) throw new Error("Could not open interactive browser");
+  const data = await response.json();
+  const url = new URL(data.debuggerFullscreenUrl);
+  if (
+    url.protocol !== "https:" ||
+    !(
+      url.hostname === "browserbase.com" ||
+      url.hostname.endsWith(".browserbase.com")
+    )
+  )
+    throw new Error("Unexpected interactive browser URL");
+  return url.href;
 }

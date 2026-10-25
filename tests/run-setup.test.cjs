@@ -33,7 +33,10 @@ const session = () =>
 test("profile fields cannot submit secrets into a URL before JavaScript is ready", () => {
   const React = require("react");
   const { renderToStaticMarkup } = require("react-dom/server");
-  const Manager = load("components/ProfilesManager.tsx", {}).default;
+  const BrowserSetup = load("components/BrowserProfileSetup.tsx", {}).default;
+  const Manager = load("components/ProfilesManager.tsx", {
+    "@/components/BrowserProfileSetup": { default: BrowserSetup },
+  }).default;
   const html = renderToStaticMarkup(
     React.createElement(Manager, {
       initialProfiles: [],
@@ -43,7 +46,9 @@ test("profile fields cannot submit secrets into a URL before JavaScript is ready
   );
   const form = html.match(/<form[^>]*>/)[0];
   assert.match(form, /method="post"/);
-  assert.match(form, /action="\/api\/profiles"/);
+  assert.match(form, /action="\/api\/profiles\/browser"/);
+  assert.ok(!html.includes("Cookies or session JSON"));
+  assert.match(html, /Advanced: import cookies or headers/);
   assert.match(html, /<fieldset disabled=""/);
 });
 test("profile encryption is randomized, authenticated and bound to owner and origin", (t) => {

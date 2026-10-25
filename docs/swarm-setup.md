@@ -93,3 +93,12 @@ Run swarm. The existing **PROFILE_ENCRYPTION_KEY** must match in Vercel and
 Trigger.dev. Deploy the web app and workers together; `pg` is kept external in
 the Trigger build. The web server and workers both need network access to the
 customer DB. See [setup, boundaries and verification](database-verification/README.md).
+
+### Browser-assisted profiles
+
+Profiles now default to **Sign in with browser**; manual cookie/header import is
+under Advanced. Configure Browserbase credentials in the Vercel web app as well
+as workers, and use a plan supporting interactive keep-alive sessions. The browser
+lasts at most ten minutes, disables recording/logging, and verifies a fresh replay
+before saving the encrypted profile. No customer database connection is needed.
+See [setup, boundaries and checks](browser-profile-setup/README.md).

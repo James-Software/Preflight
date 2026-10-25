@@ -96,3 +96,12 @@ The GitHub handoff has no public layout/navigation/footer/card/buttons. Its blac
 viewport contains only white “Connecting to Github...” text while OAuth begins.
 Transient launch failures retry automatically; terminal failures use the existing
 access-denied route. Keep normal loading minimal in both themes.
+
+### Browser-assisted profile setup
+
+`/dashboard/profiles` defaults to an interactive sign-in browser instead of JSON
+fields. Ask for an app URL and explicit protected-page/text evidence, then verify
+a fresh replay before saving. Keep manual imports in the Advanced disclosure.
+Offer an external-tab live-view fallback, preserve active sign-in across reloads,
+and select the saved profile when returning to run setup. Never send sign-in DOM,
+passwords or session credentials to a model or include them in visible results.

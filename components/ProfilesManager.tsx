@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import BrowserProfileSetup from "@/components/BrowserProfileSetup";
 import type { AuthProfile } from "@/lib/auth-profiles";
 
 export default function ProfilesManager({
@@ -13,6 +14,7 @@ export default function ProfilesManager({
 }) {
   const [ready, setReady] = useState(false);
   useEffect(() => setReady(true), []);
+  const [manual, setManual] = useState(false);
   const [savedId, setSavedId] = useState<number | null>(null);
   const [profiles, setProfiles] = useState(initialProfiles);
   const [creating, setCreating] = useState(
@@ -112,6 +114,31 @@ export default function ProfilesManager({
         </p>
       )}
       {creating && (
+        <>
+          <BrowserProfileSetup
+            initialOrigin={initialOrigin}
+            onSaved={(profile) => {
+              setProfiles((previous) => [profile, ...previous]);
+              setSavedId(profile.id);
+              setCreating(false);
+              setNotice(
+                "Profile verified and saved. Choose it when you start a swarm.",
+              );
+            }}
+          />
+          <button
+            type="button"
+            className="mt-4 min-h-11 text-sm text-muted hover:text-primary"
+            aria-expanded={manual}
+            onClick={() => setManual((value) => !value)}
+          >
+            {manual
+              ? "Hide advanced import"
+              : "Advanced: import cookies or headers"}
+          </button>
+        </>
+      )}
+      {creating && manual && (
         <form
           method="post"
           action="/api/profiles"

@@ -68,6 +68,13 @@ export async function ensureSchema(): Promise<void> {
     verification_path TEXT NOT NULL DEFAULT '/', verification_text TEXT,
     revoked_at TIMESTAMPTZ, created_at TIMESTAMPTZ DEFAULT NOW()
   )`;
+  await sql`CREATE TABLE IF NOT EXISTS profile_captures (
+    id UUID PRIMARY KEY, owner_github_id TEXT NOT NULL, name TEXT NOT NULL,
+    origin TEXT NOT NULL, verification_path TEXT NOT NULL, verification_text TEXT NOT NULL,
+    session_id TEXT, status TEXT NOT NULL DEFAULT 'active',
+    expires_at TIMESTAMPTZ NOT NULL DEFAULT NOW() + INTERVAL '10 minutes'
+  )`;
+  await sql`CREATE UNIQUE INDEX IF NOT EXISTS profile_capture_active_owner ON profile_captures(owner_github_id) WHERE status IN ('active','saving')`;
   await sql`ALTER TABLE runs ADD COLUMN IF NOT EXISTS auth_profile_id INT REFERENCES auth_profiles(id)`;
   await sql`ALTER TABLE runs ADD COLUMN IF NOT EXISTS auth_profile_snapshot JSONB`;
   await sql`ALTER TABLE runs ADD COLUMN IF NOT EXISTS auth_profile_name TEXT`;
