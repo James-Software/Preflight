@@ -389,3 +389,12 @@ html.dark { --run-bg: #111822; --run-fg: #e3e9f2; --run-border: #384252; --run-t
 
 /* Form focus remains visible even when a field uses outline-none. */
 :is(input, textarea, select):focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+/* Motion affects only the photograph, never the Cloud Window or its copy. */
+.hero-cloud-photo { transform: scale(1.18); }
+.hero-cloud-motion canvas { opacity: 0; }
+.hero-cloud-motion[data-motion="webgl"] canvas { opacity: 1; }
+@media (prefers-reduced-motion: reduce) {
+  .hero-cloud-photo { transform: none; }
+  .hero-cloud-motion canvas { display: none; }
+}
