@@ -1,4 +1,3 @@
-import DatabaseCleanup from "@/components/DatabaseCleanup";
 import DatabaseCheckResults from "@/components/DatabaseCheckResults";
 import { BranchIcon } from "@/components/GitIcons";
 import RunArchiveButton from "@/components/RunArchiveButton";
@@ -134,11 +133,12 @@ export default async function RunReportPage({
           />
         )}
         {!!run.database_snapshot && (
-          <DatabaseCleanup
-            projectId={projectId}
-            runId={runNumber}
-            active={active}
-          />
+          <a
+            href={`/dashboard/projects/${projectId}/cleanup?run=${runNumber}`}
+            className="pressable mt-8 inline-flex min-h-11 items-center gap-2 rounded-lg border border-line px-4 text-sm font-medium hover:bg-panel"
+          >
+            Review cleanup for this run →
+          </a>
         )}
       </div>
     </main>

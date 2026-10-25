@@ -8,14 +8,7 @@ export default function DashboardNavigation({ isAdmin }: { isAdmin: boolean }) {
     {
       href: "/dashboard",
       label: "Projects",
-      active:
-        !pathname.startsWith("/dashboard/admin") &&
-        !pathname.startsWith("/dashboard/profiles"),
-    },
-    {
-      href: "/dashboard/profiles",
-      label: "Profiles",
-      active: pathname.startsWith("/dashboard/profiles"),
+      active: !pathname.startsWith("/dashboard/admin"),
     },
     ...(isAdmin
       ? [

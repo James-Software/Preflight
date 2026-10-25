@@ -183,7 +183,9 @@ test("the project sidebar puts Runs first, selects it for reports and includes s
   assert.ok(html.includes("Back to projects"));
   assert.match(html, /href="\/dashboard\/projects\/1"[^>]*aria-current="page"/);
   assert.ok(html.includes("/database"));
-  assert.equal((html.match(/<svg/g) || []).length, 4);
+  assert.equal((html.match(/<svg/g) || []).length, 6);
+  assert.ok(html.includes("/profiles"));
+  assert.ok(html.includes("/cleanup"));
 });
 
 test("project sections preserve their own login destination and reject foreign projects", async () => {

@@ -82,10 +82,23 @@ export async function ensureSchema(): Promise<void> {
     session_id TEXT, status TEXT NOT NULL DEFAULT 'active',
     expires_at TIMESTAMPTZ NOT NULL DEFAULT NOW() + INTERVAL '10 minutes'
   )`;
-  await sql`CREATE UNIQUE INDEX IF NOT EXISTS profile_capture_active_owner ON profile_captures(owner_github_id) WHERE status IN ('active','saving')`;
+  await sql`ALTER TABLE auth_profiles ADD COLUMN IF NOT EXISTS project_id INT REFERENCES projects(id)`;
+  await sql`ALTER TABLE profile_captures ADD COLUMN IF NOT EXISTS project_id INT REFERENCES projects(id)`;
+  await sql`DROP INDEX IF EXISTS profile_capture_active_owner`;
+  await sql`CREATE UNIQUE INDEX IF NOT EXISTS profile_capture_active_project ON profile_captures(owner_github_id,project_id) WHERE status IN ('active','saving')`;
   await sql`ALTER TABLE runs ADD COLUMN IF NOT EXISTS auth_profile_id INT REFERENCES auth_profiles(id)`;
   await sql`ALTER TABLE runs ADD COLUMN IF NOT EXISTS auth_profile_snapshot JSONB`;
   await sql`ALTER TABLE runs ADD COLUMN IF NOT EXISTS auth_profile_name TEXT`;
+  // Assign legacy sessions only when ownership/origin/history identify one project.
+  // Ambiguous sessions stay unassigned until their owner explicitly moves them.
+  await sql`WITH candidates AS (
+    SELECT a.id,p.id AS project_id FROM auth_profiles a JOIN projects p ON p.owner_github_id=a.owner_github_id
+    WHERE a.project_id IS NULL AND (
+      lower(substring(p.app_url FROM '^https?://[^/?#]+'))=lower(a.origin)
+      OR EXISTS (SELECT 1 FROM runs r WHERE r.project_id=p.id AND r.auth_profile_id=a.id)
+    )
+  ), matched AS (SELECT id,min(project_id) AS project_id FROM candidates GROUP BY id HAVING count(*)=1)
+  UPDATE auth_profiles a SET project_id=m.project_id FROM matched m WHERE a.id=m.id AND a.project_id IS NULL`;
   await sql`CREATE TABLE IF NOT EXISTS database_provider_accounts (
     owner_github_id TEXT NOT NULL, provider TEXT NOT NULL, encrypted_tokens TEXT NOT NULL,
     refresh_until TIMESTAMPTZ, updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),

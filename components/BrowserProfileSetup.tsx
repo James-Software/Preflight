@@ -6,10 +6,13 @@ type Capture = { id: string; liveUrl: string; expiresAt: number };
 export default function BrowserProfileSetup({
   initialOrigin,
   onSaved,
+  projectId,
 }: {
   initialOrigin: string;
   onSaved: (profile: AuthProfile) => void;
+  projectId: number;
 }) {
+  const endpoint = `/api/profiles/browser?projectId=${projectId}`;
   const [capture, setCapture] = useState<Capture | null>(null);
   const [busy, setBusy] = useState(false);
   const [ready, setReady] = useState(false);
@@ -17,7 +20,7 @@ export default function BrowserProfileSetup({
   const [expired, setExpired] = useState(false);
   useEffect(() => {
     let mounted = true;
-    void fetch("/api/profiles/browser", { cache: "no-store" })
+    void fetch(endpoint, { cache: "no-store" })
       .then((r) => r.json())
       .then((data) => {
         if (mounted && data.capture) setCapture(data.capture);
@@ -29,7 +32,7 @@ export default function BrowserProfileSetup({
     return () => {
       mounted = false;
     };
-  }, []);
+  }, [endpoint]);
   useEffect(() => {
     setExpired(false);
     if (!capture) return;
@@ -40,7 +43,7 @@ export default function BrowserProfileSetup({
     return () => clearTimeout(timer);
   }, [capture]);
   async function request(method: string, input: object) {
-    const response = await fetch("/api/profiles/browser", {
+    const response = await fetch(endpoint, {
       method,
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(input),
@@ -107,7 +110,7 @@ export default function BrowserProfileSetup({
         </p>
       )}
       {!capture ? (
-        <form method="post" action="/api/profiles/browser" onSubmit={start}>
+        <form method="post" action={endpoint} onSubmit={start}>
           <fieldset
             disabled={!ready || busy}
             className="mt-5 space-y-5 disabled:opacity-60"

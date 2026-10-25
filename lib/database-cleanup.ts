@@ -126,3 +126,23 @@ export async function decideCleanup(
     throw new DatabaseCheckError(message);
   }
 }
+
+export type CleanupRun = {
+  id: number;
+  status: string;
+  created_at: string;
+  pending_count: number;
+  total_count: number;
+};
+export async function listProjectCleanupRuns(
+  projectId: number,
+  owner: string,
+): Promise<CleanupRun[]> {
+  const rows = await getSql()`SELECT r.id,r.status,r.created_at,
+    (SELECT count(*)::int FROM run_database_cleanup c WHERE c.run_id=r.id AND c.status='pending') AS pending_count,
+    (SELECT count(*)::int FROM run_database_cleanup c WHERE c.run_id=r.id) AS total_count
+    FROM runs r JOIN projects p ON p.id=r.project_id
+    WHERE r.project_id=${projectId} AND p.owner_github_id=${owner} AND jsonb_typeof(r.database_snapshot)='object'
+    ORDER BY r.created_at DESC,r.id DESC`;
+  return rows as CleanupRun[];
+}

@@ -55,6 +55,12 @@ function fixture(options = {}) {
     close: async () => calls.push(["disconnect"]),
   };
   const api = load("lib/profile-capture.ts", {
+    "@/lib/auth-profiles": {
+      profileProject: async (_owner, projectId) => {
+        if (projectId !== 12)
+          throw new state.ProfileError("Project unavailable.");
+      },
+    },
     "@/lib/db": { getSql: () => sql },
     "@/lib/schema": { ensureSchema: async () => {} },
     "@/lib/auth-profile-state": state,
@@ -146,7 +152,7 @@ test("capture discards third-party and expired cookies and other origins", () =>
 test("interactive allocation is private, bounded, single-owner and returns no CDP key", async (t) => {
   key(t);
   const { api, calls, sqlCalls } = fixture();
-  const result = await api.startProfileCapture("owner", input);
+  const result = await api.startProfileCapture("owner", input, 12);
   assert.deepEqual(
     calls.find((c) => c[0] === "allocate"),
     ["allocate", true, true],
@@ -163,7 +169,7 @@ test("interactive allocation is private, bounded, single-owner and returns no CD
   );
   const duplicate = fixture({ duplicate: true });
   await assert.rejects(
-    duplicate.api.startProfileCapture("owner", input),
+    duplicate.api.startProfileCapture("owner", input, 12),
     /already open/,
   );
   assert.equal(duplicate.calls.length, 0);
@@ -174,6 +180,7 @@ test("save verifies replay before atomic encrypted insert, then releases the bro
   const result = await api.finishProfileCapture(
     "owner",
     "12345678-1234-1234-1234-123456789abc",
+    12,
   );
   assert.equal(result.id, 7);
   assert.ok(
@@ -200,7 +207,11 @@ test("verification failures save nothing, sanitize errors and permit retry", asy
   key(t);
   const { api, sqlCalls, calls } = fixture({ failVerify: true });
   await assert.rejects(
-    api.finishProfileCapture("owner", "12345678-1234-1234-1234-123456789abc"),
+    api.finishProfileCapture(
+      "owner",
+      "12345678-1234-1234-1234-123456789abc",
+      12,
+    ),
     (error) =>
       !error.message.includes("private-secret") &&
       /Nothing was saved/.test(error.message),
@@ -218,6 +229,7 @@ test("foreign, expired or consumed grants cannot connect to a browser; cancel re
     foreign.api.finishProfileCapture(
       "other",
       "12345678-1234-1234-1234-123456789abc",
+      12,
     ),
     /unavailable/,
   );
@@ -228,6 +240,7 @@ test("foreign, expired or consumed grants cannot connect to a browser; cancel re
     await cancel.api.finishProfileCapture(
       "owner",
       "12345678-1234-1234-1234-123456789abc",
+      12,
       true,
     ),
     null,
@@ -240,6 +253,7 @@ test("browser profile API blocks foreign origins and unauthenticated callers bef
     allocations = 0;
   const route = load("app/api/profiles/browser/route.ts", {
     "@/auth": { auth: async () => user },
+    "@/lib/auth-profiles": { profileProject: async () => {} },
     "next/cache": { revalidatePath: () => {} },
     "@/lib/auth-profile-state": state,
     "@/lib/profile-capture": {
@@ -250,11 +264,14 @@ test("browser profile API blocks foreign origins and unauthenticated callers bef
     },
   });
   const req = (origin) =>
-    new NextRequest("https://preflight.example.com/api/profiles/browser", {
-      method: "POST",
-      headers: { origin },
-      body: JSON.stringify(input),
-    });
+    new NextRequest(
+      "https://preflight.example.com/api/profiles/browser?projectId=12",
+      {
+        method: "POST",
+        headers: { origin },
+        body: JSON.stringify(input),
+      },
+    );
   assert.equal((await route.POST(req("https://evil.example.com"))).status, 403);
   assert.equal(
     (await route.POST(req("https://preflight.example.com"))).status,

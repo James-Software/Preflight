@@ -3,9 +3,10 @@
 Run swarm opens a modal to choose a branch or open PR and an optional saved
 profile. Branch/PR tabs have independent search, the default branch is listed
 first, and the resolved deployment URL is shown before starting. A missing
-preview prevents launch. Create profile opens `/dashboard/profiles` with the
-selected origin; returning restores the selection and selects the saved profile.
-Profiles also have a permanent dashboard navigation link.
+preview prevents launch. Create profile opens `/dashboard/projects/:id/profiles` with the selected origin;
+returning restores the selection and selects the saved profile. Each project has
+a permanent Profiles sidebar tab. The old `/dashboard/profiles` route is a project
+chooser and preserves old run-setup deep links.
 
 ## Deployment
 
@@ -16,7 +17,7 @@ the web app and workers with this code. Public runs do not require this key.
 Keep the key stable; changing it without migrating existing encrypted data makes
 old profiles unreadable. No key or real session was committed or used in testing.
 
-Schema updates run through `ensureSchema()`: `auth_profiles` stores owner-scoped
+Schema updates run through `ensureSchema()`: `auth_profiles` stores owner- and project-scoped
 metadata, encrypted state and revocation time. Runs store the chosen profile ID,
 name, encrypted configuration snapshot, target ref and head SHA. Reports show the
 branch/PR and profile name. List/create responses never include encrypted or
@@ -26,7 +27,9 @@ plaintext credentials; Trigger payloads carry IDs/URLs rather than credentials.
 
 - Import a cookie JSON array or Playwright storage state with cookies and local
   storage, and/or a JSON object of authentication headers.
-- A profile belongs to one exact origin. Imported cookies must match that app
+- A profile belongs to one project and one exact origin. Another project cannot
+  list, revoke or select it, even when both projects use the same domain.
+  Imported cookies must match that app
   and are narrowed to its hostname, preserving path, expiry, HttpOnly, Secure
   and SameSite. Headers are injected only for the exact origin. A zero-redirect
   request/fulfill step prevents header overrides following cross-origin redirects.
@@ -95,3 +98,6 @@ real GitHub deployment or real customer authentication was exercised.
 
 References: [Playwright authentication](https://playwright.dev/docs/auth),
 [Browserbase session API types](https://github.com/browserbase/sdk-node/blob/main/src/resources/sessions/sessions.ts).
+
+Project isolation, legacy migration and browser validation are documented in
+[project profiles and cleanup](project-profiles/README.md).

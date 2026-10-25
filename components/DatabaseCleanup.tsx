@@ -14,10 +14,12 @@ export default function DatabaseCleanup({
   projectId,
   runId,
   active,
+  heading = "Cleanup",
 }: {
   projectId: number;
   runId: number;
   active: boolean;
+  heading?: string;
 }) {
   const endpoint = `/api/projects/${projectId}/runs/${runId}/cleanup`;
   const [items, setItems] = useState<CleanupItem[]>([]);
@@ -96,7 +98,7 @@ export default function DatabaseCleanup({
           id="cleanup-heading"
           className="text-xl font-semibold tracking-tight"
         >
-          Cleanup
+          {heading}
         </h2>
         <button
           type="button"

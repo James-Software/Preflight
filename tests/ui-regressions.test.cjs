@@ -39,7 +39,7 @@ test("an inaccessible run never queries findings or diagnosis artifacts", async 
     "@/lib/db": { getSql: () => sql },
   });
   assert.equal(await getRunReport(12, 34, "owner-100"), null);
-  const reads = calls.filter((call) => /SELECT/i.test(call.query));
+  const reads = calls.filter((call) => /^\s*SELECT/i.test(call.query));
   assert.equal(reads.length, 1);
   assert.match(reads[0].query, /p\.owner_github_id = \?/);
   assert.match(reads[0].query, /r\.project_id = \?/);

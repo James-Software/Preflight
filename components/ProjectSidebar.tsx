@@ -6,7 +6,7 @@ import ProjectLogo from "@/components/ProjectLogo";
 export function ProjectSectionIcon({
   section,
 }: {
-  section: "runs" | "general" | "database";
+  section: "runs" | "general" | "database" | "profiles" | "cleanup";
 }) {
   return (
     <svg
@@ -25,6 +25,15 @@ export function ProjectSectionIcon({
         <>
           <path d="m10 8 6 4-6 4V8Z" />
           <circle cx="12" cy="12" r="9" />
+        </>
+      ) : section === "profiles" ? (
+        <>
+          <circle cx="9" cy="8" r="3" />
+          <path d="M3 20v-2a6 6 0 0 1 12 0v2M17 4a3 3 0 0 1 0 6M18 14a5 5 0 0 1 3 4v2" />
+        </>
+      ) : section === "cleanup" ? (
+        <>
+          <path d="m5 17 8-8 4 4-8 8H3l2-4ZM13 9l6-6M4 17l5 4M17 5l2 2M5 4v4M3 6h4" />
         </>
       ) : section === "general" ? (
         <>
@@ -57,6 +66,8 @@ export default function ProjectSidebar({
   const base = `/dashboard/projects/${project.id}`;
   const tabs = [
     { section: "runs", label: "Runs", href: base },
+    { section: "profiles", label: "Profiles", href: `${base}/profiles` },
+    { section: "cleanup", label: "Cleanup", href: `${base}/cleanup` },
     { section: "general", label: "General info", href: `${base}/general` },
     { section: "database", label: "Database", href: `${base}/database` },
   ] as const;
@@ -95,7 +106,7 @@ export default function ProjectSidebar({
       </div>
       <nav
         aria-label="Project sections"
-        className="mt-6 grid grid-cols-3 gap-1 lg:grid-cols-1 lg:gap-2"
+        className="mt-6 flex gap-1 overflow-x-auto pb-1 lg:flex-col lg:gap-2 lg:overflow-visible"
       >
         {tabs.map((tab) => {
           const selected =
@@ -108,7 +119,7 @@ export default function ProjectSidebar({
               href={tab.href}
               prefetch={false}
               aria-current={selected ? "page" : undefined}
-              className={`pressable flex min-h-11 cursor-pointer items-center justify-center gap-2 rounded-lg px-2 py-3 text-center text-xs font-medium transition-colors sm:text-sm lg:justify-start lg:px-3 lg:text-left ${selected ? "bg-panel text-primary" : "text-muted hover:bg-panel hover:text-primary"}`}
+              className={`pressable flex min-h-11 shrink-0 cursor-pointer items-center justify-center gap-2 rounded-lg px-2 py-3 text-center text-xs font-medium transition-colors sm:text-sm lg:justify-start lg:px-3 lg:text-left ${selected ? "bg-panel text-primary" : "text-muted hover:bg-panel hover:text-primary"}`}
             >
               <ProjectSectionIcon section={tab.section} />
               {tab.label}

@@ -233,7 +233,12 @@ export async function POST(
   let profile;
   if (body.profileId != null) {
     try {
-      profile = await profileForRun(githubId, body.profileId, targetUrl!);
+      profile = await profileForRun(
+        githubId,
+        body.profileId,
+        targetUrl!,
+        project.id,
+      );
     } catch (error) {
       return NextResponse.json(
         {

@@ -63,7 +63,7 @@ export async function GET(
     }
     const [targets, profiles] = await Promise.all([
       listRunTargets(ctx, project.repo_full_name),
-      listAuthProfiles(owner),
+      listAuthProfiles(owner, project.id),
     ]);
     return NextResponse.json({ ...targets, profiles });
   } catch (error) {

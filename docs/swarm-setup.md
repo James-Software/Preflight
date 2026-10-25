@@ -70,7 +70,7 @@ Set the same **PROFILE_ENCRYPTION_KEY** (base64-encoded 32 random bytes) in Verc
 and the matching Trigger.dev worker environment, then deploy both. Generate it
 locally with `openssl rand -base64 32`; keep it private and stable. The profile UI
 will report unavailable storage until configured. Public runs still work without
-this key. `/dashboard/profiles` stores encrypted cookie/local-storage/header
+this key. Each project’s Profiles tab stores encrypted cookie/local-storage/header
 profiles. The Run swarm panel chooses a profile and resolves the selected branch
 or PR deployment. See [authentication profiles](authenticated-testing.md) for
 supported formats, deployment resolution, origin scoping and verification limits.

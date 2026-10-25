@@ -224,7 +224,7 @@ export default function RunSwarmButton({ projectId }: { projectId: number }) {
       setBusy(false);
     }
   }
-  const createUrl = `/dashboard/profiles?${new URLSearchParams({ returnTo: `/dashboard/projects/${projectId}`, ...(targetUrl ? { origin: new URL(targetUrl).origin } : {}) })}`;
+  const createUrl = `/dashboard/projects/${projectId}/profiles?${new URLSearchParams({ returnToRun: "1", ...(targetUrl ? { origin: new URL(targetUrl).origin } : {}) })}`;
   return (
     <>
       <button

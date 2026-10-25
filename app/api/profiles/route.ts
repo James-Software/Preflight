@@ -5,14 +5,27 @@ import {
   createAuthProfile,
   listAuthProfiles,
   revokeAuthProfile,
+  profileProject,
+  assignAuthProfile,
 } from "@/lib/auth-profiles";
 import { ProfileError } from "@/lib/auth-profile-state";
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const owner = (await auth())?.user?.githubId;
   if (!owner)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-  return NextResponse.json({ profiles: await listAuthProfiles(owner) });
+  try {
+    const projectId = Number(req.nextUrl.searchParams.get("projectId"));
+    return NextResponse.json(
+      { profiles: await listAuthProfiles(owner, projectId) },
+      { headers: { "Cache-Control": "no-store" } },
+    );
+  } catch {
+    return NextResponse.json(
+      { error: "Project unavailable." },
+      { status: 404 },
+    );
+  }
 }
 async function change(req: NextRequest, remove: boolean) {
   if (req.headers.get("origin") !== req.nextUrl.origin)
@@ -27,6 +40,8 @@ async function change(req: NextRequest, remove: boolean) {
       { status: 401 },
     );
   try {
+    const projectId = Number(req.nextUrl.searchParams.get("projectId"));
+    await profileProject(owner, projectId);
     const raw = await req.text();
     if (raw.length > 160_000)
       return NextResponse.json(
@@ -47,13 +62,20 @@ async function change(req: NextRequest, remove: boolean) {
     if (remove) {
       if (!Number.isSafeInteger(body.id) || body.id <= 0)
         throw new ProfileError("Select a valid profile.");
-      if (!(await revokeAuthProfile(owner, body.id)))
+      if (!(await revokeAuthProfile(owner, body.id, projectId)))
         return NextResponse.json(
           { error: "Profile not found." },
           { status: 404 },
         );
-      revalidatePath("/dashboard/profiles");
+      revalidatePath(`/dashboard/projects/${projectId}/profiles`);
       return NextResponse.json({ removed: true });
+    }
+    if (body.action === "assign") {
+      if (!Number.isSafeInteger(body.id) || body.id <= 0)
+        throw new ProfileError("Choose a valid profile.");
+      const profile = await assignAuthProfile(owner, projectId, body.id);
+      revalidatePath(`/dashboard/projects/${projectId}/profiles`);
+      return NextResponse.json({ profile });
     }
     for (const key of ["name", "origin", "session", "headers"])
       if (typeof body[key] !== "string")
@@ -61,8 +83,8 @@ async function change(req: NextRequest, remove: boolean) {
     for (const key of ["verificationPath", "verificationText"])
       if (body[key] !== undefined && typeof body[key] !== "string")
         throw new ProfileError("Use text for the verification fields.");
-    const profile = await createAuthProfile(owner, body);
-    revalidatePath("/dashboard/profiles");
+    const profile = await createAuthProfile(owner, body, projectId);
+    revalidatePath(`/dashboard/projects/${projectId}/profiles`);
     return NextResponse.json({ profile }, { status: 201 });
   } catch (error) {
     return NextResponse.json(

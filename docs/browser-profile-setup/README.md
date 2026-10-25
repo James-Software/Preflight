@@ -1,6 +1,6 @@
 # Browser-assisted authentication profiles
 
-Open **Dashboard → Profiles → New profile → Sign in with browser**. Enter a name,
+Open **Dashboard → Project → Profiles → New profile → Sign in with browser**. Enter a name,
 the app's HTTPS URL, a protected page (for example `/dashboard`), and text shown
 only on that page after signing in. Open the browser, sign in with a dedicated
 test account (including MFA), then choose **Verify and save profile**. The saved
@@ -28,8 +28,8 @@ timeout. API fields and live-view URLs were checked against the
   an interactive Browserbase live view; the CDP URL/API key stays server-side.
   Live-view URLs are sensitive access links: they are returned only to the owner,
   never stored in local storage, with no-store responses and no iframe referrer.
-- A server-side, owner-scoped capture grant lasts ten minutes. Only one active
-  grant per owner can be allocated. Reloading Profiles restores an active browser.
+- A server-side, owner- and project-scoped capture grant lasts ten minutes. Only one active
+  grant per owner/project can be allocated. Reloading Profiles restores an active browser.
   Cancelling or saving requests browser release; abandoned browsers expire at the
   provider. Expired grants can be reclaimed. Provider calls failing during cleanup
   rely on the hard provider timeout.

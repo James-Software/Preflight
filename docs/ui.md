@@ -129,8 +129,12 @@ must be explained at the relevant step, without offering non-working OAuth CTAs.
 
 ### Project sections
 
-Project pages share a left sidebar: **Runs** first/default, **General info**, then
-**Database**, with line icons and a Back to projects link. On phones, use a tab row.
+Project pages share a left sidebar: **Runs** first/default, **Profiles**,
+**Cleanup**, **General info**, then **Database**, with line icons and a Back to
+projects link. On phones, use a horizontally scrolling tab row. Profiles and
+sign-in capture grants belong to the project as well as the owner and app origin.
+Cleanup has a project page with a run picker; reports deep-link to that run’s
+cleanup rather than duplicating the review controls.
 Keep run launch/history on the root route; settings belong on their own routes.
 General info saves a display name, safe uploaded logo, app URL and verified GitHub
 repository. A custom logo can be reset to favicon detection. Existing run reports

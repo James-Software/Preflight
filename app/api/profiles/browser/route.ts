@@ -1,3 +1,4 @@
+import { profileProject } from "@/lib/auth-profiles";
 import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
@@ -22,6 +23,8 @@ async function handle(req: NextRequest, action: "start" | "save" | "cancel") {
       { status: 401 },
     );
   try {
+    const projectId = Number(req.nextUrl.searchParams.get("projectId"));
+    await profileProject(owner, projectId);
     const raw = await req.text();
     if (raw.length > 5000)
       throw new ProfileError("Profile settings are too large.");
@@ -34,17 +37,21 @@ async function handle(req: NextRequest, action: "start" | "save" | "cancel") {
     if (!input || typeof input !== "object" || Array.isArray(input))
       throw new ProfileError("Complete the profile settings.");
     if (action === "start")
-      return NextResponse.json(await startProfileCapture(owner, input), {
-        headers: { "Cache-Control": "no-store" },
-      });
+      return NextResponse.json(
+        await startProfileCapture(owner, input, projectId),
+        {
+          headers: { "Cache-Control": "no-store" },
+        },
+      );
     if (typeof input.id !== "string")
       throw new ProfileError("Choose a sign-in session.");
     const profile = await finishProfileCapture(
       owner,
       input.id,
+      projectId,
       action === "cancel",
     );
-    revalidatePath("/dashboard/profiles");
+    revalidatePath(`/dashboard/projects/${projectId}/profiles`);
     return NextResponse.json(
       { profile },
       { headers: { "Cache-Control": "no-store" } },
@@ -71,13 +78,18 @@ export async function DELETE(req: NextRequest) {
   return handle(req, "cancel");
 }
 
-export async function GET() {
+export async function GET(req: NextRequest) {
   const owner = (await auth())?.user?.githubId;
   if (!owner)
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   try {
     return NextResponse.json(
-      { capture: await activeProfileCapture(owner) },
+      {
+        capture: await activeProfileCapture(
+          owner,
+          Number(req.nextUrl.searchParams.get("projectId")),
+        ),
+      },
       {
         headers: {
           "Cache-Control": "no-store",

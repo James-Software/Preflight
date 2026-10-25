@@ -1,5 +1,5 @@
 import { getSql } from "@/lib/db";
-import { ensureSchema } from "@/lib/schema";
+import { ensureSchema, getProject } from "@/lib/schema";
 import {
   decryptProfile,
   encryptProfile,
@@ -22,10 +22,22 @@ export type AuthSnapshot = {
   verification_path: string;
   verification_text: string | null;
 };
-export async function listAuthProfiles(owner: string): Promise<AuthProfile[]> {
+export async function profileProject(owner: string, projectId: number) {
+  if (
+    !Number.isSafeInteger(projectId) ||
+    projectId <= 0 ||
+    !(await getProject(projectId, owner))
+  )
+    throw new ProfileError("This project is unavailable.");
+}
+export async function listAuthProfiles(
+  owner: string,
+  projectId: number,
+): Promise<AuthProfile[]> {
+  await profileProject(owner, projectId);
   await ensureSchema();
   const rows =
-    await getSql()`SELECT id, name, origin, verification_path, verification_text, created_at FROM auth_profiles WHERE owner_github_id = ${owner} AND revoked_at IS NULL ORDER BY created_at DESC`;
+    await getSql()`SELECT id, name, origin, verification_path, verification_text, created_at FROM auth_profiles WHERE owner_github_id = ${owner} AND project_id = ${projectId} AND revoked_at IS NULL ORDER BY created_at DESC`;
   return Array.isArray(rows) ? (rows as AuthProfile[]) : [];
 }
 export async function createAuthProfile(
@@ -38,7 +50,9 @@ export async function createAuthProfile(
     verificationPath?: string;
     verificationText?: string;
   },
+  projectId: number,
 ): Promise<AuthProfile> {
+  await profileProject(owner, projectId);
   const name = input.name.trim(),
     origin = profileOrigin(input.origin);
   if (!name || name.length > 80)
@@ -68,8 +82,8 @@ export async function createAuthProfile(
   const encrypted = encryptProfile(state, owner, origin);
   await ensureSchema();
   const rows =
-    await getSql()`INSERT INTO auth_profiles (owner_github_id, name, origin, encrypted_state, verification_path, verification_text)
-    VALUES (${owner},${name},${origin},${encrypted},${check.pathname + check.search},${text}) RETURNING id, name, origin, verification_path, verification_text, created_at`;
+    await getSql()`INSERT INTO auth_profiles (owner_github_id, name, origin, encrypted_state, verification_path, verification_text, project_id)
+    VALUES (${owner},${name},${origin},${encrypted},${check.pathname + check.search},${text},${projectId}) RETURNING id, name, origin, verification_path, verification_text, created_at`;
   if (!Array.isArray(rows) || !rows.length)
     throw new Error("Profile could not be saved");
   return rows[0] as AuthProfile;
@@ -77,20 +91,24 @@ export async function createAuthProfile(
 export async function revokeAuthProfile(
   owner: string,
   id: number,
+  projectId: number,
 ): Promise<boolean> {
+  await profileProject(owner, projectId);
   await ensureSchema();
   const rows =
-    await getSql()`UPDATE auth_profiles SET revoked_at = NOW() WHERE id = ${id} AND owner_github_id = ${owner} AND revoked_at IS NULL RETURNING id`;
+    await getSql()`UPDATE auth_profiles SET revoked_at = NOW() WHERE id = ${id} AND owner_github_id = ${owner} AND project_id = ${projectId} AND revoked_at IS NULL RETURNING id`;
   return Array.isArray(rows) && rows.length > 0;
 }
 export async function profileForRun(
   owner: string,
   id: number,
   targetUrl: string,
+  projectId: number,
 ) {
+  await profileProject(owner, projectId);
   await ensureSchema();
   const rows =
-    await getSql()`SELECT id, name, origin, encrypted_state, verification_path, verification_text FROM auth_profiles WHERE id = ${id} AND owner_github_id = ${owner} AND revoked_at IS NULL`;
+    await getSql()`SELECT id, name, origin, encrypted_state, verification_path, verification_text FROM auth_profiles WHERE id = ${id} AND owner_github_id = ${owner} AND project_id = ${projectId} AND revoked_at IS NULL`;
   const p = Array.isArray(rows)
     ? (rows[0] as (AuthProfile & { encrypted_state: string }) | undefined)
     : null;
@@ -117,7 +135,7 @@ export async function profileForRun(
 export async function getRunAuthentication(runId: number) {
   const rows =
     await getSql()`SELECT r.auth_profile_snapshot, r.target_url, p.owner_github_id, a.revoked_at, a.id AS profile_id
-    FROM runs r JOIN projects p ON p.id = r.project_id LEFT JOIN auth_profiles a ON a.id = r.auth_profile_id AND a.owner_github_id = p.owner_github_id WHERE r.id = ${runId}`;
+    FROM runs r JOIN projects p ON p.id = r.project_id LEFT JOIN auth_profiles a ON a.id = r.auth_profile_id AND a.owner_github_id = p.owner_github_id AND (a.project_id=r.project_id OR a.project_id IS NULL) WHERE r.id = ${runId}`;
   const row = Array.isArray(rows)
     ? (rows[0] as
         | {
@@ -146,4 +164,25 @@ export async function getRunAuthentication(runId: number) {
       snapshot.origin,
     ),
   };
+}
+
+export async function listUnassignedProfiles(
+  owner: string,
+): Promise<AuthProfile[]> {
+  await ensureSchema();
+  const rows =
+    await getSql()`SELECT id,name,origin,verification_path,verification_text,created_at FROM auth_profiles WHERE owner_github_id=${owner} AND project_id IS NULL AND revoked_at IS NULL ORDER BY created_at DESC`;
+  return Array.isArray(rows) ? (rows as AuthProfile[]) : [];
+}
+export async function assignAuthProfile(
+  owner: string,
+  projectId: number,
+  id: number,
+) {
+  await profileProject(owner, projectId);
+  const rows =
+    await getSql()`UPDATE auth_profiles SET project_id=${projectId} WHERE id=${id} AND owner_github_id=${owner} AND project_id IS NULL AND revoked_at IS NULL RETURNING id,name,origin,verification_path,verification_text,created_at`;
+  if (!Array.isArray(rows) || !rows.length)
+    throw new ProfileError("This profile is already assigned or unavailable.");
+  return rows[0] as AuthProfile;
 }

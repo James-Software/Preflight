@@ -39,6 +39,7 @@ test("profile fields cannot submit secrets into a URL before JavaScript is ready
   }).default;
   const html = renderToStaticMarkup(
     React.createElement(Manager, {
+      projectId: 12,
       initialProfiles: [],
       initialOrigin: "https://app.example.com",
       returnTo: null,
@@ -46,7 +47,7 @@ test("profile fields cannot submit secrets into a URL before JavaScript is ready
   );
   const form = html.match(/<form[^>]*>/)[0];
   assert.match(form, /method="post"/);
-  assert.match(form, /action="\/api\/profiles\/browser"/);
+  assert.match(form, /action="\/api\/profiles\/browser\?projectId=12"/);
   assert.ok(!html.includes("Cookies or session JSON"));
   assert.match(html, /Advanced: import cookies or headers/);
   assert.match(html, /<fieldset disabled=""/);
@@ -250,21 +251,24 @@ test("profile validation fails for revoked accounts and mismatched targets befor
       GithubRenewalUnavailable: class extends Error {},
     },
     "@/lib/auth-profile-state": state,
-    "@/lib/schema": { ensureSchema: async () => {} },
+    "@/lib/schema": {
+      ensureSchema: async () => {},
+      getProject: async () => ({ id: 12 }),
+    },
     "@/lib/db": { getSql: () => async () => (row ? [row] : []) },
   });
   assert.equal(
-    (await api.profileForRun("100", 3, "https://app.example.com/dashboard"))
+    (await api.profileForRun("100", 3, "https://app.example.com/dashboard", 12))
       .snapshot.encrypted_state,
     encrypted,
   );
   await assert.rejects(
-    api.profileForRun("100", 3, "https://preview.example.com"),
+    api.profileForRun("100", 3, "https://preview.example.com", 12),
     /Create or choose/,
   );
   row = null;
   await assert.rejects(
-    api.profileForRun("100", 3, "https://app.example.com"),
+    api.profileForRun("100", 3, "https://app.example.com", 12),
     /unavailable/,
   );
   await assert.rejects(api.getRunAuthentication(12), /removed/);

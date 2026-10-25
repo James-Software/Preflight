@@ -7,18 +7,24 @@ export default function ProfilesManager({
   initialProfiles,
   initialOrigin,
   returnTo,
+  projectId,
+  unassignedProfiles = [],
 }: {
   initialProfiles: AuthProfile[];
   initialOrigin: string;
   returnTo: string | null;
+  projectId: number;
+  unassignedProfiles?: AuthProfile[];
 }) {
+  const endpoint = `/api/profiles?projectId=${projectId}`;
+  const [unassigned, setUnassigned] = useState(unassignedProfiles);
   const [ready, setReady] = useState(false);
   useEffect(() => setReady(true), []);
   const [manual, setManual] = useState(false);
   const [savedId, setSavedId] = useState<number | null>(null);
   const [profiles, setProfiles] = useState(initialProfiles);
   const [creating, setCreating] = useState(
-    !initialProfiles.length || !!initialOrigin,
+    !initialProfiles.length || !!returnTo,
   );
   const [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
@@ -34,7 +40,7 @@ export default function ProfilesManager({
     setError("");
     setNotice("");
     try {
-      const response = await fetch("/api/profiles", {
+      const response = await fetch(endpoint, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
@@ -58,7 +64,7 @@ export default function ProfilesManager({
     setError("");
     setNotice("");
     try {
-      const response = await fetch("/api/profiles", {
+      const response = await fetch(endpoint, {
         method: "DELETE",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ id }),
@@ -71,6 +77,32 @@ export default function ProfilesManager({
       setRemove(null);
     } catch (e) {
       setError(e instanceof Error ? e.message : "Connection lost. Try again.");
+    } finally {
+      setBusy(false);
+    }
+  }
+  async function assign(id: number) {
+    setBusy(true);
+    setError("");
+    try {
+      const response = await fetch(endpoint, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "assign", id }),
+      });
+      const data = await response.json();
+      if (!response.ok)
+        throw new Error(data.error || "Could not move this profile.");
+      setProfiles((previous) => [data.profile, ...previous]);
+      setUnassigned((previous) =>
+        previous.filter((profile) => profile.id !== id),
+      );
+      setSavedId(data.profile.id);
+      setNotice("Profile moved into this project.");
+    } catch (error) {
+      setError(
+        error instanceof Error ? error.message : "Could not move this profile.",
+      );
     } finally {
       setBusy(false);
     }
@@ -113,9 +145,44 @@ export default function ProfilesManager({
           {notice}
         </p>
       )}
+      {!!unassigned.length && (
+        <details className="mt-6 rounded-lg border border-line p-4">
+          <summary className="min-h-11 text-sm font-medium">
+            Move an existing profile
+          </summary>
+          <p className="mt-2 text-sm text-muted">
+            These older profiles are not assigned to a project. Move one here to
+            use it only in this project.
+          </p>
+          <ul className="mt-3 divide-y divide-line">
+            {unassigned.map((profile) => (
+              <li
+                key={profile.id}
+                className="flex flex-wrap items-center justify-between gap-3 py-3"
+              >
+                <div className="min-w-0">
+                  <p className="text-sm font-medium">{profile.name}</p>
+                  <p className="break-all text-xs text-muted">
+                    {profile.origin}
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  disabled={busy}
+                  onClick={() => void assign(profile.id)}
+                  className="min-h-11 rounded-lg border border-line px-4 text-sm hover:bg-panel disabled:opacity-50"
+                >
+                  Move to this project
+                </button>
+              </li>
+            ))}
+          </ul>
+        </details>
+      )}
       {creating && (
         <>
           <BrowserProfileSetup
+            projectId={projectId}
             initialOrigin={initialOrigin}
             onSaved={(profile) => {
               setProfiles((previous) => [profile, ...previous]);
@@ -141,7 +208,7 @@ export default function ProfilesManager({
       {creating && manual && (
         <form
           method="post"
-          action="/api/profiles"
+          action={endpoint}
           onSubmit={save}
           className="mt-6 rounded-xl border border-line bg-surface p-5 sm:p-7"
         >
