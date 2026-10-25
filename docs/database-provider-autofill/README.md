@@ -5,7 +5,10 @@ Neon, connect the account once, and select the database for this app origin.
 Accounts can be reused across the owner's projects. **Paste a connection URL
 instead** preserves manual setup and other PostgreSQL providers.
 
-- **Neon:** choose project, branch, database and existing role. PreFlight retrieves
+- **Neon:** choose project, branch, database and existing role. Personal API keys
+  automatically discover the user's organizations and list projects with the
+  required `org_id`; organization keys continue using their inferred scope.
+  Multiple organizations are shown in project labels. PreFlight retrieves
   the selected role's pooled connection URI server-side. Database and role lists
   with a single option fill themselves in; multiple options require a choice.
 - **Supabase:** choose the project and enter its existing database password.
@@ -92,7 +95,7 @@ snapshots remain the worker access path.
 
 ## Verification
 
-- Build/typecheck and **97 unit tests** pass, including provider URL/password
+- Build/typecheck and **112 unit tests** pass, including provider URL/password
   construction, stripped DTOs, owner/CSRF gates, OAuth cookie/state/PKCE/expiry,
   encrypted owner/provider/purpose separation and sanitized provider errors.
 - [Integration](integration.jsonl) uses the real PostgreSQL WASM schema and actual
@@ -116,3 +119,10 @@ Provider references checked during implementation:
 - [Neon OAuth availability and protocol](https://neon.com/docs/guides/oauth-integration)
 - Neon API client `@neondatabase/api-client@2.7.3` bundled OpenAPI specification,
   checked for project/branch/database/role listing and connection URI endpoints.
+
+Personal-key organization scoping follows [Neon's personal vs organization key
+requirements](https://neon.com/docs/manage/orgs-api). Account API/access-token
+fields are plain text with autocomplete, capitalization, autocorrect and
+spellcheck disabled, plus password-manager ignore hints. They are not new-password
+fields and are cleared on successful connection. Existing database passwords stay
+masked and no longer advertise themselves as new passwords either.

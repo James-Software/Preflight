@@ -111,7 +111,7 @@ passwords or session credentials to a model or include them in visible results.
 Project database setup starts with provider selection and account authorization,
 then a database picker. Keep direct URL entry available in a disclosure. Do not
 require SQL/workflow assertions just to save a connection: offer Add checks later,
-and exclude zero-check connections from Run swarm's verification toggle. Mask and
-clear provider tokens/passwords; return only project/branch/database/role names to
+and exclude zero-check connections from Run swarm's verification toggle. Use plain, no-autofill inputs for account API/access tokens; mask actual database
+passwords and clear credentials after connecting; return only project/branch/database/role names to
 the client. Supabase's existing-password requirement and Neon's OAuth availability
 must be explained at the relevant step, without offering non-working OAuth CTAs.

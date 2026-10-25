@@ -72,6 +72,15 @@ export async function exchangeProviderTokens(
       : {}),
   };
 }
+export class ProviderRequestError extends DatabaseCheckError {
+  constructor(
+    message: string,
+    public status: number,
+    public organizationRequired = false,
+  ) {
+    super(message);
+  }
+}
 export async function providerRequest(
   provider: DatabaseProvider,
   token: string,
@@ -86,21 +95,45 @@ export async function providerRequest(
     signal: AbortSignal.timeout(15_000),
   });
   if (response.status === 401)
-    throw new DatabaseCheckError(
+    throw new ProviderRequestError(
       "Account authorization expired. Reconnect this provider.",
+      401,
     );
   if (response.status === 403)
-    throw new DatabaseCheckError(
+    throw new ProviderRequestError(
       "This account cannot access that resource. Check the integration permissions or choose another database.",
+      403,
     );
   if (response.status === 429)
-    throw new DatabaseCheckError(
+    throw new ProviderRequestError(
       "The provider is rate limiting requests. Try again shortly.",
+      429,
     );
-  if (!response.ok)
-    throw new DatabaseCheckError(
-      "Could not load database details from the provider. Try again.",
+  if (!response.ok) {
+    let organizationRequired = false;
+    if (
+      provider === "neon" &&
+      response.status === 400 &&
+      /^\/projects(?:\?|$)/.test(path)
+    ) {
+      const detail = await response.json().catch(() => null);
+      const message =
+        typeof detail?.message === "string"
+          ? detail.message
+          : typeof detail?.error === "string"
+            ? detail.error
+            : "";
+      organizationRequired =
+        /org[_ -]?id|organization.*(?:required|specif)/i.test(message);
+    }
+    throw new ProviderRequestError(
+      organizationRequired
+        ? "Neon requires an organization for this personal API key."
+        : `Could not load database details from ${provider === "neon" ? "Neon" : "Supabase"} (HTTP ${response.status}). Try again.`,
+      response.status,
+      organizationRequired,
     );
+  }
   return response.json();
 }
 export type ProviderProject = { id: string; name: string };
@@ -120,24 +153,75 @@ export async function providerProjects(
       )
       .map((p) => ({ id: p.ref || p.id, name: p.name }));
   }
-  let cursor = "";
-  const projects: ProviderProject[] = [];
-  for (let page = 0; page < 20; page++) {
-    const data = await providerRequest(
-      provider,
-      token,
-      `/projects?limit=400${cursor ? `&cursor=${encodeURIComponent(cursor)}` : ""}`,
-    );
-    if (!Array.isArray(data.projects))
-      throw new DatabaseCheckError("Could not load Neon projects.");
-    projects.push(
-      ...data.projects.map((p: any) => ({ id: p.id, name: p.name })),
-    );
-    const next = data.pagination?.cursor;
-    if (!next || next === cursor || data.projects.length < 400) break;
-    cursor = next;
+  async function listProjects(
+    organization?: string,
+  ): Promise<ProviderProject[]> {
+    let cursor = "";
+    const projects: ProviderProject[] = [];
+    for (let page = 0; page < 20; page++) {
+      const query = new URLSearchParams({
+        limit: "400",
+        ...(organization ? { org_id: organization } : {}),
+        ...(cursor ? { cursor } : {}),
+      });
+      const data = await providerRequest("neon", token, `/projects?${query}`);
+      if (!Array.isArray(data.projects))
+        throw new DatabaseCheckError("Could not load Neon projects.");
+      projects.push(
+        ...data.projects.map((p: any) => ({ id: p.id, name: p.name })),
+      );
+      const next = data.pagination?.cursor;
+      if (!next || next === cursor || !data.projects.length) break;
+      cursor = next;
+    }
+    return projects;
   }
-  return projects;
+  try {
+    // Organization API keys infer the org themselves, and need no user endpoint.
+    return await listProjects();
+  } catch (error) {
+    if (!(error instanceof ProviderRequestError) || !error.organizationRequired)
+      throw error;
+  }
+  const data = await providerRequest("neon", token, "/users/me/organizations");
+  if (!Array.isArray(data.organizations))
+    throw new DatabaseCheckError("Could not load your Neon organizations.");
+  const organizations = data.organizations.filter(
+    (o: any) => typeof o.id === "string",
+  );
+  const projects: ProviderProject[] = [];
+  let permissionError: ProviderRequestError | undefined;
+  for (let offset = 0; offset < organizations.length; offset += 4) {
+    const batch = organizations.slice(offset, offset + 4);
+    const results = await Promise.allSettled(
+      batch.map((o: any) => listProjects(o.id)),
+    );
+    for (let index = 0; index < results.length; index++) {
+      const result = results[index];
+      if (result.status === "rejected") {
+        if (
+          result.reason instanceof ProviderRequestError &&
+          result.reason.status === 403
+        ) {
+          permissionError = result.reason;
+          continue;
+        }
+        throw result.reason;
+      }
+      const organization = batch[index];
+      projects.push(
+        ...result.value.map((p: ProviderProject) => ({
+          ...p,
+          name:
+            organizations.length > 1
+              ? `${organization.name || organization.id} / ${p.name}`
+              : p.name,
+        })),
+      );
+    }
+  }
+  if (!projects.length && permissionError) throw permissionError;
+  return [...new Map(projects.map((p) => [p.id, p])).values()];
 }
 export async function providerBranches(
   token: string,

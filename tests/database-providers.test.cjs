@@ -336,3 +336,115 @@ test("OAuth callback rejects wrong state, expired grants and switched owners; co
   assert.ok(!response.headers.get("location").includes("private-code"));
   assert.equal(response.cookies.get("database-oauth-supabase").value, "");
 });
+
+test("Neon personal API keys discover organizations before retrying scoped project listing", async (t) => {
+  const original = global.fetch;
+  t.after(() => {
+    global.fetch = original;
+  });
+  const calls = [];
+  global.fetch = async (raw, init) => {
+    const url = new URL(raw);
+    calls.push(url.pathname + url.search);
+    assert.equal(init.headers.Authorization, "Bearer personal-secret");
+    if (url.pathname.endsWith("/projects") && !url.searchParams.has("org_id"))
+      return new Response(
+        JSON.stringify({
+          code: "BAD_REQUEST",
+          message: "org_id is required for personal API keys",
+        }),
+        { status: 400 },
+      );
+    if (url.pathname.endsWith("/users/me/organizations"))
+      return new Response(
+        JSON.stringify({
+          organizations: [{ id: "org-first", name: "My team" }],
+        }),
+      );
+    assert.equal(url.searchParams.get("org_id"), "org-first");
+    return new Response(
+      JSON.stringify({ projects: [{ id: "p1", name: "Storefront" }] }),
+    );
+  };
+  assert.deepEqual(await api.providerProjects("neon", "personal-secret"), [
+    { id: "p1", name: "Storefront" },
+  ]);
+  assert.equal(calls.length, 3);
+});
+test("Neon personal keys combine organizations, paginate each one and label duplicate project names", async (t) => {
+  const original = global.fetch;
+  t.after(() => {
+    global.fetch = original;
+  });
+  global.fetch = async (raw) => {
+    const url = new URL(raw);
+    if (url.pathname.endsWith("/users/me/organizations"))
+      return new Response(
+        JSON.stringify({
+          organizations: [
+            { id: "org-a", name: "Team A" },
+            { id: "org-b", name: "Team B" },
+          ],
+        }),
+      );
+    const org = url.searchParams.get("org_id");
+    if (!org)
+      return new Response(
+        JSON.stringify({ message: "organization id must be specified" }),
+        { status: 400 },
+      );
+    if (org === "org-b")
+      return new Response(
+        JSON.stringify({ projects: [{ id: "b1", name: "App" }] }),
+      );
+    if (url.searchParams.has("cursor")) {
+      assert.equal(url.searchParams.get("cursor"), "next-page");
+      return new Response(
+        JSON.stringify({ projects: [{ id: "a2", name: "Worker" }] }),
+      );
+    }
+    return new Response(
+      JSON.stringify({
+        projects: [{ id: "a1", name: "App" }],
+        pagination: { cursor: "next-page" },
+      }),
+    );
+  };
+  assert.deepEqual(await api.providerProjects("neon", "secret"), [
+    { id: "a1", name: "Team A / App" },
+    { id: "a2", name: "Team A / Worker" },
+    { id: "b1", name: "Team B / App" },
+  ]);
+});
+test("Neon organization keys continue to work without calling user organization endpoints", async (t) => {
+  let calls = 0;
+  fetches(t, async (url) => {
+    calls++;
+    assert.ok(url.pathname.endsWith("/projects"));
+    assert.equal(url.searchParams.has("org_id"), false);
+    return { projects: [{ id: "p1", name: "App" }] };
+  });
+  assert.deepEqual(await api.providerProjects("neon", "org-secret"), [
+    { id: "p1", name: "App" },
+  ]);
+  assert.equal(calls, 1);
+});
+test("unrelated Neon request errors do not trigger organization discovery or leak upstream messages", async (t) => {
+  const original = global.fetch;
+  t.after(() => {
+    global.fetch = original;
+  });
+  let calls = 0;
+  global.fetch = async () => {
+    calls++;
+    return new Response(
+      JSON.stringify({ message: "private-key-or-upstream-details" }),
+      { status: 400 },
+    );
+  };
+  await assert.rejects(
+    api.providerProjects("neon", "secret"),
+    (e) => e.message.includes("HTTP 400") && !e.message.includes("private"),
+  );
+  assert.equal(calls, 1);
+});

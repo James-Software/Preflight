@@ -368,7 +368,12 @@ export default function DatabaseProviderPicker({
                         value={password}
                         aria-label="Database password"
                         onChange={(e) => setPassword(e.target.value)}
-                        autoComplete="new-password"
+                        autoComplete="off"
+                        autoCapitalize="none"
+                        autoCorrect="off"
+                        spellCheck={false}
+                        data-1p-ignore
+                        data-lpignore="true"
                         className={field}
                       />
                       <span className="mt-2 block text-xs text-muted">
@@ -435,10 +440,15 @@ export default function DatabaseProviderPicker({
                       {name} {provider === "neon" ? "API key" : "access token"}
                       <input
                         required
-                        type="password"
+                        type="text"
                         value={token}
                         onChange={(e) => setToken(e.target.value)}
-                        autoComplete="new-password"
+                        autoComplete="off"
+                        autoCapitalize="none"
+                        autoCorrect="off"
+                        spellCheck={false}
+                        data-1p-ignore
+                        data-lpignore="true"
                         className={field}
                       />
                     </label>
