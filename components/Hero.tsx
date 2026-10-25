@@ -1,6 +1,13 @@
 import Image from "next/image";
+import localFont from "next/font/local";
 import CloudPhotoMotion from "./CloudPhotoMotion";
 import clouds from "@/public/images/pero-kalimero-clouds.webp";
+
+const headline = localFont({
+  src: "../app/fonts/instrument-sans-latin-wght-normal.woff2",
+  weight: "400 700",
+  display: "swap",
+});
 
 export default function Hero() {
   return (
@@ -23,7 +30,9 @@ export default function Hero() {
           </CloudPhotoMotion>
 
           <div className="relative min-w-0 w-full px-5 pb-24 pt-20 text-center sm:px-16 sm:pb-24 sm:pt-24 md:px-12 md:pb-32 md:pt-20">
-            <h1 className="hero-headline animate-hero-rise mx-auto max-w-4xl text-balance font-sans leading-[1.08] font-semibold tracking-[-0.035em] text-[#142b42]">
+            <h1
+              className={`${headline.className} hero-headline animate-hero-rise mx-auto max-w-[60rem] text-balance leading-[1.04] font-medium tracking-[-0.045em] text-[#142b42]`}
+            >
               <span className="block">Your build passed.</span>{" "}
               <span className="block">Now test the app.</span>
             </h1>
