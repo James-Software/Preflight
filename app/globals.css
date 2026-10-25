@@ -389,3 +389,15 @@ html.dark { --run-bg: #111822; --run-fg: #e3e9f2; --run-border: #384252; --run-t
 
 /* Form focus remains visible even when a field uses outline-none. */
 :is(input, textarea, select):focus-visible { outline: 2px solid var(--accent); outline-offset: 3px; }
+
+/* Slow photographic drift stays inside the fixed Cloud Window. */
+.hero-cloud-photo {
+  animation: hero-cloud-drift 40s ease-in-out infinite alternate;
+}
+@keyframes hero-cloud-drift {
+  from { transform: scale(1.035) translate3d(-0.4%, 0.3%, 0); }
+  to { transform: scale(1.035) translate3d(0.4%, -0.3%, 0); }
+}
+@media (prefers-reduced-motion: reduce) {
+  .hero-cloud-photo { animation: none; }
+}
