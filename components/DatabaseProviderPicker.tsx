@@ -221,7 +221,7 @@ export default function DatabaseProviderPicker({
             disabled={busy}
             aria-pressed={provider === p}
             onClick={() => setProvider(p)}
-            className={`min-h-11 rounded-lg border px-5 text-sm font-medium disabled:opacity-60 ${provider === p ? "border-primary bg-primary/10 text-primary" : "border-line"}`}
+            className={`pressable min-h-11 flex-1 cursor-pointer rounded-lg border px-5 py-2.5 text-sm font-medium disabled:cursor-wait disabled:opacity-60 sm:flex-none ${provider === p ? "border-primary bg-primary/10 text-primary enabled:hover:bg-primary/15" : "border-line bg-surface enabled:hover:border-primary/50 enabled:hover:bg-panel"}`}
           >
             {p === "supabase" ? "Supabase" : "Neon"}
           </button>
