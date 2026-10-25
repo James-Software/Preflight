@@ -239,6 +239,7 @@ function parentTask({
   const statuses = [];
   let batches = 0;
   const task = load("src/trigger/run-swarm.ts", {
+    "@/lib/auth-profiles": {},
     "@trigger.dev/sdk": {
       task: (options) => options,
       tasks: {
@@ -315,6 +316,8 @@ function browserTask({ verdictError = false, severityError = false } = {}) {
     locator: () => ({ ariaSnapshot: async () => "button Pay" }),
   };
   const task = load("src/trigger/browser-agent.ts", {
+    "@/lib/auth-profiles": {},
+    "@/lib/browser-auth": {},
     "@trigger.dev/sdk": { task: (options) => options },
     "playwright-core": {
       chromium: {

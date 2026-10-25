@@ -27,6 +27,9 @@ export interface Run {
   started_at: string | null;
   finished_at: string | null;
   archived_at: string | null;
+  target_ref?: string | null;
+  target_sha?: string | null;
+  auth_profile_name?: string | null;
 }
 
 export async function ensureSchema(): Promise<void> {
@@ -58,6 +61,17 @@ export async function ensureSchema(): Promise<void> {
   await sql`ALTER TABLE projects ALTER COLUMN app_url DROP NOT NULL`;
   await sql`ALTER TABLE runs ADD COLUMN IF NOT EXISTS target_url TEXT`;
   await sql`ALTER TABLE runs ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ`;
+  await sql`CREATE TABLE IF NOT EXISTS auth_profiles (
+    id SERIAL PRIMARY KEY, owner_github_id TEXT NOT NULL, name TEXT NOT NULL,
+    origin TEXT NOT NULL, encrypted_state TEXT NOT NULL,
+    verification_path TEXT NOT NULL DEFAULT '/', verification_text TEXT,
+    revoked_at TIMESTAMPTZ, created_at TIMESTAMPTZ DEFAULT NOW()
+  )`;
+  await sql`ALTER TABLE runs ADD COLUMN IF NOT EXISTS auth_profile_id INT REFERENCES auth_profiles(id)`;
+  await sql`ALTER TABLE runs ADD COLUMN IF NOT EXISTS auth_profile_snapshot JSONB`;
+  await sql`ALTER TABLE runs ADD COLUMN IF NOT EXISTS auth_profile_name TEXT`;
+  await sql`ALTER TABLE runs ADD COLUMN IF NOT EXISTS target_ref TEXT`;
+  await sql`ALTER TABLE runs ADD COLUMN IF NOT EXISTS target_sha TEXT`;
   await sql`ALTER TABLE projects ADD COLUMN IF NOT EXISTS screenshot_retention_days INT`;
   await sql`
     CREATE TABLE IF NOT EXISTS agents (
@@ -190,7 +204,7 @@ export async function listRuns(projectId: number): Promise<RunSummary[]> {
   await ensureSchema();
   const sql = getSql();
   const rows = await sql`
-    SELECT id, project_id, status, plan, target_url, created_at, started_at, finished_at, archived_at,
+    SELECT id, project_id, status, plan, target_url, created_at, started_at, finished_at, archived_at, target_ref, target_sha, auth_profile_name,
       (SELECT COUNT(*)::int FROM findings WHERE findings.run_id = runs.id AND findings.deleted_at IS NULL) AS "findingsCount"
     FROM runs
     WHERE project_id = ${projectId}
@@ -210,13 +224,19 @@ export interface Agent {
 export async function createRun(
   projectId: number,
   targetUrl?: string | null,
+  options?: {
+    targetRef?: string;
+    targetSha?: string;
+    profile?: { id: number; name: string; snapshot: unknown };
+  },
 ): Promise<Run> {
   await ensureSchema();
   const sql = getSql();
   const rows = await sql`
-    INSERT INTO runs (project_id, status, target_url)
-    VALUES (${projectId}, 'queued', ${targetUrl ?? null})
-    RETURNING id, project_id, status, plan, target_url, created_at, started_at, finished_at, archived_at
+    INSERT INTO runs (project_id, status, target_url, target_ref, target_sha, auth_profile_id, auth_profile_name, auth_profile_snapshot)
+    VALUES (${projectId}, 'queued', ${targetUrl ?? null}, ${options?.targetRef ?? null}, ${options?.targetSha ?? null},
+      ${options?.profile?.id ?? null}, ${options?.profile?.name ?? null}, ${JSON.stringify(options?.profile?.snapshot ?? null)}::jsonb)
+    RETURNING id, project_id, status, plan, target_url, created_at, started_at, finished_at, archived_at, target_ref, target_sha, auth_profile_name
   `;
   if (!Array.isArray(rows) || rows.length === 0) {
     throw new Error("Failed to create run");

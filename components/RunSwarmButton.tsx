@@ -1,60 +1,462 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { BranchIcon, PullRequestIcon } from "@/components/GitIcons";
+import type { TargetOption } from "@/lib/run-targets";
+import type { AuthProfile } from "@/lib/auth-profiles";
 
+const optionKey = (target: TargetOption) =>
+  target.type === "branch" ? `branch:${target.ref}` : `pr:${target.number}`;
 export default function RunSwarmButton({ projectId }: { projectId: number }) {
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
-
-  const start = async () => {
+  const dialog = useRef<HTMLDialogElement>(null);
+  const [open, setOpen] = useState(false),
+    [loading, setLoading] = useState(false),
+    [busy, setBusy] = useState(false);
+  const [error, setError] = useState(""),
+    [targetError, setTargetError] = useState("");
+  const [options, setOptions] = useState<TargetOption[]>([]),
+    [profiles, setProfiles] = useState<AuthProfile[]>([]);
+  const [selected, setSelected] = useState<TargetOption | null>(null),
+    [filter, setFilter] = useState<"branch" | "pull-request">("branch"),
+    [search, setSearch] = useState("");
+  const [profileId, setProfileId] = useState(""),
+    [targetUrl, setTargetUrl] = useState(""),
+    [resolving, setResolving] = useState(false),
+    [truncated, setTruncated] = useState(false);
+  const draftKey = `preflight:run-setup:${projectId}`;
+  async function load() {
+    setLoading(true);
+    setOptions([]);
+    setProfiles([]);
+    setSelected(null);
+    setError("");
+    setTargetUrl("");
+    setTargetError("");
+    setSearch("");
+    try {
+      const response = await fetch(`/api/projects/${projectId}/run-options`);
+      const data = await response.json();
+      if (!response.ok)
+        throw new Error(data.error || "Could not load run options.");
+      setOptions(data.options);
+      setProfiles(data.profiles);
+      setTruncated(data.truncated);
+      let key = "";
+      try {
+        key = sessionStorage.getItem(draftKey) || "";
+      } catch {}
+      const initial =
+        data.options.find((t: TargetOption) => optionKey(t) === key) ||
+        data.options.find((t: TargetOption) => t.isDefault) ||
+        data.options[0];
+      setSelected(initial || null);
+      setFilter(initial?.type || "branch");
+      const queryProfile = new URLSearchParams(location.search).get(
+        "profileId",
+      );
+      setProfileId(
+        data.profiles.some((p: AuthProfile) => String(p.id) === queryProfile)
+          ? queryProfile || ""
+          : "",
+      );
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Could not load run options.");
+    } finally {
+      setLoading(false);
+    }
+  }
+  function show() {
+    dialog.current?.showModal();
+    dialog.current?.querySelector("h2")?.focus();
+    setOpen(true);
+    void load();
+  }
+  useEffect(() => {
+    if (new URLSearchParams(location.search).get("configureRun") === "1")
+      show();
+  }, []); // Return from profile creation.
+  useEffect(() => {
+    if (!open) return;
+    const previous = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = previous;
+    };
+  }, [open]);
+  useEffect(() => {
+    if (!open || !selected) return;
+    const controller = new AbortController();
+    setResolving(true);
+    setTargetUrl("");
+    setTargetError("");
+    const query = new URLSearchParams({
+      type: selected.type,
+      ...(selected.type === "branch"
+        ? { ref: selected.ref }
+        : { number: String(selected.number) }),
+    });
+    void (async () => {
+      try {
+        const response = await fetch(
+          `/api/projects/${projectId}/run-options?${query}`,
+          { signal: controller.signal },
+        );
+        const data = await response.json();
+        if (!response.ok)
+          throw new Error(data.error || "This deployment is unavailable.");
+        if (!controller.signal.aborted) {
+          setTargetUrl(data.target.url);
+          setProfileId((previous) =>
+            profiles.some(
+              (p) =>
+                String(p.id) === previous &&
+                p.origin === new URL(data.target.url).origin,
+            )
+              ? previous
+              : "",
+          );
+        }
+      } catch (e) {
+        if (!controller.signal.aborted)
+          setTargetError(
+            e instanceof Error
+              ? e.message
+              : "Could not resolve this deployment.",
+          );
+      } finally {
+        if (!controller.signal.aborted) setResolving(false);
+      }
+    })();
+    return () => controller.abort();
+  }, [open, selected, projectId, profiles]);
+  const matchingProfiles = profiles.filter((p) => {
+    try {
+      return p.origin === new URL(targetUrl).origin;
+    } catch {
+      return false;
+    }
+  });
+  const visible = options.filter(
+    (t) =>
+      t.type === filter &&
+      `${t.label} ${t.ref} ${t.number || ""}`
+        .toLowerCase()
+        .includes(search.toLowerCase()),
+  );
+  async function start(event: React.FormEvent) {
+    event.preventDefault();
+    if (!selected || !targetUrl || resolving) return;
     setBusy(true);
     setError("");
     try {
-      const res = await fetch(`/api/projects/${projectId}/runs`, {
+      const response = await fetch(`/api/projects/${projectId}/runs`, {
         method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          target:
+            selected.type === "branch"
+              ? { type: "branch", ref: selected.ref }
+              : { type: "pull-request", number: selected.number },
+          profileId: profileId ? Number(profileId) : null,
+        }),
       });
-      if (!res.ok) {
-        const data = (await res.json().catch(() => ({}))) as { error?: string };
+      const data = await response.json();
+      if (!response.ok)
         throw new Error(data.error || "Could not start the run.");
-      }
-      // The runs list polls and will pick the new run up.
-      window.location.reload();
+      window.location.assign(
+        `/dashboard/projects/${projectId}/runs/${data.run.id}`,
+      );
     } catch (e) {
       setError(e instanceof Error ? e.message : "Could not start the run.");
-    } finally {
       setBusy(false);
     }
-  };
-
+  }
+  const createUrl = `/dashboard/profiles?${new URLSearchParams({ returnTo: `/dashboard/projects/${projectId}`, ...(targetUrl ? { origin: new URL(targetUrl).origin } : {}) })}`;
   return (
-    <div className="flex min-w-0 max-w-full flex-col items-end gap-2">
+    <>
       <button
         type="button"
-        onClick={() => void start()}
-        disabled={busy}
-        className="pressable btn-primary cursor-pointer rounded-full px-5 py-2.5 text-sm font-medium text-white disabled:cursor-wait disabled:opacity-70"
+        onClick={show}
+        className="pressable btn-primary shrink-0 rounded-full px-5 py-2.5 text-sm font-medium"
       >
-        {busy ? "Starting…" : "Run swarm"}
+        Run swarm
       </button>
-      {error && (
-        <div
-          role="alert"
-          className="max-w-sm text-sm text-red-700 dark:text-red-300"
-        >
-          <p className="break-words">{error}</p>
-          <a
-            href="#project-settings"
-            onClick={() =>
-              document
-                .getElementById("project-settings")
-                ?.setAttribute("open", "")
-            }
-            className="inline-flex min-h-11 items-center font-medium underline underline-offset-4"
-          >
-            Edit app URL
-          </a>
-        </div>
-      )}
-    </div>
+      <dialog
+        ref={dialog}
+        aria-labelledby={`run-setup-${projectId}`}
+        onClose={() => {
+          setOpen(false);
+          setBusy(false);
+        }}
+        onCancel={(e) => {
+          if (busy) e.preventDefault();
+        }}
+        className="m-auto max-h-[90svh] w-[calc(100%-2rem)] max-w-lg overflow-y-auto rounded-2xl border border-line bg-page p-0 text-ink shadow-xl backdrop:bg-black/50 dark:text-white"
+      >
+        <form onSubmit={start}>
+          <div className="flex items-start justify-between gap-5 px-6 pt-6">
+            <div>
+              <h2
+                id={`run-setup-${projectId}`}
+                tabIndex={-1}
+                className="text-xl font-semibold tracking-tight"
+                style={{ outline: "none" }}
+              >
+                Start a swarm
+              </h2>
+              <p className="mt-2 text-sm text-muted">
+                Choose what to test and how to sign in.
+              </p>
+            </div>
+            <button
+              type="button"
+              aria-label="Close run setup"
+              disabled={busy}
+              onClick={() => dialog.current?.close()}
+              className="-mr-2 -mt-2 flex size-11 shrink-0 items-center justify-center rounded-full text-muted hover:bg-panel disabled:opacity-50"
+            >
+              <svg
+                width="18"
+                height="18"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="1.75"
+                aria-hidden="true"
+              >
+                <path d="m6 6 12 12M18 6 6 18" />
+              </svg>
+            </button>
+          </div>
+          <div className="space-y-6 px-6 pb-6 pt-6">
+            {loading ? (
+              <p role="status" className="py-8 text-sm text-muted">
+                Loading branches, PRs and profiles…
+              </p>
+            ) : options.length > 0 ? (
+              <>
+                <fieldset disabled={busy}>
+                  <legend className="text-sm font-semibold">Deployment</legend>
+                  <div
+                    className="mt-3 flex gap-1 rounded-lg bg-panel p-1"
+                    role="group"
+                    aria-label="Filter deployment targets"
+                  >
+                    {(["branch", "pull-request"] as const).map((type) => (
+                      <button
+                        type="button"
+                        key={type}
+                        aria-pressed={filter === type}
+                        onClick={() => {
+                          setFilter(type);
+                          setSearch("");
+                        }}
+                        className={`flex min-h-10 flex-1 items-center justify-center gap-2 rounded-md px-3 text-sm font-medium ${filter === type ? "bg-surface text-ink dark:text-white" : "text-muted"}`}
+                      >
+                        {type === "branch" ? (
+                          <BranchIcon />
+                        ) : (
+                          <PullRequestIcon />
+                        )}
+                        {type === "branch" ? "Branches" : "Pull requests"}
+                      </button>
+                    ))}
+                  </div>
+                  <input
+                    type="search"
+                    onKeyDown={(event) => {
+                      if (event.key === "Enter") event.preventDefault();
+                    }}
+                    value={search}
+                    onChange={(e) => setSearch(e.target.value)}
+                    aria-label={
+                      filter === "branch"
+                        ? "Search branches"
+                        : "Search pull requests"
+                    }
+                    placeholder={
+                      filter === "branch"
+                        ? "Search branches…"
+                        : "Search pull requests…"
+                    }
+                    className="mt-3 min-h-11 w-full rounded-lg border border-line bg-page px-3 text-sm"
+                  />
+                  <div
+                    className="mt-2 max-h-44 overflow-y-auto rounded-lg border border-line p-1"
+                    role="group"
+                    aria-label={
+                      filter === "branch" ? "Branches" : "Pull requests"
+                    }
+                  >
+                    {visible.map((target) => (
+                      <label
+                        key={optionKey(target)}
+                        className={`flex min-h-12 cursor-pointer items-center gap-3 rounded-md px-3 py-2 ${selected && optionKey(selected) === optionKey(target) ? "bg-panel" : "hover:bg-panel/60"}`}
+                      >
+                        <input
+                          type="radio"
+                          name={`target-${projectId}`}
+                          checked={
+                            !!selected &&
+                            optionKey(selected) === optionKey(target)
+                          }
+                          onChange={() => {
+                            setTargetUrl("");
+                            setSelected(target);
+                            try {
+                              sessionStorage.setItem(
+                                draftKey,
+                                optionKey(target),
+                              );
+                            } catch {}
+                          }}
+                          className="size-4 shrink-0 accent-primary"
+                        />
+                        <span className="min-w-0 flex-1 break-words text-sm">
+                          {target.type === "pull-request" && (
+                            <span className="mr-2 text-muted">
+                              #{target.number}{" "}
+                            </span>
+                          )}
+                          {target.label}{" "}
+                          {target.type === "pull-request" && (
+                            <span className="mt-0.5 block break-all text-xs text-muted">
+                              {target.ref}
+                            </span>
+                          )}
+                        </span>
+                        {target.isDefault && (
+                          <span className="text-xs text-muted">Default</span>
+                        )}
+                      </label>
+                    ))}
+                    {!visible.length && (
+                      <p className="px-3 py-5 text-sm text-muted">
+                        {search
+                          ? "No matching targets."
+                          : filter === "pull-request"
+                            ? "No open pull requests."
+                            : "No branches available."}
+                      </p>
+                    )}
+                  </div>
+                  {truncated && (
+                    <p className="mt-2 text-xs text-muted">
+                      Showing up to 100 branches and the 100 most recently
+                      updated open PRs.
+                    </p>
+                  )}
+                  {selected && (
+                    <p className="mt-3 flex items-center gap-2 break-words text-xs text-muted">
+                      {selected.type === "branch" ? (
+                        <BranchIcon />
+                      ) : (
+                        <PullRequestIcon />
+                      )}
+                      Selected:{" "}
+                      {selected.type === "pull-request"
+                        ? `#${selected.number} · `
+                        : ""}
+                      {selected.ref}
+                    </p>
+                  )}
+                  {resolving && (
+                    <p role="status" className="mt-2 text-xs text-muted">
+                      Finding deployment…
+                    </p>
+                  )}
+                  {targetUrl && (
+                    <p className="mt-2 break-all text-xs text-muted">
+                      {targetUrl}
+                    </p>
+                  )}
+                  {targetError && (
+                    <p
+                      role="alert"
+                      className="mt-3 text-sm text-red-700 dark:text-red-300"
+                    >
+                      {targetError}
+                    </p>
+                  )}
+                </fieldset>
+                <fieldset disabled={busy}>
+                  <div className="flex items-center justify-between gap-3">
+                    <label
+                      htmlFor={`run-profile-${projectId}`}
+                      className="text-sm font-semibold"
+                    >
+                      Authentication profile
+                    </label>
+                    <a
+                      href={createUrl}
+                      aria-disabled={busy}
+                      onClick={(e) => {
+                        if (busy) e.preventDefault();
+                      }}
+                      className="inline-flex min-h-11 items-center text-sm font-medium text-primary"
+                    >
+                      Create profile
+                    </a>
+                  </div>
+                  <select
+                    id={`run-profile-${projectId}`}
+                    value={profileId || ""}
+                    onChange={(e) => setProfileId(e.target.value)}
+                    disabled={busy || resolving || !targetUrl}
+                    className="min-h-11 w-full rounded-lg border border-line bg-page px-3 text-sm"
+                  >
+                    <option value="">No profile · Public pages</option>
+                    {matchingProfiles.map((p) => (
+                      <option key={p.id} value={p.id}>
+                        {p.name}
+                      </option>
+                    ))}
+                  </select>
+                  <p className="mt-2 text-xs leading-relaxed text-muted">
+                    {matchingProfiles.length
+                      ? "Saved cookies and headers will be used only for this app origin."
+                      : "Choose no profile for public pages, or create one with cookies or auth headers for this origin."}
+                  </p>
+                </fieldset>
+              </>
+            ) : null}
+            {error && (
+              <div
+                role="alert"
+                className="rounded-lg border border-red-500/40 p-3 text-sm"
+              >
+                {error}
+                {!options.length && (
+                  <button
+                    type="button"
+                    className="ml-2 min-h-11 font-medium text-primary underline"
+                    onClick={() => void load()}
+                  >
+                    Try again
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+          <div className="sticky bottom-0 flex items-center justify-end gap-3 border-t border-line bg-page px-6 py-4">
+            <button
+              type="button"
+              disabled={busy}
+              onClick={() => dialog.current?.close()}
+              className="min-h-11 rounded-full border border-line px-4 text-sm disabled:opacity-50"
+            >
+              Cancel
+            </button>
+            <button
+              type="submit"
+              disabled={loading || busy || resolving || !selected || !targetUrl}
+              className="btn-primary min-h-11 rounded-full px-5 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {busy ? "Starting…" : "Start swarm"}
+            </button>
+          </div>
+        </form>
+      </dialog>
+    </>
   );
 }

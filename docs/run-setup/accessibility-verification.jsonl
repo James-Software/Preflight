@@ -1,0 +1,5 @@
+{"width":1440,"page":"run-panel","nativeModalFocus":true,"escapeRestoresFocus":true,"violations":[],"incomplete":["color-contrast"]}
+{"width":1440,"page":"profiles","violations":[],"incomplete":["aria-valid-attr-value","color-contrast"]}
+{"width":390,"page":"run-panel","nativeModalFocus":true,"escapeRestoresFocus":true,"violations":[],"incomplete":["color-contrast"]}
+{"width":390,"page":"profiles","violations":[],"incomplete":["aria-valid-attr-value","color-contrast"]}
+{"noJavaScript":true,"credentialsCannotSubmitInUrl":true}

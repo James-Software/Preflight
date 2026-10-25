@@ -1,3 +1,4 @@
+import { BranchIcon } from "@/components/GitIcons";
 import RunArchiveButton from "@/components/RunArchiveButton";
 import FixesTable from "@/components/FixesTable";
 import ProjectLogo from "@/components/ProjectLogo";
@@ -84,6 +85,19 @@ export default async function RunReportPage({
             })}
           </time>
         </div>
+        {(run.target_ref || run.auth_profile_name) && (
+          <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted">
+            {run.target_ref && (
+              <span className="inline-flex min-w-0 items-center gap-2 break-all">
+                <BranchIcon />
+                {run.target_ref}
+              </span>
+            )}
+            {run.auth_profile_name && (
+              <span>Profile · {run.auth_profile_name}</span>
+            )}
+          </div>
+        )}
         {run.target_url && (
           <p className="mt-4 break-all text-sm text-muted">
             Tested URL: {run.target_url}

@@ -243,6 +243,9 @@ function swarmRoute(trigger, config, changes = {}) {
       ...changes,
     },
     "@/lib/github": {},
+    "@/lib/auth-profiles": {},
+    "@/lib/auth-profile-state": {},
+    "@/lib/run-targets": {},
   });
 }
 test("invalid worker configuration creates no queued run", async () => {
@@ -254,7 +257,10 @@ test("invalid worker configuration creates no queued run", async () => {
     { createRun: () => assert.fail("must not create a run") },
   );
   const response = await route.POST(
-    new Request("https://example.com/api/projects/12/runs", { method: "POST" }),
+    new Request("https://example.com/api/projects/12/runs", {
+      method: "POST",
+      headers: { origin: "https://example.com" },
+    }),
     { params: Promise.resolve({ id: "12" }) },
   );
   assert.equal(response.status, 503);
@@ -270,7 +276,10 @@ test("swarm startup passes worker routing per request", async () => {
     () => config,
   );
   const response = await route.POST(
-    new Request("https://example.com/api/projects/12/runs", { method: "POST" }),
+    new Request("https://example.com/api/projects/12/runs", {
+      method: "POST",
+      headers: { origin: "https://example.com" },
+    }),
     { params: Promise.resolve({ id: "12" }) },
   );
   assert.equal(response.status, 200);
@@ -333,7 +342,10 @@ test("a missing remote worker branch fails the run and returns recovery instruct
     { updateRunStatus: async (...args) => updates.push(args) },
   );
   const response = await route.POST(
-    new Request("https://example.com/api/projects/12/runs", { method: "POST" }),
+    new Request("https://example.com/api/projects/12/runs", {
+      method: "POST",
+      headers: { origin: "https://example.com" },
+    }),
     { params: Promise.resolve({ id: "12" }) },
   );
   assert.equal(response.status, 500);

@@ -1,3 +1,10 @@
+import { profileForRun } from "@/lib/auth-profiles";
+import { ProfileError } from "@/lib/auth-profile-state";
+import {
+  parseRunTarget,
+  resolveRunTarget,
+  RunTargetError,
+} from "@/lib/run-targets";
 import { NextRequest, NextResponse } from "next/server";
 import { tasks } from "@trigger.dev/sdk";
 import { auth } from "@/auth";
@@ -20,6 +27,8 @@ export async function GET(
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const { id } = await params;
+  if (!Number.isSafeInteger(Number(id)) || Number(id) <= 0)
+    return NextResponse.json({ error: "Project not found." }, { status: 404 });
   const project = await getProject(Number(id), githubId);
   if (!project) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -38,12 +47,19 @@ export async function POST(
   req: NextRequest,
   { params }: { params: Promise<{ id: string }> },
 ) {
+  if (req.headers.get("origin") !== new URL(req.url).origin)
+    return NextResponse.json(
+      { error: "Invalid request origin." },
+      { status: 403 },
+    );
   const session = await auth();
   const githubId = session?.user?.githubId;
   if (!githubId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const { id } = await params;
+  if (!Number.isSafeInteger(Number(id)) || Number(id) <= 0)
+    return NextResponse.json({ error: "Project not found." }, { status: 404 });
   const project = await getProject(Number(id), githubId);
   if (!project) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
@@ -59,7 +75,63 @@ export async function POST(
     );
   }
 
+  let body;
+  try {
+    const raw = await req.text();
+    body = raw ? JSON.parse(raw) : {};
+  } catch {
+    return NextResponse.json(
+      { error: "Choose valid run options." },
+      { status: 400 },
+    );
+  }
+  if (!body || typeof body !== "object" || Array.isArray(body))
+    return NextResponse.json(
+      { error: "Choose valid run options." },
+      { status: 400 },
+    );
+  if (
+    body.profileId != null &&
+    (!Number.isSafeInteger(body.profileId) || body.profileId <= 0)
+  )
+    return NextResponse.json(
+      { error: "Choose a valid authentication profile." },
+      { status: 400 },
+    );
+  let targetRef: string | undefined, targetSha: string | undefined;
   let targetUrl = project.app_url;
+  if (body.target !== undefined) {
+    try {
+      const selected = parseRunTarget(body.target);
+      const ctx = await getGithubContext(req);
+      if (!ctx)
+        return NextResponse.json(
+          { error: "GitHub session expired. Sign in again." },
+          { status: 401 },
+        );
+      const resolved = await resolveRunTarget(
+        ctx,
+        project.repo_full_name,
+        selected,
+        project.app_url,
+      );
+      targetUrl = resolved.url;
+      targetRef = resolved.ref;
+      targetSha = resolved.sha;
+    } catch (error) {
+      return NextResponse.json(
+        {
+          error:
+            error instanceof RunTargetError
+              ? error.message
+              : error instanceof GithubAuthError
+                ? "GitHub session expired. Sign in again."
+                : "Could not resolve this deployment. Try again.",
+        },
+        { status: 400 },
+      );
+    }
+  }
   if (!targetUrl) {
     const ctx = await getGithubContext(req);
     if (!ctx) {
@@ -99,9 +171,29 @@ export async function POST(
     targetUrl = preview.url;
   }
 
+  let profile;
+  if (body.profileId != null) {
+    try {
+      profile = await profileForRun(githubId, body.profileId, targetUrl!);
+    } catch (error) {
+      return NextResponse.json(
+        {
+          error:
+            error instanceof ProfileError
+              ? error.message
+              : "Could not load this profile. Try again.",
+        },
+        { status: 400 },
+      );
+    }
+  }
   let run;
   try {
-    run = await createRun(project.id, targetUrl);
+    run = await createRun(project.id, targetUrl, {
+      targetRef,
+      targetSha,
+      profile,
+    });
   } catch (e) {
     console.error("createRun failed", e);
     return NextResponse.json(

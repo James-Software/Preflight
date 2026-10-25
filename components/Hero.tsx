@@ -14,7 +14,7 @@ export default function Hero() {
       id="top"
       className="relative flex min-h-svh flex-col overflow-x-clip"
     >
-      <div className="flex min-w-0 flex-1 px-2 pb-2 pt-20">
+      <div className="flex min-w-0 flex-1 px-[calc(8px+0.5vw)] pb-2 pt-20">
         <div
           className="relative flex min-w-0 w-full flex-1 items-center justify-center rounded-xl"
           style={{ background: "none", border: 0, boxShadow: "none" }}

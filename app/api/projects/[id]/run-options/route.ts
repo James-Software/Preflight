@@ -1,0 +1,72 @@
+import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/auth";
+import { getProject } from "@/lib/schema";
+import { getGithubContext, GithubAuthError } from "@/lib/github";
+import { listAuthProfiles } from "@/lib/auth-profiles";
+import {
+  listRunTargets,
+  parseRunTarget,
+  resolveRunTarget,
+  RunTargetError,
+} from "@/lib/run-targets";
+export async function GET(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  const owner = (await auth())?.user?.githubId;
+  if (!owner)
+    return NextResponse.json(
+      { error: "Sign in again to configure a run." },
+      { status: 401 },
+    );
+  const { id } = await params;
+  if (!Number.isSafeInteger(Number(id)) || Number(id) <= 0)
+    return NextResponse.json({ error: "Project not found." }, { status: 404 });
+  try {
+    const project = await getProject(Number(id), owner);
+    if (!project)
+      return NextResponse.json(
+        { error: "Project not found." },
+        { status: 404 },
+      );
+    const ctx = await getGithubContext(req);
+    if (!ctx)
+      return NextResponse.json(
+        { error: "GitHub session expired. Sign in again." },
+        { status: 401 },
+      );
+    const query = req.nextUrl.searchParams;
+    if (query.has("type")) {
+      const target = parseRunTarget({
+        type: query.get("type"),
+        ref: query.get("ref"),
+        number: Number(query.get("number")),
+      });
+      return NextResponse.json({
+        target: await resolveRunTarget(
+          ctx,
+          project.repo_full_name,
+          target,
+          project.app_url,
+        ),
+      });
+    }
+    const [targets, profiles] = await Promise.all([
+      listRunTargets(ctx, project.repo_full_name),
+      listAuthProfiles(owner),
+    ]);
+    return NextResponse.json({ ...targets, profiles });
+  } catch (error) {
+    return NextResponse.json(
+      {
+        error:
+          error instanceof GithubAuthError
+            ? "GitHub session expired. Sign in again."
+            : error instanceof RunTargetError
+              ? error.message
+              : "Could not load run options. Try again.",
+      },
+      { status: error instanceof GithubAuthError ? 401 : 502 },
+    );
+  }
+}

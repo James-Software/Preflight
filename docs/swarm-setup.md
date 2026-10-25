@@ -63,3 +63,14 @@ A driver error such as `Unexpected non-whitespace character after JSON` is an in
 Driver history, judge observations and finding reproduction/console/network evidence are scoped to the current step. Initial navigation evidence remains available for the first step. The judge also receives the current URL and a bounded accessibility snapshot of the final page, rather than relying only on the driver's action descriptions.
 
 Regression coverage reproduces the reported login → `/terms` sequence and verifies that a parsing failure produces no `/terms` finding or severity request. Other checks cover structured-output routing, one repair attempt, concatenated responses, invalid action fields, genuine findings, isolated per-step evidence, action budgets and cloud-session cleanup. A local production build renders `/terms` with HTTP 200 and no page errors at desktop/phone sizes in both themes. The live domain could not be independently fetched from this workspace because its network proxy rejected the request; this does not establish the deployed route's health. No paid swarm was launched for verification. Deploy the updated workers before retrying a real run.
+
+## Saved authentication profiles
+
+Set the same **PROFILE_ENCRYPTION_KEY** (base64-encoded 32 random bytes) in Vercel
+and the matching Trigger.dev worker environment, then deploy both. Generate it
+locally with `openssl rand -base64 32`; keep it private and stable. The profile UI
+will report unavailable storage until configured. Public runs still work without
+this key. `/dashboard/profiles` stores encrypted cookie/local-storage/header
+profiles. The Run swarm panel chooses a profile and resolves the selected branch
+or PR deployment. See [authentication profiles](authenticated-testing.md) for
+supported formats, deployment resolution, origin scoping and verification limits.

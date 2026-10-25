@@ -21,7 +21,7 @@ export const generateTestPlan = task({
     const sql = getSql();
 
     const rows = await sql`
-      SELECT r.id AS run_id, r.target_url, p.app_url, p.repo_full_name
+      SELECT r.id AS run_id, r.target_url, r.auth_profile_id, r.auth_profile_snapshot, p.app_url, p.repo_full_name
       FROM runs r
       JOIN projects p ON p.id = r.project_id
       WHERE r.id = ${payload.runId}
@@ -34,6 +34,8 @@ export const generateTestPlan = task({
       target_url: string | null;
       app_url: string | null;
       repo_full_name: string;
+      auth_profile_id?: number | null;
+      auth_profile_snapshot?: { verification_path: string };
     };
 
     await sql`
@@ -45,7 +47,27 @@ export const generateTestPlan = task({
     if (!baseUrl) {
       throw new Error(`Run ${payload.runId} has no target URL`);
     }
-    const plan = await buildSmokePlan(baseUrl);
+    const plan = run.auth_profile_id
+      ? [
+          {
+            id: "signed-in-page",
+            title: "Signed-in page loads",
+            detail: `Navigate to ${new URL(run.auth_profile_snapshot?.verification_path || "/", baseUrl).href}. Check that the authenticated app loads and inspect visible controls.`,
+          },
+          {
+            id: "signed-in-navigation",
+            title: "Signed-in navigation works",
+            detail:
+              "Follow the main internal navigation links available to this test account. Check their layouts and primary controls. Do not log out or change security settings.",
+          },
+          {
+            id: "signed-in-interaction",
+            title: "Primary signed-in interaction responds",
+            detail:
+              "Exercise a primary non-destructive interaction or form validation in the authenticated app. Check the expected result and console errors. Do not make payments, delete data, change credentials or log out.",
+          },
+        ]
+      : await buildSmokePlan(baseUrl);
 
     await sql`
       UPDATE runs
@@ -107,7 +129,8 @@ async function buildSmokePlan(appUrl: string): Promise<PlanStep[]> {
       steps.push({
         id: `form-${i + 1}`,
         title: `Exercise form #${i + 1}`,
-        detail: "Fill required fields with realistic input, submit, and verify the outcome (success message, redirect, or validation).",
+        detail:
+          "Fill required fields with realistic input, submit, and verify the outcome (success message, redirect, or validation).",
       });
     });
   } catch {

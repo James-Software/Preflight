@@ -63,6 +63,15 @@ provides current/archived views; active runs must be stopped before archiving.
 
 ## Landing motion
 
-The cloud window is a regular rounded rectangle with 12px corners. It fills the space below the 80px navigation with 8px side/bottom gutters; do not add extra shader or fallback insets. Clouds can move inside it; the outline must stay fixed in both WebGL and the CSS fallback.
+The cloud window is a regular rounded rectangle with 12px corners. It fills the space below the 80px navigation with side gutters of `calc(8px + 0.5vw)` and an 8px bottom gutter; do not add extra shader or fallback insets. Clouds can move inside it; the outline must stay fixed in both WebGL and the CSS fallback.
 
 The evidence sequence preserves native wheel, touch and keyboard scrolling. Make accidental skips less likely with enough scroll distance between beats. Do not consume gestures, discard momentum, prevent input defaults or enforce a per-step cooldown. Settling is proximity-only, confined to the animation, and has no running page-scroll tween that can catch new input; reduced motion and short viewports keep normal document flow.
+
+## Run configuration
+
+`RunSwarmButton` owns the native setup dialog, deployment filters/search and
+profile selection. Keep its primary action disabled until a deployment resolves.
+`ProfilesManager` owns cookie/header import and revocation at `/dashboard/profiles`.
+Credential fields wait for initialization and use POST even for native submission;
+never let a fallback form place session values in a URL. Secret values are not
+returned after saving. See [authenticated testing](authenticated-testing.md).

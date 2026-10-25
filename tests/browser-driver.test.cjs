@@ -99,6 +99,9 @@ function agent({
   steps = [{ title: "Visit /terms", detail: "Open /terms" }],
   actions,
   verdict = () => "pass",
+  authentication = null,
+  authenticationError = null,
+  setupError = null,
 }) {
   let currentUrl = "about:blank",
     call = 0;
@@ -145,6 +148,19 @@ function agent({
     }),
   };
   const task = load("src/trigger/browser-agent.ts", {
+    "@/lib/auth-profiles": {
+      getRunAuthentication: async () => {
+        if (authenticationError) throw authenticationError;
+        return authentication;
+      },
+    },
+    "@/lib/browser-auth": {
+      profileRedactor: () => (text) => text,
+      authenticatedPage: async () => {
+        if (setupError) throw setupError;
+        return page;
+      },
+    },
     "@trigger.dev/sdk": { task: (config) => config },
     "node:timers/promises": { setTimeout: async () => {} },
     "playwright-core": {
@@ -198,6 +214,9 @@ function agent({
         agentIndex: 0,
         assignment: { steps },
         appUrl: "https://target.example/",
+        ...(authentication || authenticationError || setupError
+          ? { authProfileId: 1 }
+          : {}),
       }),
     findings,
     judgments,
@@ -312,4 +331,25 @@ test("running out of overall actions cannot silently skip the remaining planned 
   assert.equal(a.judgments.length, 3);
   assert.equal(a.findings.length, 0);
   assert.deepEqual(a.statuses, ["running", "failed"]);
+});
+
+test("authentication setup failures never become app findings or model judgments", async () => {
+  const expired = agent({
+    authentication: {
+      origin: "https://target.example",
+      verification_path: "/dashboard",
+    },
+    setupError: new Error("Authentication check failed"),
+  });
+  await assert.rejects(expired.run(), /Authentication check failed/);
+  assert.equal(expired.findings.length, 0);
+  assert.equal(expired.judgments.length, 0);
+  assert.equal(expired.driverInputs.length, 0);
+  assert.deepEqual(expired.closed, ["test-session"]);
+  const unavailable = agent({
+    authenticationError: new Error("Profile was revoked"),
+  });
+  await assert.rejects(unavailable.run(), /revoked/);
+  assert.deepEqual(unavailable.closed, []);
+  assert.equal(unavailable.findings.length, 0);
 });

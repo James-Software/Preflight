@@ -1,3 +1,5 @@
+import { getRunAuthentication } from "@/lib/auth-profiles";
+import { authenticatedPage, profileRedactor } from "@/lib/browser-auth";
 import { task } from "@trigger.dev/sdk";
 import { setTimeout as delay } from "node:timers/promises";
 import { chromium, type Page } from "playwright-core";
@@ -105,6 +107,7 @@ export const browserAgent = task({
     agentIndex: number;
     assignment: Assignment;
     appUrl: string;
+    authProfileId?: number;
   }) => {
     const agent = await createAgent(payload.runId, payload.assignment);
     const consoleLogs: string[] = [];
@@ -112,6 +115,7 @@ export const browserAgent = task({
       [];
     const actionLog: string[] = [];
     let sessionId: string | null = null;
+    let redact = (text: string) => text;
     let findingsCount = 0;
     let actionsUsed = 0;
     let stepLogStart = 0;
@@ -136,6 +140,8 @@ export const browserAgent = task({
         } catch {
           screenshotUrl = null;
         }
+        title = redact(title);
+        detail = redact(detail);
         let severity = "medium";
         try {
           severity = (await assessSeverity({ title, detail })).severity;
@@ -173,31 +179,39 @@ export const browserAgent = task({
 
     try {
       await updateAgentStatus(agent.id, "running");
-      const session = await createBrowserSession();
+      const authentication = payload.authProfileId
+        ? await getRunAuthentication(payload.runId)
+        : null;
+      if (authentication) redact = profileRedactor(authentication);
+      const session = await createBrowserSession(!!authentication);
       sessionId = session.id;
       const browser = await chromium.connectOverCDP(session.connectUrl);
-      const page = await browser.newPage({
-        viewport: { width: 1280, height: 800 },
-      });
+      const page = authentication
+        ? await authenticatedPage(browser, authentication)
+        : await browser.newPage({
+            viewport: { width: 1280, height: 800 },
+          });
 
       page.on("console", (msg) => {
         if (msg.type() === "error" || msg.type() === "warning") {
-          consoleLogs.push(`[${msg.type()}] ${msg.text()}`.slice(0, 500));
+          consoleLogs.push(
+            redact(`[${msg.type()}] ${msg.text()}`).slice(0, 500),
+          );
         }
       });
       page.on("pageerror", (err) =>
-        consoleLogs.push(`[pageerror] ${String(err).slice(0, 500)}`),
+        consoleLogs.push(redact(`[pageerror] ${String(err).slice(0, 500)}`)),
       );
       page.on("requestfailed", (req) => {
         networkErrors.push({
-          url: req.url().slice(0, 300),
+          url: redact(req.url()).slice(0, 300),
           failure: req.failure()?.errorText,
         });
       });
       page.on("response", (res) => {
         if (res.status() >= 400) {
           networkErrors.push({
-            url: res.url().slice(0, 300),
+            url: redact(res.url()).slice(0, 300),
             status: res.status(),
           });
         }
@@ -206,7 +220,10 @@ export const browserAgent = task({
       actionLog.push(
         await executeAction(page, {
           action: "goto",
-          value: payload.appUrl,
+          value: authentication
+            ? new URL(authentication.verification_path, authentication.origin)
+                .href
+            : payload.appUrl,
           reasoning: "start the assignment at the app",
         }),
       );
@@ -224,7 +241,7 @@ export const browserAgent = task({
           stepConsoleStart = consoleLogs.length;
           stepNetworkStart = networkErrors.length;
         }
-        actionLog.push(`Start step at ${page.url()}`);
+        actionLog.push(redact(`Start step at ${page.url()}`));
         let finished = false;
         for (
           let attempt = 0;
@@ -245,7 +262,7 @@ export const browserAgent = task({
             action = await driverDecide({
               goal: `Step: ${step.title}. ${step.detail}`,
               history: actionLog.slice(stepLogStart).slice(-10),
-              axTree,
+              axTree: redact(axTree),
               consoleLogs: consoleLogs.slice(stepConsoleStart).slice(-10),
               screenshotBase64: screenshot.toString("base64"),
             });
@@ -257,7 +274,7 @@ export const browserAgent = task({
               { cause: error },
             );
           }
-          actionLog.push(describeAction(action));
+          actionLog.push(redact(describeAction(action)));
           actionsUsed++;
 
           if (action.action === "done") {
@@ -270,7 +287,7 @@ export const browserAgent = task({
             break;
           }
           const result = await executeAction(page, action);
-          actionLog.push(`  → ${result}`);
+          actionLog.push(redact(`  → ${result}`));
           // Gentle on free-tier rate limits.
           await delay(1000);
         }
@@ -286,20 +303,22 @@ export const browserAgent = task({
           const verdict = await judgeStep({
             stepTitle: step.title,
             stepDetail: step.detail,
-            observation: [
-              `Current URL: ${page.url()}`,
-              `Current page: ${(await page.locator("body").ariaSnapshot()).slice(0, 4000)}`,
-              `This step's actions:`,
-              ...actionLog.slice(stepLogStart),
-              `Console output: ${consoleLogs.slice(stepConsoleStart).slice(-5).join(" | ") || "none"}`,
-              `Network errors: ${
-                networkErrors
-                  .slice(stepNetworkStart)
-                  .slice(-5)
-                  .map((n) => n.url)
-                  .join(" | ") || "none"
-              }`,
-            ].join("\n"),
+            observation: redact(
+              [
+                `Current URL: ${page.url()}`,
+                `Current page: ${(await page.locator("body").ariaSnapshot()).slice(0, 4000)}`,
+                `This step's actions:`,
+                ...actionLog.slice(stepLogStart),
+                `Console output: ${consoleLogs.slice(stepConsoleStart).slice(-5).join(" | ") || "none"}`,
+                `Network errors: ${
+                  networkErrors
+                    .slice(stepNetworkStart)
+                    .slice(-5)
+                    .map((n) => n.url)
+                    .join(" | ") || "none"
+                }`,
+              ].join("\n"),
+            ),
           });
           if (verdict.verdict === "fail") {
             await recordFinding(

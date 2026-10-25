@@ -1,3 +1,4 @@
+import { getRunAuthentication } from "@/lib/auth-profiles";
 import { task, tasks } from "@trigger.dev/sdk";
 import { getSql } from "@/lib/db";
 import { updateRunStatus } from "@/lib/schema";
@@ -15,7 +16,7 @@ function chunk<T>(arr: T[], n: number): T[][] {
 /**
  * run-swarm — the swarm parent. Ensures a test plan exists (generating one
  * first if needed), splits it across agents, fans them out, and marks the
- * run done with a findings count. Diagnosis + fix PRs are Phase 4.
+ * run done with a findings count. Fix PRs are opened separately from stored patches in the run report.
  */
 export const runSwarm = task({
   id: "run-swarm",
@@ -23,7 +24,7 @@ export const runSwarm = task({
   run: async (payload: { runId: number; targetUrl?: string }) => {
     const sql = getSql();
     const rows = await sql`
-      SELECT r.id, r.status, r.plan, r.target_url, p.app_url
+      SELECT r.id, r.status, r.plan, r.target_url, r.auth_profile_id, r.auth_profile_snapshot, p.app_url
       FROM runs r
       JOIN projects p ON p.id = r.project_id
       WHERE r.id = ${payload.runId}
@@ -37,6 +38,8 @@ export const runSwarm = task({
       plan: unknown;
       target_url: string | null;
       app_url: string | null;
+      auth_profile_id?: number | null;
+      auth_profile_snapshot?: unknown;
     };
     // The run may have been cancelled (or failed) between trigger and
     // pickup. Never spend Browserbase/LLM money on a dead run.
@@ -63,6 +66,8 @@ export const runSwarm = task({
 
     try {
       assertSwarmModelConfig();
+      if (run.auth_profile_id || run.auth_profile_snapshot)
+        await getRunAuthentication(payload.runId);
     } catch (error) {
       await updateRunStatus(payload.runId, "failed");
       throw error;
@@ -103,6 +108,9 @@ export const runSwarm = task({
             agentIndex: i,
             assignment,
             appUrl: targetUrl,
+            ...(run.auth_profile_id
+              ? { authProfileId: run.auth_profile_id }
+              : {}),
           },
         })),
       );

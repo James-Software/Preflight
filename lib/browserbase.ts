@@ -16,9 +16,13 @@ function bbKey(): string {
   return k;
 }
 
-export async function createBrowserSession(): Promise<BrowserSession> {
+export async function createBrowserSession(
+  privateSession = false,
+): Promise<BrowserSession> {
   const key = bbKey();
-  const body: Record<string, string> = {};
+  const body: Record<string, unknown> = {};
+  if (privateSession)
+    body.browserSettings = { recordSession: false, logSession: false };
   if (process.env.BROWSERBASE_PROJECT_ID) {
     body.projectId = process.env.BROWSERBASE_PROJECT_ID;
   }
@@ -29,7 +33,9 @@ export async function createBrowserSession(): Promise<BrowserSession> {
   });
   if (!res.ok) {
     const t = await res.text().catch(() => "");
-    throw new Error(`Browserbase session error ${res.status}: ${t.slice(0, 200)}`);
+    throw new Error(
+      `Browserbase session error ${res.status}: ${t.slice(0, 200)}`,
+    );
   }
   const data = (await res.json()) as { id?: string };
   if (!data.id) throw new Error("Browserbase returned no session id");
@@ -41,13 +47,19 @@ export async function createBrowserSession(): Promise<BrowserSession> {
 
 export async function closeBrowserSession(sessionId: string): Promise<void> {
   const res = await fetch(`${BB_API}/${sessionId}`, {
-    method: "DELETE",
-    headers: { "x-bb-api-key": bbKey() },
+    method: "POST",
+    headers: { "x-bb-api-key": bbKey(), "Content-Type": "application/json" },
+    body: JSON.stringify({
+      status: "REQUEST_RELEASE",
+      ...(process.env.BROWSERBASE_PROJECT_ID
+        ? { projectId: process.env.BROWSERBASE_PROJECT_ID }
+        : {}),
+    }),
   });
   if (!res.ok) {
     const t = await res.text().catch(() => "");
     throw new Error(
-      `Browserbase close error ${res.status}: ${t.slice(0, 200)}`
+      `Browserbase close error ${res.status}: ${t.slice(0, 200)}`,
     );
   }
 }
