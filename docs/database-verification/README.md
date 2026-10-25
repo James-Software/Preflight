@@ -8,17 +8,18 @@ or prove unrelated effects such as email delivery.
 ## Setup
 
 1. Open a project → **Database verification** → **Connect database**.
-2. Enter the app origin and a read-only PostgreSQL URL for that environment.
-   Neon and Supabase hosted PostgreSQL/session or transaction pooler URLs are
-   supported. This does not replace PreFlight's own `DATABASE_URL`.
-3. Add a check name, exact accessible button label, browser workflow, scalar
-   SELECT query and expectation. **Test and save** checks the connection and SQL
-   result shape. Passwords remain hidden after saving. **Edit checks** can reuse
-   the stored connection without returning its password to the browser.
-4. Open Run swarm, choose the branch/PR and authentication profile, then leave
-   **Verify database changes** enabled. It appears/defaults on only when that
-   resolved deployment origin has a configured database. It can be switched off
-   for a browser-only run. Feature/PR origins never borrow another origin's DB.
+2. Choose Supabase/Neon and select a database from your account, or use **Paste a
+   connection URL instead**. Supabase needs its existing database password; Neon
+   can retrieve the chosen role's URI. See [account autofill setup](../database-provider-autofill/README.md).
+3. Connecting tests a read-only `SELECT 1` and saves the encrypted URI. SQL and
+   browser workflows are optional at this stage. Use **Add checks** later to pair
+   an exact button label/workflow with a scalar SELECT and expectation. Test and
+   save validates these queries; Edit checks reuses the stored URI without
+   returning its password to the browser.
+4. In Run swarm, **Verify database changes** appears/defaults on only when the
+   resolved deployment origin has a configured database with at least one check.
+   Connections with no checks do not claim verification. The toggle can be turned
+   off for a browser-only run. Feature/PR origins never borrow another origin's DB.
 
 Example create-task check:
 
@@ -102,7 +103,7 @@ automatic schema/SQL inference and other database engines are not implemented.
 
 ## Verification
 
-- Production build/typecheck and **82 unit tests** pass. New coverage includes
+- Production build/typecheck and **97 unit tests** pass. New coverage includes
   assertion semantics, stale baselines, SQL/parameter restrictions, public address
   validation, verified/pinned TLS configuration, read-only transactions, bounded
   scalar results, sanitized errors, owner/origin gates, secret-free task payloads,

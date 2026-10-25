@@ -95,7 +95,7 @@ export async function databaseSummary(
   const origin = profileOrigin(targetUrl);
   return (
     (await listProjectDatabases(projectId, owner)).find(
-      (d) => d.origin === origin,
+      (d) => d.origin === origin && d.check_count > 0,
     ) || null
   );
 }
@@ -149,10 +149,15 @@ export async function saveProjectDatabase(
     ).connectionString;
   }
   parsePostgresUrl(connectionString);
-  const checks = parseDatabaseChecks(input.checks);
+  const checks =
+    Array.isArray(input.checks) && input.checks.length === 0
+      ? []
+      : parseDatabaseChecks(input.checks);
   profileKey();
   const reader = await postgresReader(connectionString);
   try {
+    if (!checks.length)
+      await reader.read("SELECT 1 AS connected", "preflight-connection-test");
     for (const check of checks)
       await reader.read(check.query, `preflight-connection-test-${check.id}`);
   } finally {
@@ -203,6 +208,10 @@ export async function databaseForRun(
       "Connect a database for this deployment origin before enabling database verification.",
     );
   const config = unseal(row.encrypted_config, owner, projectId, origin);
+  if (!config.checks.length)
+    throw new DatabaseCheckError(
+      "This database is connected. Add a verification check before enabling database verification.",
+    );
   return {
     snapshot: {
       id: row.id,

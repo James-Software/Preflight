@@ -102,3 +102,12 @@ as workers, and use a plan supporting interactive keep-alive sessions. The brows
 lasts at most ten minutes, disables recording/logging, and verifies a fresh replay
 before saving the encrypted profile. No customer database connection is needed.
 See [setup, boundaries and checks](browser-profile-setup/README.md).
+
+### Database provider autofill
+
+Database settings offer Supabase/Neon account selection and a manual-URL fallback.
+No verification checks are required to connect; add them later to enable database
+verification during a swarm. Optional OAuth app credentials belong in the web
+app only. Supabase still requires an existing database password. Neon OAuth needs
+partner approval; encrypted account API-key autofill is available without it.
+See [provider setup and validation](database-provider-autofill/README.md).

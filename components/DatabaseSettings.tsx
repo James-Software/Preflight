@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import DatabaseProviderPicker from "@/components/DatabaseProviderPicker";
 import type { DatabaseMetadata } from "@/lib/database-connections";
 
 type DraftCheck = {
@@ -33,13 +34,35 @@ export default function DatabaseSettings({
     [id, setId] = useState<number | null>(null);
   const [origin, setOrigin] = useState(defaultOrigin),
     [url, setUrl] = useState(""),
-    [checks, setChecks] = useState<DraftCheck[]>([blankCheck()]);
+    [checks, setChecks] = useState<DraftCheck[]>([]);
   const [busy, setBusy] = useState(false),
     [ready, setReady] = useState(false),
     [error, setError] = useState(""),
     [notice, setNotice] = useState(""),
     [remove, setRemove] = useState<number | null>(null);
-  useEffect(() => setReady(true), []);
+  const [initialProvider, setInitialProvider] = useState<
+    "supabase" | "neon" | null
+  >(null);
+  const [autoOpen, setAutoOpen] = useState(false);
+  useEffect(() => {
+    setReady(true);
+    const current = new URL(window.location.href);
+    const connected = current.searchParams.get("databaseProvider");
+    const failed = current.searchParams.get("databaseProviderError");
+    const provider = connected || failed;
+    if (provider === "supabase" || provider === "neon") {
+      setInitialProvider(provider);
+      setAutoOpen(true);
+      setEditing(true);
+      if (failed)
+        setError(
+          "Account connection was cancelled or could not be completed. Try again.",
+        );
+      current.searchParams.delete("databaseProvider");
+      current.searchParams.delete("databaseProviderError");
+      window.history.replaceState(null, "", current.href);
+    }
+  }, []);
   const field =
     "mt-2 min-h-11 w-full rounded-lg border border-line bg-page px-3 py-2 text-sm";
   const endpoint = `/api/projects/${projectId}/database`;
@@ -54,7 +77,7 @@ export default function DatabaseSettings({
     setId(null);
     setOrigin(defaultOrigin);
     setUrl("");
-    setChecks([blankCheck()]);
+    setChecks([]);
     setError("");
     setEditing(true);
   }
@@ -129,7 +152,9 @@ export default function DatabaseSettings({
       setUrl("");
       setEditing(false);
       setNotice(
-        "Connection and read-only queries checked. Database verification is available for this origin when you start a swarm.",
+        data.connection.check_count
+          ? "Connection and read-only queries checked. Database verification is available for this origin when you start a swarm."
+          : "Database connected. You can add verification checks whenever you’re ready.",
       );
     } catch (e) {
       setError(
@@ -163,6 +188,7 @@ export default function DatabaseSettings({
     <details
       className="mt-4 rounded-lg border border-line bg-surface px-5 py-2 sm:px-6"
       id="database-settings"
+      open={autoOpen || undefined}
     >
       <summary className="min-h-11 cursor-pointer py-3 text-sm font-medium">
         Database verification{" "}
@@ -174,9 +200,8 @@ export default function DatabaseSettings({
       </summary>
       <div className="pb-4 pt-3">
         <p className="max-w-2xl text-sm leading-relaxed text-muted">
-          Confirm that a button changes saved data. Connect a read-only
-          PostgreSQL user, then pair a browser workflow with a database
-          expectation.
+          Choose a database from Supabase or Neon, or paste a connection URL.
+          Verification checks can be added later.
         </p>
         {error && (
           <p
@@ -203,9 +228,10 @@ export default function DatabaseSettings({
                     {connection.origin}
                   </p>
                   <p className="mt-1 text-xs text-muted">
-                    {connection.check_count} check
-                    {connection.check_count === 1 ? "" : "s"} · Connection URL
-                    hidden
+                    {connection.check_count
+                      ? `${connection.check_count} check${connection.check_count === 1 ? "" : "s"}`
+                      : "Connected · No checks configured"}{" "}
+                    · Connection details hidden
                   </p>
                 </div>
                 <div className="flex flex-wrap gap-3">
@@ -215,7 +241,7 @@ export default function DatabaseSettings({
                     onClick={() => void edit(connection.id)}
                     className="min-h-11 px-2 text-sm font-medium text-primary"
                   >
-                    Edit checks
+                    {connection.check_count ? "Edit checks" : "Add checks"}
                   </button>
                   {remove === connection.id ? (
                     <>
@@ -261,216 +287,272 @@ export default function DatabaseSettings({
             Connect database
           </button>
         ) : (
-          <form
-            method="post"
-            action={endpoint}
-            onSubmit={save}
-            className="mt-6 border-t border-line pt-6"
-          >
-            <fieldset
-              disabled={!ready || busy}
-              className="space-y-6 disabled:opacity-60"
-            >
-              <div className="grid gap-5 sm:grid-cols-2">
-                <label className="text-sm font-medium">
-                  App origin
-                  <input
-                    required
-                    type="url"
-                    value={origin}
-                    onChange={(e) => setOrigin(e.target.value)}
-                    readOnly={!!id}
-                    placeholder="https://staging.example.com"
-                    className={field}
-                  />
-                </label>
-                <label className="text-sm font-medium">
-                  Read-only PostgreSQL URL
-                  <input
-                    required={!id}
-                    type="password"
-                    value={url}
-                    onChange={(e) => setUrl(e.target.value)}
-                    autoComplete="new-password"
-                    placeholder={
-                      id
-                        ? "Leave blank to keep the saved URL"
-                        : "postgresql://user:password@host/database"
-                    }
-                    className={`${field} font-mono text-xs`}
-                  />
-                </label>
-              </div>
-              <p className="text-xs leading-relaxed text-muted">
-                Use Neon, Supabase or another publicly reachable PostgreSQL host
-                with TLS. The app performs the action; PreFlight only reads the
-                result. Keep this connection scoped to test data for the
-                selected origin.
-              </p>
-              <div className="space-y-5">
-                {checks.map((check, index) => (
-                  <section
-                    key={index}
-                    className="rounded-lg border border-line bg-page p-4 sm:p-5"
-                    aria-labelledby={`db-check-${index}`}
-                  >
-                    <div className="flex items-center justify-between gap-3">
-                      <h3
-                        id={`db-check-${index}`}
-                        className="text-sm font-semibold"
-                      >
-                        Check {index + 1}
-                      </h3>
-                      {checks.length > 1 && (
-                        <button
-                          type="button"
-                          onClick={() =>
-                            setChecks((previous) =>
-                              previous.filter((_, i) => i !== index),
-                            )
-                          }
-                          aria-label={`Remove check ${index + 1}`}
-                          className="min-h-11 px-2 text-xs text-muted"
-                        >
-                          Remove
-                        </button>
-                      )}
-                    </div>
-                    <div className="mt-3 grid gap-4 sm:grid-cols-2">
-                      <label className="text-sm">
-                        Check name
-                        <input
-                          required
-                          maxLength={100}
-                          value={check.title}
-                          onChange={(e) =>
-                            update(index, { title: e.target.value })
-                          }
-                          placeholder="New task is saved"
-                          className={field}
-                        />
-                      </label>
-                      <label className="text-sm">
-                        Exact button label
-                        <input
-                          required
-                          maxLength={100}
-                          value={check.buttonLabel}
-                          onChange={(e) =>
-                            update(index, { buttonLabel: e.target.value })
-                          }
-                          placeholder="Create task"
-                          className={field}
-                        />
-                      </label>
-                    </div>
-                    <label className="mt-4 block text-sm">
-                      Browser workflow
-                      <textarea
-                        required
-                        rows={3}
-                        maxLength={1500}
-                        value={check.instructions}
-                        onChange={(e) =>
-                          update(index, { instructions: e.target.value })
+          <div className="mt-6 border-t border-line pt-6">
+            <label className="block max-w-lg text-sm font-medium">
+              App origin
+              <input
+                required
+                type="url"
+                value={origin}
+                onChange={(e) => setOrigin(e.target.value)}
+                readOnly={!!id}
+                placeholder="https://staging.example.com"
+                className={field}
+              />
+            </label>
+            {!id && (
+              <DatabaseProviderPicker
+                projectId={projectId}
+                origin={origin}
+                initialProvider={initialProvider}
+                onConnected={(connection) => {
+                  setError("");
+                  setConnections((previous) => [
+                    connection,
+                    ...previous.filter((c) => c.id !== connection.id),
+                  ]);
+                  setEditing(false);
+                  setUrl("");
+                  setNotice(
+                    connection.check_count
+                      ? "Database connected. Your verification checks are ready."
+                      : "Database connected. You can add verification checks whenever you’re ready.",
+                  );
+                }}
+              />
+            )}
+            <details className="mt-5" open={!!id || undefined}>
+              <summary className="min-h-11 cursor-pointer py-3 text-sm font-medium">
+                {id
+                  ? "Connection and verification checks"
+                  : "Paste a connection URL instead"}
+              </summary>
+              <form
+                method="post"
+                action={endpoint}
+                onSubmit={save}
+                className="mt-6 border-t border-line pt-6"
+              >
+                <fieldset
+                  disabled={!ready || busy}
+                  className="space-y-6 disabled:opacity-60"
+                >
+                  <div className="grid gap-5 sm:grid-cols-2">
+                    <label className="text-sm font-medium">
+                      Read-only PostgreSQL URL
+                      <input
+                        required={!id}
+                        type="password"
+                        value={url}
+                        onChange={(e) => setUrl(e.target.value)}
+                        autoComplete="new-password"
+                        placeholder={
+                          id
+                            ? "Leave blank to keep the saved URL"
+                            : "postgresql://user:password@host/database"
                         }
-                        placeholder="Open /tasks, create a task titled {{marker}}, then click Create task."
-                        className={field}
-                      />
-                    </label>
-                    <p className="mt-2 text-xs leading-relaxed text-muted">
-                      Use <code>{"{{marker}}"}</code> for a unique value per
-                      run. The workflow must activate the configured button.
-                    </p>
-                    <label className="mt-4 block text-sm">
-                      Read-only SQL
-                      <textarea
-                        required
-                        rows={3}
-                        maxLength={4000}
-                        spellCheck={false}
-                        value={check.query}
-                        onChange={(e) =>
-                          update(index, { query: e.target.value })
-                        }
-                        placeholder="SELECT count(*) AS value FROM tasks WHERE title = $1"
                         className={`${field} font-mono text-xs`}
                       />
                     </label>
-                    <p className="mt-2 text-xs text-muted">
-                      Return one row and one scalar value. <code>$1</code>{" "}
-                      receives the run’s unique marker. Queries and database
-                      values are kept out of the model’s input.
-                    </p>
-                    <div className="mt-4 grid gap-4 sm:grid-cols-2">
-                      <label className="text-sm">
-                        After clicking, the value
-                        <select
-                          value={check.operator}
-                          onChange={(e) =>
-                            update(index, {
-                              operator: e.target
-                                .value as DraftCheck["operator"],
-                            })
-                          }
-                          className={field}
-                        >
-                          <option value="equals">
-                            Equals an expected value
-                          </option>
-                          <option value="changes">Changes</option>
-                          <option value="increases">Increases</option>
-                          <option value="decreases">Decreases</option>
-                        </select>
-                      </label>
-                      {check.operator === "equals" && (
-                        <label className="text-sm">
-                          Expected JSON value
-                          <input
+                  </div>
+                  <p className="text-xs leading-relaxed text-muted">
+                    Use Neon, Supabase or another publicly reachable PostgreSQL
+                    host with TLS. The app performs the action; PreFlight only
+                    reads the result. Keep this connection scoped to test data
+                    for the selected origin.
+                  </p>
+                  <div className="space-y-5">
+                    {!checks.length && (
+                      <p className="text-sm text-muted">
+                        No checks yet. Connect now, then add checks to verify
+                        specific button actions.
+                      </p>
+                    )}
+                    {checks.map((check, index) => (
+                      <section
+                        key={index}
+                        className="rounded-lg border border-line bg-page p-4 sm:p-5"
+                        aria-labelledby={`db-check-${index}`}
+                      >
+                        <div className="flex items-center justify-between gap-3">
+                          <h3
+                            id={`db-check-${index}`}
+                            className="text-sm font-semibold"
+                          >
+                            Check {index + 1}
+                          </h3>
+                          {checks.length > 0 && (
+                            <button
+                              type="button"
+                              onClick={() =>
+                                setChecks((previous) =>
+                                  previous.filter((_, i) => i !== index),
+                                )
+                              }
+                              aria-label={`Remove check ${index + 1}`}
+                              className="min-h-11 px-2 text-xs text-muted"
+                            >
+                              Remove
+                            </button>
+                          )}
+                        </div>
+                        <div className="mt-3 grid gap-4 sm:grid-cols-2">
+                          <label className="text-sm">
+                            Check name
+                            <input
+                              required
+                              maxLength={100}
+                              value={check.title}
+                              onChange={(e) =>
+                                update(index, { title: e.target.value })
+                              }
+                              placeholder="New task is saved"
+                              className={field}
+                            />
+                          </label>
+                          <label className="text-sm">
+                            Exact button label
+                            <input
+                              required
+                              maxLength={100}
+                              value={check.buttonLabel}
+                              onChange={(e) =>
+                                update(index, { buttonLabel: e.target.value })
+                              }
+                              placeholder="Create task"
+                              className={field}
+                            />
+                          </label>
+                        </div>
+                        <label className="mt-4 block text-sm">
+                          Browser workflow
+                          <textarea
                             required
-                            value={check.expectedText}
+                            rows={3}
+                            maxLength={1500}
+                            value={check.instructions}
                             onChange={(e) =>
-                              update(index, { expectedText: e.target.value })
+                              update(index, { instructions: e.target.value })
                             }
-                            placeholder={'1, true or "{{marker}}"'}
+                            placeholder="Open /tasks, create a task titled {{marker}}, then click Create task."
+                            className={field}
+                          />
+                        </label>
+                        <p className="mt-2 text-xs leading-relaxed text-muted">
+                          Use <code>{"{{marker}}"}</code> for a unique value per
+                          run. The workflow must activate the configured button.
+                        </p>
+                        <label className="mt-4 block text-sm">
+                          Read-only SQL
+                          <textarea
+                            required
+                            rows={3}
+                            maxLength={4000}
+                            spellCheck={false}
+                            value={check.query}
+                            onChange={(e) =>
+                              update(index, { query: e.target.value })
+                            }
+                            placeholder="SELECT count(*) AS value FROM tasks WHERE title = $1"
                             className={`${field} font-mono text-xs`}
                           />
                         </label>
-                      )}
-                    </div>
-                  </section>
-                ))}
-              </div>
+                        <p className="mt-2 text-xs text-muted">
+                          Return one row and one scalar value. <code>$1</code>{" "}
+                          receives the run’s unique marker. Queries and database
+                          values are kept out of the model’s input.
+                        </p>
+                        <div className="mt-4 grid gap-4 sm:grid-cols-2">
+                          <label className="text-sm">
+                            After clicking, the value
+                            <select
+                              value={check.operator}
+                              onChange={(e) =>
+                                update(index, {
+                                  operator: e.target
+                                    .value as DraftCheck["operator"],
+                                })
+                              }
+                              className={field}
+                            >
+                              <option value="equals">
+                                Equals an expected value
+                              </option>
+                              <option value="changes">Changes</option>
+                              <option value="increases">Increases</option>
+                              <option value="decreases">Decreases</option>
+                            </select>
+                          </label>
+                          {check.operator === "equals" && (
+                            <label className="text-sm">
+                              Expected JSON value
+                              <input
+                                required
+                                value={check.expectedText}
+                                onChange={(e) =>
+                                  update(index, {
+                                    expectedText: e.target.value,
+                                  })
+                                }
+                                placeholder={'1, true or "{{marker}}"'}
+                                className={`${field} font-mono text-xs`}
+                              />
+                            </label>
+                          )}
+                        </div>
+                      </section>
+                    ))}
+                  </div>
+                  <button
+                    type="button"
+                    disabled={checks.length >= 10}
+                    onClick={() =>
+                      setChecks((previous) => [...previous, blankCheck()])
+                    }
+                    className="min-h-11 rounded-full border border-line px-4 text-sm disabled:opacity-50"
+                  >
+                    Add check
+                  </button>
+                  <div className="flex flex-wrap justify-end gap-3">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditing(false);
+                        setUrl("");
+                      }}
+                      className="min-h-11 rounded-full border border-line px-4 text-sm"
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      type="submit"
+                      className="btn-primary min-h-11 px-5 text-sm font-medium"
+                    >
+                      {busy
+                        ? "Checking connection…"
+                        : checks.length
+                          ? "Test and save"
+                          : id
+                            ? "Save connection"
+                            : "Connect database"}
+                    </button>
+                  </div>
+                </fieldset>
+              </form>
+            </details>
+            {!id && (
               <button
                 type="button"
-                disabled={checks.length >= 10}
-                onClick={() =>
-                  setChecks((previous) => [...previous, blankCheck()])
-                }
-                className="min-h-11 rounded-full border border-line px-4 text-sm disabled:opacity-50"
+                onClick={() => {
+                  setEditing(false);
+                  setUrl("");
+                }}
+                className="mt-4 min-h-11 text-sm text-muted"
               >
-                Add check
+                Cancel setup
               </button>
-              <div className="flex flex-wrap justify-end gap-3">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setEditing(false);
-                    setUrl("");
-                  }}
-                  className="min-h-11 rounded-full border border-line px-4 text-sm"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="btn-primary min-h-11 px-5 text-sm font-medium"
-                >
-                  {busy ? "Checking connection…" : "Test and save"}
-                </button>
-              </div>
-            </fieldset>
-          </form>
+            )}
+          </div>
         )}
       </div>
     </details>

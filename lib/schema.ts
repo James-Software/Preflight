@@ -78,6 +78,11 @@ export async function ensureSchema(): Promise<void> {
   await sql`ALTER TABLE runs ADD COLUMN IF NOT EXISTS auth_profile_id INT REFERENCES auth_profiles(id)`;
   await sql`ALTER TABLE runs ADD COLUMN IF NOT EXISTS auth_profile_snapshot JSONB`;
   await sql`ALTER TABLE runs ADD COLUMN IF NOT EXISTS auth_profile_name TEXT`;
+  await sql`CREATE TABLE IF NOT EXISTS database_provider_accounts (
+    owner_github_id TEXT NOT NULL, provider TEXT NOT NULL, encrypted_tokens TEXT NOT NULL,
+    refresh_until TIMESTAMPTZ, updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY(owner_github_id,provider)
+  )`;
   await sql`CREATE TABLE IF NOT EXISTS project_database_connections (
     id SERIAL PRIMARY KEY, project_id INT NOT NULL REFERENCES projects(id), origin TEXT NOT NULL,
     encrypted_config TEXT NOT NULL, check_count INT NOT NULL, revoked_at TIMESTAMPTZ,
