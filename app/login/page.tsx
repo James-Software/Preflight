@@ -12,7 +12,5 @@ export default async function Login({
   const returnTo = safeReturnTo(params.callbackUrl);
   const session = await auth();
   if (session?.user && params.reauth !== "github") redirect(returnTo);
-  return (
-    <LoginHandoff returnTo={returnTo} reconnect={params.reauth === "github"} />
-  );
+  return <LoginHandoff returnTo={returnTo} />;
 }

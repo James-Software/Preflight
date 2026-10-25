@@ -40,7 +40,7 @@ export const generateTestPlan = task({
 
     await sql`
       UPDATE runs SET status = 'planning', started_at = NOW()
-      WHERE id = ${payload.runId}
+      WHERE id = ${payload.runId} AND status <> 'cancelled'
     `;
 
     const baseUrl = run.target_url ?? run.app_url;
@@ -72,7 +72,7 @@ export const generateTestPlan = task({
     await sql`
       UPDATE runs
       SET plan = ${JSON.stringify(plan)}::jsonb, status = 'planned'
-      WHERE id = ${payload.runId}
+      WHERE id = ${payload.runId} AND status <> 'cancelled'
     `;
 
     return { runId: payload.runId, steps: plan.length };

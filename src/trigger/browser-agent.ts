@@ -1,3 +1,8 @@
+import {
+  runDatabaseVerifier,
+  databaseVerificationError,
+} from "@/lib/database-verification";
+import { DatabaseCheckError } from "@/lib/database-check-config";
 import { getRunAuthentication } from "@/lib/auth-profiles";
 import { authenticatedPage, profileRedactor } from "@/lib/browser-auth";
 import { task } from "@trigger.dev/sdk";
@@ -14,7 +19,12 @@ import { uploadScreenshot } from "@/lib/evidence";
 import { MODEL_CONFIG } from "@/lib/model-config";
 import { createAgent, updateAgentStatus, createFinding } from "@/lib/schema";
 
-export type PlanStep = { id: string; title: string; detail: string };
+export type PlanStep = {
+  id: string;
+  title: string;
+  detail: string;
+  databaseCheckId?: string;
+};
 export type Assignment = { goal: string; steps: PlanStep[] };
 
 const MAX_ACTIONS = 15;
@@ -115,6 +125,10 @@ export const browserAgent = task({
       [];
     const actionLog: string[] = [];
     let sessionId: string | null = null;
+    let databaseVerifier: Awaited<
+      ReturnType<typeof runDatabaseVerifier>
+    > | null = null;
+    let databaseCheckId: string | null = null;
     let redact = (text: string) => text;
     let findingsCount = 0;
     let actionsUsed = 0;
@@ -242,6 +256,14 @@ export const browserAgent = task({
           stepNetworkStart = networkErrors.length;
         }
         actionLog.push(redact(`Start step at ${page.url()}`));
+        if (step.databaseCheckId) {
+          databaseCheckId = step.databaseCheckId;
+          databaseVerifier = await runDatabaseVerifier(
+            payload.runId,
+            step.databaseCheckId,
+          );
+        }
+        let databaseObserved = false;
         let finished = false;
         for (
           let attempt = 0;
@@ -286,6 +308,41 @@ export const browserAgent = task({
             await recordFinding(page, action.title, action.detail);
             break;
           }
+          if (
+            databaseVerifier &&
+            action.action === "click" &&
+            action.role.toLowerCase() === "button" &&
+            action.name.trim().toLowerCase() ===
+              databaseVerifier.check.buttonLabel.toLowerCase()
+          ) {
+            const before = await databaseVerifier.before();
+            try {
+              await page
+                .getByRole("button", {
+                  name: databaseVerifier.check.buttonLabel,
+                  exact: true,
+                })
+                .click({ timeout: 6000 });
+            } catch {
+              actionLog.push(
+                "Action failed: the configured button was not uniquely available for this workflow.",
+              );
+              continue;
+            }
+            actionLog.push(
+              `Clicked the configured button "${databaseVerifier.check.buttonLabel}".`,
+            );
+            const outcome = await databaseVerifier.after(before);
+            databaseObserved = true;
+            finished = true;
+            if (!outcome.passed)
+              await recordFinding(
+                page,
+                `Database change not confirmed: ${step.title}`,
+                outcome.summary,
+              );
+            break;
+          }
           const result = await executeAction(page, action);
           actionLog.push(redact(`  → ${result}`));
           // Gentle on free-tier rate limits.
@@ -296,6 +353,19 @@ export const browserAgent = task({
           throw new Error(
             `Browser agent reached its action budget during "${step.title}". This test step was not evaluated.`,
           );
+        }
+
+        if (databaseVerifier) {
+          if (!databaseObserved) {
+            await databaseVerifier.inconclusive();
+            throw new DatabaseCheckError(
+              "The configured browser workflow did not activate its database-verified button.",
+            );
+          }
+          await databaseVerifier.close();
+          databaseVerifier = null;
+          databaseCheckId = null;
+          continue; // The deterministic database assertion is the verdict for this workflow.
         }
 
         // Judge only completed observations, never model/runner errors.
@@ -342,9 +412,18 @@ export const browserAgent = task({
         status: "done",
       };
     } catch (e) {
+      if (databaseCheckId)
+        await databaseVerificationError(
+          payload.runId,
+          databaseCheckId,
+          e instanceof DatabaseCheckError
+            ? e.message
+            : "The browser workflow did not complete. This database check is unverified.",
+        ).catch(() => {});
       await updateAgentStatus(agent.id, "failed").catch(() => {});
       throw e;
     } finally {
+      await databaseVerifier?.close().catch(() => {});
       if (sessionId) await closeBrowserSession(sessionId).catch(() => {});
     }
   },

@@ -22,7 +22,7 @@ export function profileKey(): Buffer {
   const key = Buffer.from(process.env.PROFILE_ENCRYPTION_KEY || "", "base64");
   if (key.length !== 32)
     throw new ProfileError(
-      "Authentication profile storage is not configured. Ask your PreFlight administrator to finish setup.",
+      "Secure connection storage is not configured. Ask your PreFlight administrator to finish setup.",
     );
   return key;
 }

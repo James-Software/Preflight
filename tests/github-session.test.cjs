@@ -540,6 +540,7 @@ test("run options distinguish permanent reconnect from a temporary refresh failu
       "@/lib/github-credentials": {
         GithubRenewalUnavailable: RenewalUnavailable,
       },
+      "@/lib/database-connections": {},
       "@/lib/auth-profiles": { listAuthProfiles: async () => [] },
       "@/lib/run-targets": {
         RunTargetError: class extends Error {},

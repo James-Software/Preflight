@@ -9,7 +9,7 @@ export default defineConfig({
     // playwright-core can't be bundled by esbuild (its internal
     // chromium-bidi imports don't resolve); keep it external so it's
     // loaded from node_modules at runtime instead.
-    external: ["playwright-core"],
+    external: ["playwright-core", "pg"],
   },
 });
 

@@ -30,6 +30,7 @@ export interface Run {
   target_ref?: string | null;
   target_sha?: string | null;
   auth_profile_name?: string | null;
+  database_check_count?: number;
 }
 
 export async function ensureSchema(): Promise<void> {
@@ -70,6 +71,20 @@ export async function ensureSchema(): Promise<void> {
   await sql`ALTER TABLE runs ADD COLUMN IF NOT EXISTS auth_profile_id INT REFERENCES auth_profiles(id)`;
   await sql`ALTER TABLE runs ADD COLUMN IF NOT EXISTS auth_profile_snapshot JSONB`;
   await sql`ALTER TABLE runs ADD COLUMN IF NOT EXISTS auth_profile_name TEXT`;
+  await sql`CREATE TABLE IF NOT EXISTS project_database_connections (
+    id SERIAL PRIMARY KEY, project_id INT NOT NULL REFERENCES projects(id), origin TEXT NOT NULL,
+    encrypted_config TEXT NOT NULL, check_count INT NOT NULL, revoked_at TIMESTAMPTZ,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`;
+  await sql`ALTER TABLE project_database_connections DROP CONSTRAINT IF EXISTS project_database_connections_project_id_origin_key`;
+  await sql`CREATE UNIQUE INDEX IF NOT EXISTS project_database_connections_active_origin ON project_database_connections(project_id, origin) WHERE revoked_at IS NULL`;
+  await sql`ALTER TABLE runs ADD COLUMN IF NOT EXISTS database_snapshot JSONB`;
+  await sql`ALTER TABLE runs ADD COLUMN IF NOT EXISTS database_check_count INT NOT NULL DEFAULT 0`;
+  await sql`CREATE TABLE IF NOT EXISTS run_database_checks (
+    id SERIAL PRIMARY KEY, run_id INT NOT NULL REFERENCES runs(id), check_id TEXT NOT NULL,
+    title TEXT NOT NULL, button_label TEXT NOT NULL, status TEXT NOT NULL DEFAULT 'pending',
+    summary TEXT, completed_at TIMESTAMPTZ, UNIQUE(run_id, check_id)
+  )`;
   await sql`ALTER TABLE runs ADD COLUMN IF NOT EXISTS target_ref TEXT`;
   await sql`ALTER TABLE runs ADD COLUMN IF NOT EXISTS target_sha TEXT`;
   await sql`ALTER TABLE projects ADD COLUMN IF NOT EXISTS screenshot_retention_days INT`;
@@ -228,15 +243,27 @@ export async function createRun(
     targetRef?: string;
     targetSha?: string;
     profile?: { id: number; name: string; snapshot: unknown };
+    database?: {
+      snapshot: unknown;
+      checks: { id: string; title: string; buttonLabel: string }[];
+    };
   },
 ): Promise<Run> {
   await ensureSchema();
   const sql = getSql();
   const rows = await sql`
-    INSERT INTO runs (project_id, status, target_url, target_ref, target_sha, auth_profile_id, auth_profile_name, auth_profile_snapshot)
-    VALUES (${projectId}, 'queued', ${targetUrl ?? null}, ${options?.targetRef ?? null}, ${options?.targetSha ?? null},
-      ${options?.profile?.id ?? null}, ${options?.profile?.name ?? null}, ${JSON.stringify(options?.profile?.snapshot ?? null)}::jsonb)
-    RETURNING id, project_id, status, plan, target_url, created_at, started_at, finished_at, archived_at, target_ref, target_sha, auth_profile_name
+    WITH new_run AS (
+      INSERT INTO runs (project_id, status, target_url, target_ref, target_sha, auth_profile_id, auth_profile_name, auth_profile_snapshot, database_snapshot, database_check_count)
+      VALUES (${projectId}, 'queued', ${targetUrl ?? null}, ${options?.targetRef ?? null}, ${options?.targetSha ?? null},
+        ${options?.profile?.id ?? null}, ${options?.profile?.name ?? null}, ${JSON.stringify(options?.profile?.snapshot ?? null)}::jsonb,
+        ${JSON.stringify(options?.database?.snapshot ?? null)}::jsonb, ${options?.database?.checks.length ?? 0})
+      RETURNING id, project_id, status, plan, target_url, created_at, started_at, finished_at, archived_at, target_ref, target_sha, auth_profile_name, database_check_count
+    ), seeded_checks AS (
+      INSERT INTO run_database_checks (run_id, check_id, title, button_label)
+      SELECT new_run.id, c.check_id, c.title, c.button_label FROM new_run
+      CROSS JOIN jsonb_to_recordset(${JSON.stringify((options?.database?.checks ?? []).map((c) => ({ check_id: c.id, title: c.title, button_label: c.buttonLabel })))}::jsonb) AS c(check_id TEXT, title TEXT, button_label TEXT)
+      RETURNING id
+    ) SELECT * FROM new_run
   `;
   if (!Array.isArray(rows) || rows.length === 0) {
     throw new Error("Failed to create run");
@@ -287,7 +314,7 @@ export async function updateRunStatus(
   status: string,
 ): Promise<void> {
   await ensureSchema();
-  await getSql()`UPDATE runs SET status = ${status} WHERE id = ${runId}`;
+  await getSql()`UPDATE runs SET status = ${status} WHERE id = ${runId} AND (status <> 'cancelled' OR ${status} = 'cancelled')`;
 }
 
 export async function createAgent(
@@ -337,6 +364,15 @@ export async function createFinding(input: {
   `;
 }
 
+export interface DatabaseCheckReport {
+  check_id: string;
+  title: string;
+  button_label: string;
+  status: string;
+  summary: string | null;
+  completed_at: string | null;
+}
+
 export interface FindingReport {
   pr_group_id: string | null;
   pr_group_state: string | null;
@@ -361,7 +397,11 @@ export async function getRunReport(
   projectId: number,
   runId: number,
   ownerGithubId: string,
-): Promise<{ run: Run; findings: FindingReport[] } | null> {
+): Promise<{
+  run: Run;
+  findings: FindingReport[];
+  databaseChecks: DatabaseCheckReport[];
+} | null> {
   await ensureSchema();
   const sql = getSql();
   const runs = await sql`
@@ -391,7 +431,16 @@ export async function getRunReport(
     ORDER BY CASE f.severity WHEN 'critical' THEN 0 WHEN 'high' THEN 1
       WHEN 'medium' THEN 2 WHEN 'low' THEN 3 ELSE 4 END, f.id
   `;
-  return { run: runs[0] as Run, findings: findings as FindingReport[] };
+  const databaseChecks =
+    await sql`SELECT check_id, title, button_label, status, summary, completed_at
+    FROM run_database_checks WHERE run_id = ${runId} ORDER BY id`;
+  return {
+    run: runs[0] as Run,
+    findings: findings as FindingReport[],
+    databaseChecks: (Array.isArray(databaseChecks)
+      ? databaseChecks
+      : []) as DatabaseCheckReport[],
+  };
 }
 
 export async function updateProjectAppUrl(

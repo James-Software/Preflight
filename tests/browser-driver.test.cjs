@@ -148,6 +148,8 @@ function agent({
     }),
   };
   const task = load("src/trigger/browser-agent.ts", {
+    "@/lib/database-verification": {},
+    "@/lib/database-check-config": {},
     "@/lib/auth-profiles": {
       getRunAuthentication: async () => {
         if (authenticationError) throw authenticationError;

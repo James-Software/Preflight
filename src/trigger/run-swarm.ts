@@ -1,3 +1,7 @@
+import {
+  preflightRunDatabase,
+  databaseVerificationError,
+} from "@/lib/database-verification";
 import { getRunAuthentication } from "@/lib/auth-profiles";
 import { task, tasks } from "@trigger.dev/sdk";
 import { getSql } from "@/lib/db";
@@ -24,7 +28,7 @@ export const runSwarm = task({
   run: async (payload: { runId: number; targetUrl?: string }) => {
     const sql = getSql();
     const rows = await sql`
-      SELECT r.id, r.status, r.plan, r.target_url, r.auth_profile_id, r.auth_profile_snapshot, p.app_url
+      SELECT r.id, r.status, r.plan, r.target_url, r.auth_profile_id, r.auth_profile_snapshot, r.database_snapshot, p.app_url
       FROM runs r
       JOIN projects p ON p.id = r.project_id
       WHERE r.id = ${payload.runId}
@@ -40,6 +44,7 @@ export const runSwarm = task({
       app_url: string | null;
       auth_profile_id?: number | null;
       auth_profile_snapshot?: unknown;
+      database_snapshot?: unknown;
     };
     // The run may have been cancelled (or failed) between trigger and
     // pickup. Never spend Browserbase/LLM money on a dead run.
@@ -64,15 +69,35 @@ export const runSwarm = task({
       );
     }
 
+    let databaseChecks: Awaited<ReturnType<typeof preflightRunDatabase>> = [];
     try {
       assertSwarmModelConfig();
       if (run.auth_profile_id || run.auth_profile_snapshot)
         await getRunAuthentication(payload.runId);
+      if (run.database_snapshot)
+        databaseChecks = await preflightRunDatabase(payload.runId);
     } catch (error) {
       await updateRunStatus(payload.runId, "failed");
       throw error;
     }
 
+    const cancelled = async () => {
+      const current =
+        await sql`SELECT status FROM runs WHERE id = ${payload.runId}`;
+      if (
+        Array.isArray(current) &&
+        (current[0] as { status?: string } | undefined)?.status === "cancelled"
+      ) {
+        if (run.database_snapshot)
+          await databaseVerificationError(
+            payload.runId,
+            null,
+            "The run was cancelled before this database check completed.",
+          );
+        return true;
+      }
+      return false;
+    };
     let plan = run.plan as PlanStep[] | null;
     if (!Array.isArray(plan) || plan.length === 0) {
       await updateRunStatus(payload.runId, "planning");
@@ -90,6 +115,7 @@ export const runSwarm = task({
       throw new Error("No test plan available for this run");
     }
 
+    if (await cancelled()) return { runId: payload.runId, status: "cancelled" };
     await updateRunStatus(payload.runId, "running");
     const chunks = chunk(plan, 3);
     const assignments: Assignment[] = chunks.map((steps, i) => ({
@@ -119,7 +145,40 @@ export const runSwarm = task({
           "A browser agent failed. Check its Trigger.dev task log for model or browser errors.",
         );
       }
+      for (const [index, check] of databaseChecks.entries()) {
+        if (await cancelled())
+          return { runId: payload.runId, status: "cancelled" };
+        const verified = await tasks.triggerAndWait("browser-agent", {
+          runId: payload.runId,
+          agentIndex: assignments.length + index,
+          assignment: {
+            goal: check.title,
+            steps: [
+              {
+                id: `database-${check.id}`,
+                title: check.title,
+                detail: `${check.instructions} Finish by clicking the button with the exact accessible name "${check.buttonLabel}". Database verification will confirm the saved result.`,
+                databaseCheckId: check.id,
+              },
+            ],
+          },
+          appUrl: targetUrl,
+          ...(run.auth_profile_id
+            ? { authProfileId: run.auth_profile_id }
+            : {}),
+        });
+        if (!verified.ok)
+          throw new Error(
+            "A database verification workflow could not complete. Check the database results in the run report.",
+          );
+      }
     } catch (e) {
+      if (run.database_snapshot)
+        await databaseVerificationError(
+          payload.runId,
+          null,
+          "The run stopped before this database check completed. It has not been verified.",
+        );
       await updateRunStatus(payload.runId, "failed");
       throw e;
     }

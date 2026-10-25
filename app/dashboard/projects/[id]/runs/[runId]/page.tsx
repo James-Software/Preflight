@@ -1,3 +1,4 @@
+import DatabaseCheckResults from "@/components/DatabaseCheckResults";
 import { BranchIcon } from "@/components/GitIcons";
 import RunArchiveButton from "@/components/RunArchiveButton";
 import FixesTable from "@/components/FixesTable";
@@ -106,6 +107,7 @@ export default async function RunReportPage({
         <div className="mt-6">
           <RunReportRefresh active={active} />
         </div>
+        <DatabaseCheckResults checks={report.databaseChecks || []} />
         {!findings.length ? (
           <div className="mt-10 rounded-2xl bg-panel p-8">
             <h2 className="text-xl font-semibold">

@@ -1,3 +1,4 @@
+import { databaseSummary } from "@/lib/database-connections";
 import { GithubRenewalUnavailable } from "@/lib/github-credentials";
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
@@ -49,13 +50,15 @@ export async function GET(
         ref: query.get("ref"),
         number: Number(query.get("number")),
       });
+      const resolved = await resolveRunTarget(
+        ctx,
+        project.repo_full_name,
+        target,
+        project.app_url,
+      );
       return NextResponse.json({
-        target: await resolveRunTarget(
-          ctx,
-          project.repo_full_name,
-          target,
-          project.app_url,
-        ),
+        target: resolved,
+        database: await databaseSummary(project.id, owner, resolved.url),
       });
     }
     const [targets, profiles] = await Promise.all([

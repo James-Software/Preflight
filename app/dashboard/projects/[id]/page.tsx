@@ -1,3 +1,5 @@
+import DatabaseSettings from "@/components/DatabaseSettings";
+import { listProjectDatabases } from "@/lib/database-connections";
 import ProjectLogo from "@/components/ProjectLogo";
 import { auth } from "@/auth";
 import { redirect, notFound } from "next/navigation";
@@ -31,7 +33,15 @@ export default async function ProjectPage({
 
   const project = await getProject(projectId, githubId);
   if (!project) notFound();
-  const runs = await listRuns(project.id);
+  const [runs, databases] = await Promise.all([
+    listRuns(project.id),
+    listProjectDatabases(project.id, githubId),
+  ]);
+  let databaseOrigin = "";
+  try {
+    databaseOrigin = new URL(project.app_url || project.latest_target_url || "")
+      .origin;
+  } catch {}
 
   const saveUrl: ProjectUrlAction = async (_previous, formData) => {
     "use server";
@@ -84,6 +94,11 @@ export default async function ProjectPage({
         </p>
 
         <ProjectUrlForm action={saveUrl} initialUrl={project.app_url} />
+        <DatabaseSettings
+          projectId={project.id}
+          initialConnections={databases}
+          defaultOrigin={databaseOrigin}
+        />
 
         <div className="mt-10">
           <div className="flex items-center justify-between">

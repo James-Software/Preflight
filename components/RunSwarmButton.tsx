@@ -24,6 +24,10 @@ export default function RunSwarmButton({ projectId }: { projectId: number }) {
     [targetUrl, setTargetUrl] = useState(""),
     [resolving, setResolving] = useState(false),
     [truncated, setTruncated] = useState(false);
+  const [database, setDatabase] = useState<{ check_count: number } | null>(
+    null,
+  );
+  const [verifyDatabase, setVerifyDatabase] = useState(false);
   const [reconnecting, setReconnecting] = useState(false);
   const [reauthFailed, setReauthFailed] = useState(false);
   const redirecting = useRef(false);
@@ -57,6 +61,8 @@ export default function RunSwarmButton({ projectId }: { projectId: number }) {
     setSelected(null);
     setError("");
     setTargetUrl("");
+    setDatabase(null);
+    setVerifyDatabase(false);
     setTargetError("");
     setSearch("");
     try {
@@ -122,6 +128,8 @@ export default function RunSwarmButton({ projectId }: { projectId: number }) {
     const controller = new AbortController();
     setResolving(true);
     setTargetUrl("");
+    setDatabase(null);
+    setVerifyDatabase(false);
     setTargetError("");
     const query = new URLSearchParams({
       type: selected.type,
@@ -144,6 +152,8 @@ export default function RunSwarmButton({ projectId }: { projectId: number }) {
           throw new Error(data.error || "This deployment is unavailable.");
         if (!controller.signal.aborted) {
           setTargetUrl(data.target.url);
+          setDatabase(data.database || null);
+          setVerifyDatabase(!!data.database);
           setProfileId((previous) =>
             profiles.some(
               (p) =>
@@ -196,6 +206,7 @@ export default function RunSwarmButton({ projectId }: { projectId: number }) {
               ? { type: "branch", ref: selected.ref }
               : { type: "pull-request", number: selected.number },
           profileId: profileId ? Number(profileId) : null,
+          ...(database ? { verifyDatabase } : {}),
         }),
       });
       const data = await response.json();
@@ -462,6 +473,27 @@ export default function RunSwarmButton({ projectId }: { projectId: number }) {
                       : "Choose no profile for public pages, or create one with cookies or auth headers for this origin."}
                   </p>
                 </fieldset>
+                {database && (
+                  <label className="flex items-start gap-3 rounded-lg border border-line p-3 text-sm">
+                    <input
+                      type="checkbox"
+                      checked={verifyDatabase}
+                      onChange={(event) =>
+                        setVerifyDatabase(event.target.checked)
+                      }
+                      disabled={busy}
+                      className="mt-0.5 size-4 shrink-0 accent-primary"
+                    />
+                    <span>
+                      Verify database changes
+                      <span className="mt-1 block text-xs leading-relaxed text-muted">
+                        {database.check_count} configured check
+                        {database.check_count === 1 ? "" : "s"} will confirm
+                        saved state after the button clicks.
+                      </span>
+                    </span>
+                  </label>
+                )}
               </>
             ) : null}
             {error && (

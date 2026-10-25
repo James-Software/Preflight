@@ -1,0 +1,4 @@
+{"case":"persisted-write","realChromium":true,"postgresWasm":true,"passed":true,"queriesBoundToMarker":true,"modelCannotOverrideVerdict":true}
+{"case":"fake-success-toast","toastSaidSaved":true,"databaseUnchanged":true,"passed":false,"findingRecorded":true}
+{"case":"already-matched-before-click","unverified":true,"noAppFinding":true,"noDuplicateWrite":true}
+{"case":"read-only-enforcement","writeFunctionBlocked":true,"noCustomerDatabaseWriteFromVerifier":true}

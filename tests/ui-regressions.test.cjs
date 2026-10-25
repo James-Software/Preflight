@@ -82,6 +82,7 @@ function reportPage(user, getProject, getRunReport) {
     "@/components/FixesTable": { default: () => null },
     "@/components/ProjectLogo": { default: () => null },
     "@/components/RunArchiveButton": { default: () => null },
+    "@/components/DatabaseCheckResults": { default: () => null },
   }).default;
 }
 test("report redirects a signed-out visitor back through the same run URL", async () => {
@@ -244,6 +245,8 @@ function swarmRoute(trigger, config, changes = {}) {
     },
     "@/lib/github": {},
     "@/lib/auth-profiles": {},
+    "@/lib/database-connections": {},
+    "@/lib/database-check-config": {},
     "@/lib/github-credentials": {
       GithubRenewalUnavailable: class extends Error {},
     },

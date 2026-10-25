@@ -365,6 +365,8 @@ test("run start saves target/profile metadata and sends no credentials in the Tr
   };
   const route = load("app/api/projects/[id]/runs/route.ts", {
     "@/auth": { auth: async () => ({ user: { githubId: "100" } }) },
+    "@/lib/database-connections": {},
+    "@/lib/database-check-config": {},
     "@/lib/auth-profiles": { profileForRun: async () => profile },
     "@/lib/github-credentials": {
       GithubRenewalUnavailable: class extends Error {},

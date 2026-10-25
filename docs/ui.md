@@ -82,3 +82,17 @@ internal return path. The run panel restores its target/profile on return.
 Explicit `/login?reauth=github` must bypass the signed-in shortcut; bound automatic
 retries so a rejected OAuth connection cannot loop. See
 [GitHub session renewal](github-session-renewal/README.md).
+
+## Database verification
+
+Project `DatabaseSettings` pairs read-only PostgreSQL queries with browser
+workflows and exact button labels. Saved credentials are never returned. Run setup
+shows a database checkbox only for the matching deployment origin; reports use
+`DatabaseCheckResults` to separate confirmed, failed and unverified outcomes.
+Never label an ordinary success toast as proof of a persisted database change.
+See [database verification](database-verification/README.md).
+
+The GitHub handoff has no public layout/navigation/footer/card/buttons. Its black
+viewport contains only white “Connecting to Github...” text while OAuth begins.
+Transient launch failures retry automatically; terminal failures use the existing
+access-denied route. Keep normal loading minimal in both themes.

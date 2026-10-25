@@ -1,3 +1,5 @@
+import { databaseForRun } from "@/lib/database-connections";
+import { DatabaseCheckError } from "@/lib/database-check-config";
 import { GithubRenewalUnavailable } from "@/lib/github-credentials";
 import { profileForRun } from "@/lib/auth-profiles";
 import { ProfileError } from "@/lib/auth-profile-state";
@@ -204,6 +206,30 @@ export async function POST(
     targetUrl = preview.url;
   }
 
+  if (
+    body.verifyDatabase !== undefined &&
+    typeof body.verifyDatabase !== "boolean"
+  )
+    return NextResponse.json(
+      { error: "Choose a valid database verification option." },
+      { status: 400 },
+    );
+  let database;
+  if (body.verifyDatabase) {
+    try {
+      database = await databaseForRun(project.id, githubId, targetUrl!);
+    } catch (error) {
+      return NextResponse.json(
+        {
+          error:
+            error instanceof DatabaseCheckError || error instanceof ProfileError
+              ? error.message
+              : "Could not load database verification.",
+        },
+        { status: 400 },
+      );
+    }
+  }
   let profile;
   if (body.profileId != null) {
     try {
@@ -226,6 +252,7 @@ export async function POST(
       targetRef,
       targetSha,
       profile,
+      ...(database ? { database } : {}),
     });
   } catch (e) {
     console.error("createRun failed", e);

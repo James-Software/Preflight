@@ -83,3 +83,13 @@ renew on the web server before access expiry. This uses existing Vercel
 is needed. Legacy sessions may make one automatic GitHub round trip because their
 refresh token was previously discarded. Run setup preserves the chosen target and
 profile. See [renewal behavior and verification](github-session-renewal/README.md).
+
+## Customer database verification
+
+Connect a project's read-only PostgreSQL URL in its **Database verification**
+settings; do not replace PreFlight's own `DATABASE_URL`. Configure a browser
+workflow/button and a scalar SELECT expectation, then enable database checks in
+Run swarm. The existing **PROFILE_ENCRYPTION_KEY** must match in Vercel and
+Trigger.dev. Deploy the web app and workers together; `pg` is kept external in
+the Trigger build. The web server and workers both need network access to the
+customer DB. See [setup, boundaries and verification](database-verification/README.md).
