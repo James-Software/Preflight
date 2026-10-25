@@ -89,7 +89,7 @@ export async function POST(
     try {
       pr = await openFixPullRequest(
         ctx,
-        project.repo_full_name,
+        report.run.repo_full_name || project.repo_full_name,
         group.branch,
         fixes,
         new URL(path, req.nextUrl.origin).href,

@@ -244,7 +244,7 @@ export async function POST(req: NextRequest, context: Context) {
         connectionString,
         checks,
       });
-      revalidatePath(`/dashboard/projects/${projectId}`);
+      revalidatePath(`/dashboard/projects/${projectId}/database`);
       return NextResponse.json({ connection }, { headers });
     }
     throw new DatabaseCheckError("Choose a valid provider action.");

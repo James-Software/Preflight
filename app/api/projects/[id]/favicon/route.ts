@@ -21,11 +21,13 @@ export async function GET(
   const origin = appIconOrigin(
     project.app_url || project.latest_target_url || null,
   );
-  const icons = !origin
-    ? []
-    : isPreflightOrigin(origin)
-      ? ["/icon.png"]
-      : await discoverSiteIcons(origin);
+  const icons = project.image_url
+    ? [project.image_url]
+    : !origin
+      ? []
+      : isPreflightOrigin(origin)
+        ? ["/icon.png"]
+        : await discoverSiteIcons(origin);
   return NextResponse.json(
     { icons },
     { headers: { "Cache-Control": "no-store" } },

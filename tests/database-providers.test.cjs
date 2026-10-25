@@ -331,7 +331,7 @@ test("OAuth callback rejects wrong state, expired grants and switched owners; co
   assert.equal(saved, 1);
   assert.equal(
     response.headers.get("location"),
-    "https://preflight.test/dashboard/projects/1?databaseProvider=supabase#database-settings",
+    "https://preflight.test/dashboard/projects/1/database?databaseProvider=supabase#database-settings",
   );
   assert.ok(!response.headers.get("location").includes("private-code"));
   assert.equal(response.cookies.get("database-oauth-supabase").value, "");

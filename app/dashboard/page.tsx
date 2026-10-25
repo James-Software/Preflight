@@ -67,14 +67,15 @@ export default async function Dashboard() {
                   <div className="flex min-w-0 items-center gap-4">
                     <ProjectLogo
                       projectId={project.id}
+                      imageUrl={project.image_url}
                       appUrl={
                         project.app_url || project.latest_target_url || null
                       }
-                      name={project.repo_full_name}
+                      name={project.display_name || project.repo_full_name}
                     />
                     <div className="min-w-0">
                       <h2 className="break-words text-lg font-semibold tracking-tight text-ink group-hover:text-primary dark:text-white">
-                        {project.repo_full_name}
+                        {project.display_name || project.repo_full_name}
                       </h2>
                       <p className="mt-2 break-all text-sm leading-relaxed text-muted">
                         {project.app_url ?? "Default branch preview deployment"}

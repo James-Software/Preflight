@@ -47,8 +47,10 @@ export default function RepoPicker({
   onHomepage,
   onSelection,
   errorId,
+  returnTo = "/dashboard/projects/new",
 }: {
   name: string;
+  returnTo?: string;
   onSelection?: (repo: string) => void;
   errorId?: string;
   onHomepage?: (homepage: string | null) => void;
@@ -84,7 +86,7 @@ export default function RepoPicker({
         if (cancelled) return;
         if (!res.ok) {
           if (res.status === 401) {
-            if (reconnectGithub("/dashboard/projects/new")) return;
+            if (reconnectGithub(returnTo)) return;
             setNeedsLogin(true);
           }
           if (data.tokenMissing || data.tokenExpired) setNeedsLogin(true);
@@ -116,7 +118,7 @@ export default function RepoPicker({
     return () => {
       cancelled = true;
     };
-  }, [reload]);
+  }, [reload, returnTo]);
 
   const filtered = useMemo(() => {
     if (!repos) return [];
@@ -136,8 +138,7 @@ export default function RepoPicker({
       );
       const data = (await res.json()) as VerifyResponse;
       if (!res.ok) {
-        if (res.status === 401 && reconnectGithub("/dashboard/projects/new"))
-          return;
+        if (res.status === 401 && reconnectGithub(returnTo)) return;
         if (
           res.status === 401 ||
           "tokenMissing" in data ||
@@ -187,7 +188,7 @@ export default function RepoPicker({
           Your GitHub session expired.{" "}
           <button
             type="button"
-            onClick={() => reconnectGithub("/dashboard/projects/new", true)}
+            onClick={() => reconnectGithub(returnTo, true)}
             className="font-medium text-ink underline underline-offset-2 dark:text-white"
           >
             Reconnect GitHub

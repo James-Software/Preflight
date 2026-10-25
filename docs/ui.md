@@ -115,3 +115,13 @@ and exclude zero-check connections from Run swarm's verification toggle. Use pla
 passwords and clear credentials after connecting; return only project/branch/database/role names to
 the client. Supabase's existing-password requirement and Neon's OAuth availability
 must be explained at the relevant step, without offering non-working OAuth CTAs.
+
+### Project sections
+
+Project pages share a left sidebar: **Runs** first/default, **General info**, then
+**Database**, with line icons and a Back to projects link. On phones, use a tab row.
+Keep run launch/history on the root route; settings belong on their own routes.
+General info saves a display name, safe uploaded logo, app URL and verified GitHub
+repository. A custom logo can be reset to favicon detection. Existing run reports
+and fix PRs remain tied to their saved repository when the project repo changes.
+See [workspace validation and previews](project-workspace/README.md).

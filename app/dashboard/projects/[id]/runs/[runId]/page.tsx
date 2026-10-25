@@ -39,7 +39,7 @@ export default async function RunReportPage({
   );
   return (
     <main className="min-h-[calc(100svh-5rem)] bg-page">
-      <div className="mx-auto max-w-6xl px-6 py-12">
+      <div className="py-2">
         <a
           href={`/dashboard/projects/${projectId}`}
           className="inline-flex min-h-11 items-center text-sm font-medium text-muted hover:text-primary"
@@ -66,11 +66,12 @@ export default async function RunReportPage({
         <div className="mt-4 flex items-center gap-3">
           <ProjectLogo
             projectId={project.id}
+            imageUrl={project.image_url}
             appUrl={project.app_url || run.target_url}
             name={project.repo_full_name}
           />
           <p className="min-w-0 break-words text-muted">
-            {project.repo_full_name}
+            {run.repo_full_name || project.repo_full_name}
           </p>
         </div>
         <div className="mt-6 flex flex-wrap items-center gap-4 text-sm">

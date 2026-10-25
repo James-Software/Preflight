@@ -12,6 +12,8 @@ export interface Project {
   app_url: string | null;
   latest_target_url?: string | null;
   repo_full_name: string;
+  display_name?: string | null;
+  image_url?: string | null;
   github_installation_id: number | null;
   screenshot_retention_days: number | null;
   created_at: string;
@@ -31,6 +33,7 @@ export interface Run {
   target_sha?: string | null;
   auth_profile_name?: string | null;
   database_check_count?: number;
+  repo_full_name?: string | null;
 }
 
 export async function ensureSchema(): Promise<void> {
@@ -60,6 +63,10 @@ export async function ensureSchema(): Promise<void> {
   `;
   // Migrate tables created before these columns existed.
   await sql`ALTER TABLE projects ALTER COLUMN app_url DROP NOT NULL`;
+  await sql`ALTER TABLE projects ADD COLUMN IF NOT EXISTS display_name TEXT`;
+  await sql`ALTER TABLE projects ADD COLUMN IF NOT EXISTS image_url TEXT`;
+  await sql`ALTER TABLE runs ADD COLUMN IF NOT EXISTS repo_full_name TEXT`;
+  await sql`UPDATE runs SET repo_full_name=p.repo_full_name FROM projects p WHERE runs.project_id=p.id AND runs.repo_full_name IS NULL`;
   await sql`ALTER TABLE runs ADD COLUMN IF NOT EXISTS target_url TEXT`;
   await sql`ALTER TABLE runs ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ`;
   await sql`CREATE TABLE IF NOT EXISTS auth_profiles (
@@ -182,7 +189,7 @@ export async function createProject(
     INSERT INTO projects (owner_github_id, app_url, repo_full_name)
     VALUES (${ownerGithubId}, ${appUrl}, ${repoFullName})
     RETURNING id, owner_github_id, app_url, repo_full_name,
-              github_installation_id, screenshot_retention_days, created_at
+              github_installation_id, screenshot_retention_days, display_name, image_url, created_at
   `;
   if (!Array.isArray(rows) || rows.length === 0) {
     throw new Error("Failed to create project");
@@ -195,8 +202,8 @@ export async function listProjects(ownerGithubId: string): Promise<Project[]> {
   const sql = getSql();
   const rows = await sql`
     SELECT id, owner_github_id, app_url, repo_full_name,
-           github_installation_id, screenshot_retention_days, created_at,
-      (SELECT target_url FROM runs WHERE project_id = projects.id AND target_url IS NOT NULL ORDER BY id DESC LIMIT 1) AS latest_target_url
+           github_installation_id, screenshot_retention_days, display_name, image_url, created_at,
+      (SELECT target_url FROM runs WHERE project_id = projects.id AND target_url IS NOT NULL AND (runs.repo_full_name = projects.repo_full_name OR runs.repo_full_name IS NULL) ORDER BY id DESC LIMIT 1) AS latest_target_url
     FROM projects
     WHERE owner_github_id = ${ownerGithubId}
     ORDER BY created_at DESC
@@ -213,8 +220,8 @@ export async function getProject(
   const sql = getSql();
   const rows = await sql`
     SELECT id, owner_github_id, app_url, repo_full_name,
-           github_installation_id, screenshot_retention_days, created_at,
-      (SELECT target_url FROM runs WHERE project_id = projects.id AND target_url IS NOT NULL ORDER BY id DESC LIMIT 1) AS latest_target_url
+           github_installation_id, screenshot_retention_days, display_name, image_url, created_at,
+      (SELECT target_url FROM runs WHERE project_id = projects.id AND target_url IS NOT NULL AND (runs.repo_full_name = projects.repo_full_name OR runs.repo_full_name IS NULL) ORDER BY id DESC LIMIT 1) AS latest_target_url
     FROM projects
     WHERE id = ${id} AND owner_github_id = ${ownerGithubId}
     LIMIT 1
@@ -253,6 +260,7 @@ export async function createRun(
   targetUrl?: string | null,
   options?: {
     targetRef?: string;
+    repoFullName?: string;
     targetSha?: string;
     profile?: { id: number; name: string; snapshot: unknown };
     database?: {
@@ -265,11 +273,11 @@ export async function createRun(
   const sql = getSql();
   const rows = await sql`
     WITH new_run AS (
-      INSERT INTO runs (project_id, status, target_url, target_ref, target_sha, auth_profile_id, auth_profile_name, auth_profile_snapshot, database_snapshot, database_check_count)
-      VALUES (${projectId}, 'queued', ${targetUrl ?? null}, ${options?.targetRef ?? null}, ${options?.targetSha ?? null},
+      INSERT INTO runs (project_id, repo_full_name, status, target_url, target_ref, target_sha, auth_profile_id, auth_profile_name, auth_profile_snapshot, database_snapshot, database_check_count)
+      VALUES (${projectId}, COALESCE(${options?.repoFullName ?? null}, (SELECT repo_full_name FROM projects WHERE id=${projectId})), 'queued', ${targetUrl ?? null}, ${options?.targetRef ?? null}, ${options?.targetSha ?? null},
         ${options?.profile?.id ?? null}, ${options?.profile?.name ?? null}, ${JSON.stringify(options?.profile?.snapshot ?? null)}::jsonb,
         ${JSON.stringify(options?.database?.snapshot ?? null)}::jsonb, ${options?.database?.checks.length ?? 0})
-      RETURNING id, project_id, status, plan, target_url, created_at, started_at, finished_at, archived_at, target_ref, target_sha, auth_profile_name, database_check_count
+      RETURNING id, project_id, repo_full_name, status, plan, target_url, created_at, started_at, finished_at, archived_at, target_ref, target_sha, auth_profile_name, database_check_count
     ), seeded_checks AS (
       INSERT INTO run_database_checks (run_id, check_id, title, button_label)
       SELECT new_run.id, c.check_id, c.title, c.button_label FROM new_run
@@ -466,5 +474,23 @@ export async function updateProjectAppUrl(
     WHERE id = ${projectId} AND owner_github_id = ${ownerGithubId}
     RETURNING id
   `;
+  return Array.isArray(rows) && rows.length > 0;
+}
+
+export async function updateProjectSettings(
+  projectId: number,
+  owner: string,
+  settings: {
+    displayName: string | null;
+    appUrl: string | null;
+    repoFullName: string;
+    imageUrl: string | null;
+  },
+) {
+  await ensureSchema();
+  const rows =
+    await getSql()`UPDATE projects SET display_name=${settings.displayName},app_url=${settings.appUrl},image_url=${settings.imageUrl},
+    github_installation_id=CASE WHEN repo_full_name=${settings.repoFullName} THEN github_installation_id ELSE NULL END,repo_full_name=${settings.repoFullName}
+    WHERE id=${projectId} AND owner_github_id=${owner} RETURNING id`;
   return Array.isArray(rows) && rows.length > 0;
 }

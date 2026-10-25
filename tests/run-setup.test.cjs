@@ -430,7 +430,12 @@ test("run start saves target/profile metadata and sends no credentials in the Tr
   assert.deepEqual(created, [
     1,
     "https://selected.preview.test",
-    { targetRef: "feature/test", targetSha: "commit-sha", profile },
+    {
+      repoFullName: "owner/app",
+      targetRef: "feature/test",
+      targetSha: "commit-sha",
+      profile,
+    },
   ]);
   assert.deepEqual(triggered[1], {
     runId: 12,

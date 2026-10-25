@@ -65,7 +65,7 @@ export async function GET(
     /* No provider errors, tokens or authorization codes go into redirects/logs. */
   }
   const target = new URL(
-    projectId ? `/dashboard/projects/${projectId}` : "/dashboard",
+    projectId ? `/dashboard/projects/${projectId}/database` : "/dashboard",
     req.url,
   );
   target.searchParams.set(

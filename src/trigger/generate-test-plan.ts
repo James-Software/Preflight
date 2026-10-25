@@ -21,7 +21,7 @@ export const generateTestPlan = task({
     const sql = getSql();
 
     const rows = await sql`
-      SELECT r.id AS run_id, r.target_url, r.auth_profile_id, r.auth_profile_snapshot, p.app_url, p.repo_full_name
+      SELECT r.id AS run_id, r.target_url, r.auth_profile_id, r.auth_profile_snapshot, p.app_url, COALESCE(r.repo_full_name,p.repo_full_name) AS repo_full_name
       FROM runs r
       JOIN projects p ON p.id = r.project_id
       WHERE r.id = ${payload.runId}

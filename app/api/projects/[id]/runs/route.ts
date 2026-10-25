@@ -249,6 +249,7 @@ export async function POST(
   let run;
   try {
     run = await createRun(project.id, targetUrl, {
+      repoFullName: project.repo_full_name,
       targetRef,
       targetSha,
       profile,

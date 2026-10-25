@@ -322,6 +322,7 @@ function actionRoute(options = {}) {
         return options.otherOwner ? null : { repo_full_name: "owner/app" };
       },
       getRunReport: async () => ({
+        run: { repo_full_name: options.runRepo || "owner/app" },
         findings: [fix(1), fix(2), fix(3), fix(4)],
       }),
     },
@@ -345,6 +346,7 @@ function actionRoute(options = {}) {
     "@/lib/fix-pull-request": {
       FixPatchError,
       openFixPullRequest: async (...args) => {
+        calls.push(["repo", args[1]]);
         calls.push(["pr", args[3].map((f) => f.id)]);
         if (options.patchError)
           throw new FixPatchError("The patch no longer applies.");
@@ -438,5 +440,19 @@ test("invalid patches release their reservation; transient failures retain a res
   assert.equal((await retry.json()).groupId, key);
   assert.ok(
     transient.calls.every((c) => c[0] !== "release" && c[0] !== "complete"),
+  );
+});
+
+test("fix PRs keep the run's original repository after the project repository changes", async () => {
+  const route = actionRoute({ runRepo: "owner/original" });
+  const response = await route.post({
+    action: "open-pr",
+    findingIds: [1],
+    groupId: key,
+  });
+  assert.equal(response.status, 200);
+  assert.deepEqual(
+    route.calls.find((c) => c[0] === "repo"),
+    ["repo", "owner/original"],
   );
 });

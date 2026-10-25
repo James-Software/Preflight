@@ -24,10 +24,12 @@ export default function DatabaseSettings({
   projectId,
   initialConnections,
   defaultOrigin,
+  expanded = false,
 }: {
   projectId: number;
   initialConnections: DatabaseMetadata[];
   defaultOrigin: string;
+  expanded?: boolean;
 }) {
   const [connections, setConnections] = useState(initialConnections),
     [editing, setEditing] = useState(false),
@@ -188,7 +190,7 @@ export default function DatabaseSettings({
     <details
       className="mt-4 rounded-lg border border-line bg-surface px-5 py-2 sm:px-6"
       id="database-settings"
-      open={autoOpen || undefined}
+      open={expanded || autoOpen || undefined}
     >
       <summary className="min-h-11 cursor-pointer py-3 text-sm font-medium">
         Database verification{" "}

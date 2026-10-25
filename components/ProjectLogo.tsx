@@ -7,10 +7,12 @@ export default function ProjectLogo({
   appUrl,
   name,
   projectId,
+  imageUrl,
 }: {
   appUrl: string | null;
   name: string;
   projectId: number;
+  imageUrl?: string | null;
 }) {
   const image = useRef<HTMLImageElement>(null);
   const origin = appIconOrigin(appUrl);
@@ -21,19 +23,22 @@ export default function ProjectLogo({
     icons: string[];
   } | null>(null);
   const [failed, setFailed] = useState<string[]>([]);
-  const icons = ownSite
-    ? ["/icon.png"]
-    : origin
-      ? [
-          ...(discovery?.origin === origin && discovery.projectId === projectId
-            ? discovery.icons
-            : []),
-          `${origin}/favicon.ico`,
-        ]
-      : [];
+  const icons = imageUrl
+    ? [imageUrl]
+    : ownSite
+      ? ["/icon.png"]
+      : origin
+        ? [
+            ...(discovery?.origin === origin &&
+            discovery.projectId === projectId
+              ? discovery.icons
+              : []),
+            `${origin}/favicon.ico`,
+          ]
+        : [];
   const src = icons.find((icon) => !failed.includes(icon)) || null;
   useEffect(() => {
-    if (!origin || ownSite) return;
+    if (!origin || ownSite || imageUrl) return;
     const controller = new AbortController();
     void fetch(`/api/projects/${projectId}/favicon`, {
       signal: controller.signal,
@@ -52,7 +57,7 @@ export default function ProjectLogo({
       })
       .catch(() => {});
     return () => controller.abort();
-  }, [origin, ownSite, projectId]);
+  }, [origin, ownSite, projectId, imageUrl]);
   function failure(url: string) {
     setFailed((previous) =>
       previous.includes(url) ? previous : [...previous, url],

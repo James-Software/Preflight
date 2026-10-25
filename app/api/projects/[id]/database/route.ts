@@ -106,7 +106,7 @@ async function mutate(
           { error: "Connection not found." },
           { status: 404 },
         );
-      revalidatePath(`/dashboard/projects/${user.projectId}`);
+      revalidatePath(`/dashboard/projects/${user.projectId}/database`);
       return NextResponse.json({ disconnected: true });
     }
     if (
@@ -122,7 +122,7 @@ async function mutate(
       user.owner,
       input,
     );
-    revalidatePath(`/dashboard/projects/${user.projectId}`);
+    revalidatePath(`/dashboard/projects/${user.projectId}/database`);
     return NextResponse.json({ connection });
   } catch (error) {
     return NextResponse.json(
