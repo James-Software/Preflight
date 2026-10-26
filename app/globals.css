@@ -78,11 +78,24 @@ body {
 }
 .site-nav[data-glass="true"] .site-nav-glass { opacity: 1; }
 .site-nav .brand-wordmark-reveal {
-  /* Keep text on a stationary layer: only its overflow window changes size.
-     Animated clip-path can flash when the browser removes its clip layer. */
-  transition: width 600ms cubic-bezier(0.55, 0.12, 0.78, 0.35);
+  /* Keep the text and its compositing layer full-sized in both states.
+     A permanent alpha mask wipes the letters without collapsing their box. */
+  -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 1px), transparent);
+  mask-image: linear-gradient(to right, #000 calc(100% - 1px), transparent);
+  -webkit-mask-repeat: no-repeat;
+  mask-repeat: no-repeat;
+  -webkit-mask-position: left center;
+  mask-position: left center;
+  -webkit-mask-size: 100% 100%;
+  mask-size: 100% 100%;
+  transform: translateZ(0);
+  backface-visibility: hidden;
+  transition: -webkit-mask-size 600ms cubic-bezier(0.55, 0.12, 0.78, 0.35), mask-size 600ms cubic-bezier(0.55, 0.12, 0.78, 0.35);
 }
-.site-nav[data-scrolled="true"] .brand-wordmark-reveal { width: 0; }
+.site-nav[data-scrolled="true"] .brand-wordmark-reveal {
+  -webkit-mask-size: 0% 100%;
+  mask-size: 0% 100%;
+}
 @media (prefers-reduced-motion: reduce) {
   .site-nav-frame, .site-nav-glass, .site-nav .brand-wordmark-reveal { transition: none; }
 }
