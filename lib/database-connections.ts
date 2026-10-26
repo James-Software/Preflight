@@ -109,6 +109,25 @@ export async function profileProvisioningDatabase(
   return unseal(row.encrypted_config, owner, projectId, origin)
     .connectionString;
 }
+
+/** Normalize PreFlight's known apex redirect without breaking encrypted DB AAD. */
+export async function canonicalizePreflightDatabase(
+  owner: string,
+  projectId: number,
+) {
+  const from = "https://trypreflight.dev", to = "https://www.trypreflight.dev";
+  if ((await getProject(projectId, owner))?.repo_full_name !== "James-Software/Preflight")
+    throw new DatabaseCheckError("This canonicalization is only for PreFlight itself.");
+  const rows = await getSql()`SELECT id,origin,encrypted_config FROM project_database_connections WHERE project_id=${projectId} AND origin IN (${from},${to}) AND revoked_at IS NULL ORDER BY updated_at DESC`;
+  const entries = rows as { id: number; origin: string; encrypted_config: string }[];
+  if (entries.some(row => row.origin === to)) return;
+  const old = entries.find(row => row.origin === from);
+  if (!old) return;
+  const encrypted = seal(unseal(old.encrypted_config, owner, projectId, from), owner, projectId, to);
+  const updated = await getSql()`UPDATE project_database_connections SET origin=${to},encrypted_config=${encrypted},updated_at=NOW() WHERE id=${old.id} AND project_id=${projectId} AND origin=${from} AND encrypted_config=${old.encrypted_config} AND revoked_at IS NULL RETURNING id`;
+  if (!(updated as any[]).length)
+    throw new DatabaseCheckError("The database connection changed. Retry profile setup.");
+}
 export async function listProjectDatabases(
   projectId: number,
   owner: string,

@@ -284,10 +284,11 @@ test("concurrent sign-ins keep the first canonical owner and encrypt for that ow
   );
 });
 
-function authConfiguration({ previous = null, canonical = null } = {}) {
+function authConfiguration({ previous = null, canonical = null, testUserValid = false } = {}) {
   let config;
   const saved = [];
   load("auth.ts", {
+    "@/lib/test-user-issuer": { validateTestUserSession: async () => testUserValid },
     "next-auth": {
       default: (options) => {
         config = options;
@@ -309,6 +310,17 @@ function authConfiguration({ previous = null, canonical = null } = {}) {
   });
   return { callbacks: config.callbacks, saved };
 }
+test("test-user JWTs cannot inherit GitHub credentials and revoked identities fail authentication", async () => {
+  const token = { sub: "test:isolated", preflightTestIdentity: true, githubLogin: "owner", githubAccessToken: "private", githubRefreshToken: "private" };
+  const { callbacks, saved } = authConfiguration({ testUserValid: true });
+  const checked = await callbacks.jwt({ token });
+  assert.equal(checked.sub, "test:isolated");
+  assert.equal(checked.githubLogin, undefined);
+  assert.equal(checked.githubAccessToken, undefined);
+  assert.equal(checked.githubRefreshToken, undefined);
+  assert.equal(saved.length, 0);
+  assert.equal(await authConfiguration().callbacks.jwt({ token }), null);
+});
 const account = () => ({
   providerAccountId: "123",
   access_token: "private-access",

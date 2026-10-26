@@ -6,12 +6,15 @@ import {
   encryptProfile,
   decryptProfile,
   ProfileError,
+  parseProfileState,
 } from "@/lib/auth-profile-state";
 import { generationToken, openTestAccount } from "@/lib/profile-generation";
 import { openFixGithubGrant } from "@/lib/fix-github-grant";
 import { profileProvisioningDatabase } from "@/lib/database-connections";
 import { postgresClient } from "@/lib/postgres-verification";
 import { DatabaseCheckError } from "@/lib/database-check-config";
+import { signTestUserRequest } from "@/lib/test-user-issuer";
+import { SITE_URL } from "@/lib/site";
 import {
   ProvisioningError,
   inspectAuthSource,
@@ -84,6 +87,22 @@ export const generateAuthProfile = task({
           "The database connection changed during setup. Generate a new profile using the current connection.",
         );
       await sql`UPDATE profile_captures SET automation_message='Provisioning a dedicated test user and issuing its authentication tokens…' WHERE id=${capture.id}::uuid AND automation_token=${token}::uuid AND status='active'`;
+      if (plan.kind === "preflight") {
+        if (capture.origin !== SITE_URL)
+          throw new ProvisioningError(
+            "This issuer is scoped to PreFlight itself. Other JWT applications need their own trusted issuer.",
+          );
+        // Read a server-only challenge from the selected DB, never send its
+        // expected value to a customer-controlled database.
+        const probe = await client.query({
+          text: "SELECT automation_token::text AS token FROM profile_captures WHERE id=$1 AND owner_github_id=$2 AND project_id=$3",
+          values: [capture.id, payload.owner, payload.projectId],
+        });
+        if (probe.rows[0]?.token !== token)
+          throw new ProvisioningError(
+            "The connected database is not this PreFlight instance's database. Select the database used by this app before provisioning a test identity.",
+          );
+      }
       let state = capture.automation_auth_state
         ? decryptProfile(
             capture.automation_auth_state,
@@ -92,7 +111,37 @@ export const generateAuthProfile = task({
           )
         : null;
       if (!state) {
-        if (plan.kind === "authjs") {
+        if (plan.kind === "preflight") {
+          const body = JSON.stringify({
+            captureId: capture.id,
+            owner: payload.owner,
+            projectId: payload.projectId,
+            workToken: token,
+            timestamp: Date.now(),
+          });
+          const response = await fetch(
+            new URL("/api/profiles/issue", SITE_URL),
+            {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "x-preflight-issuer-signature": signTestUserRequest(body),
+              },
+              body,
+              redirect: "error",
+              signal: AbortSignal.timeout(15000),
+              cache: "no-store",
+            },
+          );
+          const result = await response.json().catch(() => null);
+          if (!response.ok || !result?.state?.cookies?.length)
+            throw new ProvisioningError(
+              "PreFlight's test-user issuer could not authorize this setup. Wait for the web and Trigger deployments, confirm their shared encryption key matches, and retry.",
+            );
+          state = parseProfileState(
+            capture.origin, JSON.stringify(result.state), "{}",
+          );
+        } else if (plan.kind === "authjs") {
           await inspectAuthTables(client, plan);
           await active();
           state = await provisionDatabaseSession(
@@ -120,7 +169,7 @@ export const generateAuthProfile = task({
         await sql`UPDATE profile_captures SET automation_auth_state=${encrypted} WHERE id=${capture.id}::uuid AND automation_token=${token}::uuid AND status='active'`;
       }
       await active();
-      if (plan.kind === "authjs") {
+      if (plan.kind === "authjs" || plan.kind === "preflight") {
         const response = await fetch(
           new URL("/api/auth/session", capture.origin),
           {
@@ -152,8 +201,12 @@ export const generateAuthProfile = task({
       }
       await active();
       const encrypted = encryptProfile(state, payload.owner, capture.origin);
+      // Verify the issued token above, but start PreFlight agents in its
+      // protected UI rather than leaving them on the session JSON endpoint.
+      const verificationPath = plan.kind === "preflight" ? "/dashboard" : plan.kind === "authjs" ? "/api/auth/session" : "/";
+      const verificationText = plan.kind === "authjs" ? account.email : null;
       const saved =
-        await sql`WITH capture_grant AS (UPDATE profile_captures SET status='completed',automation_credentials=NULL,automation_auth_state=NULL,automation_github_grant=NULL,automation_live_url=NULL WHERE id=${capture.id}::uuid AND owner_github_id=${payload.owner} AND project_id=${payload.projectId} AND automation_token=${token}::uuid AND status='active' AND expires_at>NOW() RETURNING *) INSERT INTO auth_profiles(owner_github_id,name,origin,encrypted_state,verification_path,verification_text,project_id,source_capture_id) SELECT owner_github_id,name,origin,${encrypted},${plan.kind === "authjs" ? "/api/auth/session" : "/"},${plan.kind === "authjs" ? account.email : null},project_id,id FROM capture_grant RETURNING id`;
+        await sql`WITH capture_grant AS (UPDATE profile_captures SET status='completed',automation_credentials=NULL,automation_auth_state=NULL,automation_github_grant=NULL,automation_live_url=NULL WHERE id=${capture.id}::uuid AND owner_github_id=${payload.owner} AND project_id=${payload.projectId} AND automation_token=${token}::uuid AND status='active' AND expires_at>NOW() RETURNING *) INSERT INTO auth_profiles(owner_github_id,name,origin,encrypted_state,verification_path,verification_text,project_id,source_capture_id) SELECT owner_github_id,name,origin,${encrypted},${verificationPath},${verificationText},project_id,id FROM capture_grant RETURNING id`;
       if (!(saved as any[]).length)
         throw new ProvisioningError(
           "Setup was cancelled before the profile could be saved. The marked test user was not deleted.",

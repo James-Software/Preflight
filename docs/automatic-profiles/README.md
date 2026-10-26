@@ -8,6 +8,18 @@ fall back to browser automation. Manual sign-in is a separate collapsed option.
 
 ## Supported issuers
 
+- **PreFlight itself (GitHub/JWT):** a trusted app-side issuer creates a separate
+  `test_users` record and signs a real Auth.js session using the web app's existing
+  `AUTH_SECRET`. The worker must prove the selected database is this same instance,
+  and the request needs a signed, current, owner/project-scoped setup grant.
+  The identity is `test:<setup ID>`, never the owner's ID; it has no admin login
+  or inherited GitHub connection. Its one-hour lifetime is enforced in the database
+  on every session check. Cancellation, failed setup, expiry or profile revocation
+  invalidates it. Generating another profile creates another isolated identity.
+  Setup verifies the issued token through `/api/auth/session`; swarm agents
+  start on the protected `/dashboard` page to exercise the app's UI.
+  The known apex → `www` redirect is normalized with the database connection
+  re-encrypted for that origin; existing run snapshots keep working.
 - **Auth.js / NextAuth with Prisma database sessions:** discovers User/Session
   models and table/column mappings in code, checks actual PostgreSQL metadata,
   and transactionally inserts a new UUID/text-ID user and its opaque session.
@@ -27,7 +39,8 @@ GitHub-only identities, other managed auth providers, custom roles/tenancy, cust
 cookie/storage conventions, and other adapters need a supported provider admin
 API or a trusted app-side test-user issuer.** They stop with an explicit message
 before database writes, rather than inserting a meaningless row, forging tokens,
-or opening a browser. PreFlight's own current GitHub/JWT login falls in this case.
+or opening a browser. PreFlight's built-in issuer is scoped to its canonical domain
+and its own database; it does not mint sessions for arbitrary third-party JWT apps.
 
 ## Writes and secrets
 
@@ -62,7 +75,8 @@ code inside PreFlight.
 
 Deploy web and Trigger together. Both use existing `DATABASE_URL` and the same
 `PROFILE_ENCRYPTION_KEY`; Vercel also needs the normal `AUTH_SECRET` (to renew the
-owner's GitHub connection) and `TRIGGER_SECRET_KEY`. The worker uses the connected
+owner's GitHub connection and issue PreFlight test sessions) and `TRIGGER_SECRET_KEY`.
+`AUTH_SECRET` stays in the web app and is not copied to Trigger. The worker uses the connected
 customer database credentials and, for Supabase, the saved owner-scoped provider
 account. Automatic profile creation needs neither Browserbase nor model keys.
 Swarm browsing and the explicit manual sign-in option retain their own browser
@@ -71,10 +85,13 @@ requirements. Schema migrations remain additive.
 Cancel any pending setup from the previous browser-based flow before generating
 a new database-backed profile. App sessions still have their normal expiry;
 revoking a saved profile does not delete the test account from the customer's app.
+PreFlight-issued test sessions are immediately invalidated through the database
+check when their saved profile is revoked. GitHub-dependent workflows still need
+their own GitHub connection; test users never borrow the owner's credentials.
 
 ## Validation
 
-Production build and 162 unit tests passed. [Database integration](database-provisioning.jsonl)
+Production build and 168 unit tests passed. [Database integration](database-provisioning.jsonl)
 uses actual PostgreSQL WASM databases for both PreFlight and the customer app,
 with immutable-source transport and a session endpoint adapter. It checks real
 user/session inserts, acceptance of the issued opaque token, encrypted profiles,
@@ -82,6 +99,26 @@ unchanged existing users, duplicate delivery exclusion, rollback on read-only
 permissions and rejection of JWT-only auth without customer-database writes.
 Supabase admin-create/token exchange is validated with synthetic provider responses;
 no live customer account, provider/admin key, paid browser or paid model was used.
+
+[PreFlight issuer integration](test-user-issuer.jsonl) exercises actual PostgreSQL
+WASM and genuine Auth.js JWE encode/decode: unsigned/expired/foreign grants,
+isolated user creation, no GitHub delegation, duplicate requests, profile
+revocation, canonical-origin database encryption migration and old run snapshots.
+The worker-to-issuer-to-session-to-profile flow uses actual route handlers and
+auth callbacks with local HTTP transport adapters, including the real NextAuth
+session handler accepting the generated cookie. A foreign database is rejected
+before issuing any identity. These checks do not establish live deployment health.
+
+Reproduce the issuer integration on Node 24 with the optional PostgreSQL WASM
+test dependency (not needed by the app):
+
+```sh
+npm install --no-save --package-lock=false @electric-sql/pglite
+node tests/test-user-issuer.integration.cjs
+```
+
+The fixture uses random synthetic secrets, in-memory databases and transport
+adapters. It does not connect to a live database, GitHub or an auth provider.
 
 [Desktop/phone UI checks](database-ui.jsonl) verify that automatic setup has no
 browser controls or iframe, manual sign-in is collapsed, one provisioning request

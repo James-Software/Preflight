@@ -168,7 +168,7 @@ export async function startProfileGeneration(
       "Set this project's app URL before generating a profile.",
     );
   const account = testAccount(input.email);
-  const appOrigin = profileOrigin(origin);
+  let appOrigin = profileOrigin(origin);
   const host = new URL(appOrigin).hostname;
   if (
     !appOrigin.startsWith("https://") ||
@@ -180,6 +180,16 @@ export async function startProfileGeneration(
     throw new ProfileError("Use a public HTTPS app URL.");
   profileKey();
   await ensureSchema();
+  if (appOrigin === "https://trypreflight.dev" && project?.repo_full_name === "James-Software/Preflight") {
+    const { canonicalizePreflightDatabase } = await import("@/lib/database-connections");
+    await canonicalizePreflightDatabase(owner, projectId);
+    appOrigin = "https://www.trypreflight.dev";
+    if (project.app_url && new URL(project.app_url).origin === "https://trypreflight.dev") {
+      const canonical = new URL(project.app_url);
+      canonical.hostname = "www.trypreflight.dev";
+      await getSql()`UPDATE projects SET app_url=${canonical.href} WHERE id=${projectId} AND owner_github_id=${owner} AND app_url=${project.app_url} AND repo_full_name='James-Software/Preflight'`;
+    }
+  }
   const sql = getSql(),
     id = randomUUID();
   await sql`UPDATE profile_captures SET status='expired',automation_credentials=NULL,automation_live_url=NULL,automation_github_grant=NULL,automation_auth_state=NULL WHERE owner_github_id=${owner} AND expires_at<=NOW() AND status IN ('active','saving')`;

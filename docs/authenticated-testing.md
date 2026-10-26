@@ -48,6 +48,8 @@ plaintext credentials; Trigger payloads carry IDs/URLs rather than credentials.
   loaded again by each agent. Revocation blocks future profile loads, including
   queued runs. It does not invalidate a session already loaded by a running agent
   or revoke the account's session at its auth provider.
+  PreFlight's own generated test identities additionally check database expiry
+  and profile revocation on every app session; see [automatic profiles](automatic-profiles/README.md).
 - Authenticated Browserbase sessions disable provider recording/logging. Known
   credential strings are redacted from text observations/logs before model input
   or storage. Screenshots still depict the app, so use test accounts. Browserbase

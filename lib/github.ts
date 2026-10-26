@@ -30,6 +30,7 @@ export async function getGithubContext(
     secureCookie: process.env.NODE_ENV === "production",
   });
   const t = token as unknown as Record<string, unknown> | null;
+  if (t?.preflightTestIdentity === true) return null;
   if (typeof t?.sub === "string") {
     try {
       const saved = await loadGithubCredentials(t.sub);

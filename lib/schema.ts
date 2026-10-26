@@ -89,6 +89,11 @@ async function initializeSchema(): Promise<void> {
     verification_path TEXT NOT NULL DEFAULT '/', verification_text TEXT,
     revoked_at TIMESTAMPTZ, created_at TIMESTAMPTZ DEFAULT NOW()
   )`;
+  await sql`CREATE TABLE IF NOT EXISTS test_users (
+    id TEXT PRIMARY KEY, capture_id UUID UNIQUE NOT NULL, owner_github_id TEXT NOT NULL,
+    project_id INT NOT NULL REFERENCES projects(id), name TEXT NOT NULL, email TEXT NOT NULL,
+    expires_at TIMESTAMPTZ NOT NULL, revoked_at TIMESTAMPTZ, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`;
   await sql`CREATE TABLE IF NOT EXISTS profile_captures (
     id UUID PRIMARY KEY, owner_github_id TEXT NOT NULL, name TEXT NOT NULL,
     origin TEXT NOT NULL, verification_path TEXT NOT NULL, verification_text TEXT NOT NULL,

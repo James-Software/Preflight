@@ -100,7 +100,7 @@ export type PrismaAuth = {
 };
 export function detectProvisioning(
   source: AuthSource,
-): PrismaAuth | { kind: "supabase"; ssr: boolean } {
+): PrismaAuth | { kind: "supabase"; ssr: boolean } | { kind: "preflight" } {
   const code = Object.entries(source.files)
     .filter(
       ([path]) => !path.endsWith("package.json") && !path.endsWith(".prisma"),
@@ -111,6 +111,8 @@ export function detectProvisioning(
     .filter(([p]) => p.endsWith("package.json"))
     .map(([, s]) => s)
     .join("\n");
+  if (/\bvalidateTestUserSession\b/.test(code) && /NextAuth\s*\(/.test(code))
+    return { kind: "preflight" };
   if (
     /(?:createBrowserClient|createServerClient|createClient)\s*\(/.test(code) &&
     /@supabase\/(?:ssr|supabase-js)/.test(code) &&

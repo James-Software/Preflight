@@ -8,6 +8,7 @@ import NextAuth, { type DefaultSession } from "next-auth";
 import GitHub from "next-auth/providers/github";
 import { isLoginAllowed, addToWaitlist } from "@/lib/access";
 import { claimInvite, INVITE_COOKIE } from "@/lib/invites";
+import { validateTestUserSession } from "@/lib/test-user-issuer";
 
 // token.sub is a stable app owner linked to GitHub's numeric account ID.
 // Existing signed-in owners are retained when linking legacy sessions.
@@ -77,6 +78,15 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     },
     async jwt({ token, profile, account }) {
       const t = token as unknown as Record<string, unknown>;
+      if (t.preflightTestIdentity === true && !account) {
+        if (!token.sub || !(await validateTestUserSession(token.sub)))
+          return null;
+        delete t.githubLogin;
+        delete t.githubAccessToken;
+        delete t.githubRefreshToken;
+        return token;
+      }
+      if (account) delete t.preflightTestIdentity;
       const p = profile as { login?: string } | undefined;
       if (p?.login) {
         t.githubLogin = p.login.toLowerCase();

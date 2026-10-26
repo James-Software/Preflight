@@ -58,6 +58,14 @@ test("Supabase detection requires actual auth use, not just a database client", 
     }),
   );
 });
+test("PreFlight's explicit test-user issuer is detected before rejecting JWT auth", () => {
+  assert.equal(api().detectProvisioning({
+    sha: "immutable-sha",
+    files: {
+      "auth.ts": 'import {validateTestUserSession} from "@/lib/test-user-issuer"; NextAuth({providers:[GitHub], callbacks:{jwt(){return validateTestUserSession(id)}}});',
+    },
+  }).kind, "preflight");
+});
 test("source mappings cannot inject SQL and custom auth cookies are rejected", () => {
   const a = api();
   assert.throws(
