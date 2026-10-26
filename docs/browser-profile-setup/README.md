@@ -6,7 +6,10 @@ only on that page after signing in. Open the browser, sign in with a dedicated
 test account (including MFA), then choose **Verify and save profile**. The saved
 profile can be selected immediately when returning to run setup.
 
-This is an assisted sign-in flow, not automatic user provisioning: no database
+For agent-created test accounts, use **Generate profile** above this manual option;
+see [Automatic profiles](../automatic-profiles/README.md).
+
+This manual option is an assisted sign-in flow, not automatic user provisioning: no database
 connection is required and the read-only database integration cannot create auth
 users. The app's protected page handles its own sign-in/provider redirect. An
 agent does not receive passwords or inspect the sign-in DOM. Existing cookie and
@@ -44,7 +47,7 @@ timeout. API fields and live-view URLs were checked against the
 - Only cookies and local storage are captured. Session storage, IndexedDB,
   client certificates, passkeys tied to the user's local device, and automatically
   inferred authentication headers are not supported. Apps/providers that block
-  cloud-browser sign-in can use the existing manual import. The flow does not
+  cloud-browser sign-in can use the existing manual import. The manual option does not
   automatically renew expired app sessions or create accounts.
 - Authentication proof relies on choosing a truly protected page and a marker
   absent when signed out. It does not infer that a public page is protected.

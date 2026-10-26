@@ -39,12 +39,15 @@ async function postChat(args: {
   maxTokens?: number;
   schema?: Record<string, unknown>;
   previousOutput?: string;
+  timeoutMs?: number;
+  attempts?: number;
 }): Promise<string> {
-  for (let attempt = 0; attempt < 3; attempt++) {
+  const attempts = args.attempts ?? 3;
+  for (let attempt = 0; attempt < attempts; attempt++) {
     const res = await fetch(OPENROUTER_CHAT, {
       method: "POST",
       headers: baseHeaders(),
-      signal: AbortSignal.timeout(60_000),
+      signal: AbortSignal.timeout(args.timeoutMs ?? 60_000),
       body: JSON.stringify({
         model: args.model,
         messages: [
@@ -75,7 +78,7 @@ async function postChat(args: {
         max_tokens: args.maxTokens ?? 1024,
       }),
     });
-    if (res.status === 429 && attempt < 2) {
+    if (res.status === 429 && attempt < attempts - 1) {
       await sleep(10000 * (attempt + 1));
       continue;
     }
@@ -518,6 +521,25 @@ export async function fixModelJson(
       user: [{ type: "text", text: JSON.stringify(input) }],
       schema,
       maxTokens,
+    }),
+  );
+}
+
+/** Short, bounded decisions for private account setup; no credentials in input. */
+export async function profileSetupJson(
+  system: string,
+  input: unknown,
+  schema: Record<string, unknown>,
+) {
+  return JSON.parse(
+    await postChat({
+      model: MODEL_CONFIG.driver.model,
+      system,
+      user: [{ type: "text", text: JSON.stringify(input) }],
+      schema,
+      maxTokens: 900,
+      timeoutMs: 20_000,
+      attempts: 1,
     }),
   );
 }

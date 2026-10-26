@@ -96,6 +96,7 @@ export async function startProfileCapture(
   owner: string,
   input: Record<string, unknown>,
   projectId: number,
+  automation?: { credentials: (id: string) => string },
 ) {
   await profileProject(owner, projectId);
   const details = captureDetails(input);
@@ -103,11 +104,11 @@ export async function startProfileCapture(
   await ensureSchema();
   const sql = getSql();
   // Provider TTL releases abandoned browsers; reclaim only expired grants.
-  await sql`UPDATE profile_captures SET status='expired' WHERE owner_github_id=${owner} AND expires_at <= NOW() AND status IN ('active','saving')`;
+  await sql`UPDATE profile_captures SET status='expired',automation_credentials=NULL WHERE owner_github_id=${owner} AND expires_at <= NOW() AND status IN ('active','saving')`;
   const id = randomUUID();
   const reserved =
-    await sql`INSERT INTO profile_captures (id,owner_github_id,name,origin,verification_path,verification_text,project_id)
-    VALUES (${id},${owner},${details.name},${details.origin},${details.path},${details.text},${projectId}) ON CONFLICT DO NOTHING RETURNING id,expires_at`;
+    await sql`INSERT INTO profile_captures (id,owner_github_id,name,origin,verification_path,verification_text,project_id,automation_status,automation_message,automation_credentials)
+    VALUES (${id},${owner},${details.name},${details.origin},${details.path},${details.text},${projectId},${automation ? "queued" : null},${automation ? "Preparing a private browser…" : null},${automation ? automation.credentials(id) : null}) ON CONFLICT DO NOTHING RETURNING id,expires_at`;
   if (!Array.isArray(reserved) || !reserved.length)
     throw new ProfileError(
       "A sign-in browser is already open. Finish or cancel it first; abandoned sessions expire after 10 minutes.",
@@ -142,7 +143,7 @@ export async function startProfileCapture(
     };
   } catch {
     if (sessionId) await closeBrowserSession(sessionId).catch(() => {});
-    await sql`UPDATE profile_captures SET status='error' WHERE id=${id} AND owner_github_id=${owner} AND project_id=${projectId}`;
+    await sql`UPDATE profile_captures SET status='error',automation_credentials=NULL WHERE id=${id} AND owner_github_id=${owner} AND project_id=${projectId}`;
     throw new ProfileError(
       "Could not open the sign-in browser. Check Browserbase configuration and interactive-session support, then try again.",
     );
@@ -153,6 +154,7 @@ export async function finishProfileCapture(
   id: string,
   projectId: number,
   cancel = false,
+  automationToken?: string,
 ) {
   await profileProject(owner, projectId);
   if (!/^[0-9a-f-]{36}$/i.test(id))
@@ -160,7 +162,7 @@ export async function finishProfileCapture(
   await ensureSchema();
   const sql = getSql();
   const rows =
-    await sql`UPDATE profile_captures SET status=${cancel ? "cancelled" : "saving"} WHERE id=${id} AND owner_github_id=${owner} AND project_id=${projectId} AND status='active' AND expires_at > NOW() RETURNING *`;
+    await sql`UPDATE profile_captures SET status=${cancel ? "cancelled" : "saving"}, automation_credentials=CASE WHEN ${cancel} THEN NULL ELSE automation_credentials END WHERE id=${id} AND owner_github_id=${owner} AND project_id=${projectId} AND status='active' AND expires_at > NOW() AND (${cancel} OR automation_status IS NULL OR automation_token=${automationToken || null}::uuid) RETURNING *`;
   const capture = Array.isArray(rows)
     ? (rows[0] as CaptureRow | undefined)
     : null;
@@ -198,10 +200,10 @@ export async function finishProfileCapture(
       const encrypted = encryptProfile(state, owner, capture.origin);
       // Save and consume the grant atomically; never return captured credentials.
       const profiles = await sql`WITH capture_grant AS (
-        UPDATE profile_captures SET status='completed' WHERE id=${id} AND owner_github_id=${owner} AND project_id=${projectId} AND status='saving' AND expires_at > NOW() RETURNING *
+        UPDATE profile_captures SET status='completed',automation_credentials=NULL WHERE id=${id} AND owner_github_id=${owner} AND project_id=${projectId} AND status='saving' AND expires_at > NOW() RETURNING *
       ), profile AS (
-        INSERT INTO auth_profiles(owner_github_id,name,origin,encrypted_state,verification_path,verification_text,project_id)
-        SELECT owner_github_id,name,origin,${encrypted},verification_path,verification_text,project_id FROM capture_grant
+        INSERT INTO auth_profiles(owner_github_id,name,origin,encrypted_state,verification_path,verification_text,project_id,source_capture_id)
+        SELECT owner_github_id,name,origin,${encrypted},verification_path,verification_text,project_id,id FROM capture_grant
         RETURNING id,name,origin,verification_path,verification_text,created_at
       ) SELECT * FROM profile`;
       if (!Array.isArray(profiles) || !profiles.length)
@@ -226,7 +228,7 @@ export async function activeProfileCapture(owner: string, projectId: number) {
   await profileProject(owner, projectId);
   await ensureSchema();
   const rows =
-    await getSql()`SELECT id,session_id,expires_at FROM profile_captures WHERE owner_github_id=${owner} AND project_id=${projectId} AND status='active' AND expires_at > NOW()`;
+    await getSql()`SELECT id,session_id,expires_at FROM profile_captures WHERE owner_github_id=${owner} AND project_id=${projectId} AND automation_status IS NULL AND status='active' AND expires_at > NOW()`;
   const row = Array.isArray(rows) ? (rows[0] as CaptureRow | undefined) : null;
   if (!row?.session_id) return null;
   return {

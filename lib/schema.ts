@@ -84,6 +84,13 @@ export async function ensureSchema(): Promise<void> {
   )`;
   await sql`ALTER TABLE auth_profiles ADD COLUMN IF NOT EXISTS project_id INT REFERENCES projects(id)`;
   await sql`ALTER TABLE profile_captures ADD COLUMN IF NOT EXISTS project_id INT REFERENCES projects(id)`;
+  await sql`ALTER TABLE profile_captures ADD COLUMN IF NOT EXISTS automation_status TEXT`;
+  await sql`ALTER TABLE profile_captures ADD COLUMN IF NOT EXISTS automation_message TEXT`;
+  await sql`ALTER TABLE profile_captures ADD COLUMN IF NOT EXISTS automation_credentials TEXT`;
+  await sql`ALTER TABLE profile_captures ADD COLUMN IF NOT EXISTS automation_token UUID`;
+  await sql`ALTER TABLE profile_captures ADD COLUMN IF NOT EXISTS automation_resume BOOLEAN NOT NULL DEFAULT FALSE`;
+  await sql`ALTER TABLE auth_profiles ADD COLUMN IF NOT EXISTS source_capture_id UUID`;
+  await sql`CREATE UNIQUE INDEX IF NOT EXISTS auth_profile_source_capture ON auth_profiles(source_capture_id) WHERE source_capture_id IS NOT NULL`;
   await sql`DROP INDEX IF EXISTS profile_capture_active_owner`;
   await sql`CREATE UNIQUE INDEX IF NOT EXISTS profile_capture_active_project ON profile_captures(owner_github_id,project_id) WHERE status IN ('active','saving')`;
   await sql`ALTER TABLE runs ADD COLUMN IF NOT EXISTS auth_profile_id INT REFERENCES auth_profiles(id)`;

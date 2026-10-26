@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useState } from "react";
 import BrowserProfileSetup from "@/components/BrowserProfileSetup";
+import AutomaticProfileSetup from "@/components/AutomaticProfileSetup";
 import type { AuthProfile } from "@/lib/auth-profiles";
 
 export default function ProfilesManager({
@@ -181,6 +182,21 @@ export default function ProfilesManager({
       )}
       {creating && (
         <>
+          <AutomaticProfileSetup
+            projectId={projectId}
+            initialOrigin={initialOrigin}
+            onSaved={(profile) => {
+              setProfiles((previous) => [
+                profile,
+                ...previous.filter((p) => p.id !== profile.id),
+              ]);
+              setSavedId(profile.id);
+              setCreating(false);
+              setNotice(
+                "Profile generated and verified. It’s ready for your next swarm.",
+              );
+            }}
+          />
           <BrowserProfileSetup
             projectId={projectId}
             initialOrigin={initialOrigin}

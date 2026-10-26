@@ -34,8 +34,13 @@ test("profile fields cannot submit secrets into a URL before JavaScript is ready
   const React = require("react");
   const { renderToStaticMarkup } = require("react-dom/server");
   const BrowserSetup = load("components/BrowserProfileSetup.tsx", {}).default;
+  const AutomaticSetup = load(
+    "components/AutomaticProfileSetup.tsx",
+    {},
+  ).default;
   const Manager = load("components/ProfilesManager.tsx", {
     "@/components/BrowserProfileSetup": { default: BrowserSetup },
+    "@/components/AutomaticProfileSetup": { default: AutomaticSetup },
   }).default;
   const html = renderToStaticMarkup(
     React.createElement(Manager, {
@@ -45,9 +50,11 @@ test("profile fields cannot submit secrets into a URL before JavaScript is ready
       returnTo: null,
     }),
   );
-  const form = html.match(/<form[^>]*>/)[0];
-  assert.match(form, /method="post"/);
-  assert.match(form, /action="\/api\/profiles\/browser\?projectId=12"/);
+  const forms = html.match(/<form[^>]*>/g);
+  assert.equal(forms.length, 2);
+  for (const form of forms) assert.match(form, /method="post"/);
+  assert.match(forms[0], /action="\/api\/profiles\/generate\?projectId=12"/);
+  assert.match(forms[1], /action="\/api\/profiles\/browser\?projectId=12"/);
   assert.ok(!html.includes("Cookies or session JSON"));
   assert.match(html, /Advanced: import cookies or headers/);
   assert.match(html, /<fieldset disabled=""/);

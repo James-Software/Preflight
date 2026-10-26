@@ -455,7 +455,7 @@ export default function RunSwarmButton({ projectId }: { projectId: number }) {
                       }}
                       className="pressable inline-flex min-h-11 items-center text-sm font-medium text-primary"
                     >
-                      Create profile
+                      Generate profile
                     </a>
                   </div>
                   <select
@@ -475,7 +475,7 @@ export default function RunSwarmButton({ projectId }: { projectId: number }) {
                   <p className="mt-2 text-xs leading-relaxed text-muted">
                     {matchingProfiles.length
                       ? "Saved cookies and headers will be used only for this app origin."
-                      : "Choose no profile for public pages, or create one with cookies or auth headers for this origin."}
+                      : "Test public pages without a profile, or generate a test account for signed-in pages."}
                   </p>
                 </fieldset>
                 {database && (
