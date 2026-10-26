@@ -83,6 +83,7 @@ function reportPage(user, getProject, getRunReport) {
     "@/components/ProjectLogo": { default: () => null },
     "@/components/RunArchiveButton": { default: () => null },
     "@/components/DatabaseCleanup": { default: () => null },
+    "@/components/TestStepResults": {default:()=>null},
     "@/components/DatabaseCheckResults": { default: () => null },
   }).default;
 }

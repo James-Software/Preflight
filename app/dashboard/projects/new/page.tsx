@@ -1,6 +1,8 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { createProject } from "@/lib/schema";
+import { createTestWorkspaceProject } from "@/lib/test-workspace";
+import { ProfileError } from "@/lib/auth-profile-state";
 import NewProjectForm, {
   type ProjectFormState,
 } from "@/components/NewProjectForm";
@@ -17,6 +19,12 @@ async function create(
 
   const appUrl = String(formData.get("appUrl") ?? "").trim();
   const repoFullName = String(formData.get("repo") ?? "").trim();
+  const name = String(formData.get("name") ?? "").trim();
+  if (name.length > 80)
+    return {
+      error: "Use a project name of up to 80 characters.",
+      field: "name",
+    };
 
   // App URL is optional: empty means runs target the default branch's
   // latest preview deployment, resolved when the run starts.
@@ -38,6 +46,20 @@ async function create(
       };
     }
     appUrlOrNull = url.toString();
+  }
+  if (session.user.isTestUser) {
+    let project;
+    try {
+      project = await createTestWorkspaceProject(githubId, name, appUrlOrNull);
+    } catch (error) {
+      return {
+        error:
+          error instanceof ProfileError
+            ? error.message
+            : "Could not create the test project. Try again.",
+      };
+    }
+    redirect(`/dashboard/projects/${project.id}`);
   }
   if (!repoFullName) {
     return { error: "Pick a repository first.", field: "repo" };
@@ -63,7 +85,12 @@ async function create(
 
   let project;
   try {
-    project = await createProject(githubId, appUrlOrNull, repoFullName);
+    project = await createProject(
+      githubId,
+      appUrlOrNull,
+      repoFullName,
+      name || null,
+    );
   } catch {
     return {
       error:
@@ -96,11 +123,16 @@ export default async function NewProject({
           New project
         </h1>
         <p className="mt-2 text-sm leading-relaxed text-muted dark:text-muted">
-          Point PreFlight at a deployed app and its GitHub repository. The swarm
-          will test the app like real users.
+          {session.user.isTestUser
+            ? "Create a project in your isolated test workspace."
+            : "Point PreFlight at a deployed app and its GitHub repository. The swarm will test the app like real users."}
         </p>
 
-        <NewProjectForm action={create} error={error} />
+        <NewProjectForm
+          action={create}
+          error={error}
+          testAccount={session.user.isTestUser === true}
+        />
       </div>
     </main>
   );

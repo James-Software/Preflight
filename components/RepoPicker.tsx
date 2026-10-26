@@ -59,6 +59,7 @@ export default function RepoPicker({
   const [repos, setRepos] = useState<Repo[] | null>(null);
   const [loadError, setLoadError] = useState("");
   const [needsLogin, setNeedsLogin] = useState(false);
+  const [needsConnection, setNeedsConnection] = useState(false);
   const [query, setQuery] = useState("");
   const [selected, setSelected] = useState("");
   const [selectedPrivate, setSelectedPrivate] = useState(false);
@@ -74,6 +75,7 @@ export default function RepoPicker({
     setRepos(null);
     setLoadError("");
     setNeedsLogin(false);
+    setNeedsConnection(false);
     (async () => {
       try {
         const res = await fetch("/api/github/repos");
@@ -82,9 +84,11 @@ export default function RepoPicker({
           error?: string;
           tokenMissing?: boolean;
           tokenExpired?: boolean;
+          code?: string;
         };
         if (cancelled) return;
         if (!res.ok) {
+          if (data.code === "GITHUB_NOT_CONNECTED") setNeedsConnection(true);
           if (res.status === 401) {
             if (reconnectGithub(returnTo)) return;
             setNeedsLogin(true);
@@ -138,6 +142,8 @@ export default function RepoPicker({
       );
       const data = (await res.json()) as VerifyResponse;
       if (!res.ok) {
+        if ("code" in data && data.code === "GITHUB_NOT_CONNECTED")
+          setNeedsConnection(true);
         if (res.status === 401 && reconnectGithub(returnTo)) return;
         if (
           res.status === 401 ||
@@ -183,7 +189,18 @@ export default function RepoPicker({
       <legend className="mb-2 text-sm font-medium">GitHub repository</legend>
       <input type="hidden" name={name} value={selected} />
 
-      {needsLogin ? (
+      {needsConnection ? (
+        <div className="rounded-xl border border-line bg-panel px-4 py-3 text-sm">
+          GitHub is not connected to this account.
+          <button
+            type="button"
+            onClick={() => reconnectGithub(returnTo, true)}
+            className="pressable ml-2 inline-flex min-h-11 cursor-pointer items-center font-medium text-primary underline underline-offset-4 hover:text-ink"
+          >
+            Connect GitHub
+          </button>
+        </div>
+      ) : needsLogin ? (
         <div className="rounded-xl border px-4 py-3 text-sm text-ink/70 dark:text-white/70 border-line bg-panel">
           Your GitHub session expired.{" "}
           <button

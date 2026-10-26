@@ -80,6 +80,12 @@ require a matching profile. The picker currently lists up to 100 branches and
 
 ## Verification
 
+Blocked workflows and unconfirmed observations are reported under Test coverage,
+separately from application findings. Confirmation requires an independent
+evidence assessment and a safe fresh-context reproduction. See
+[finding verification](finding-verification/README.md) for limitations and the
+isolated test-user database workflow.
+
 Unit tests cover encrypted-state tampering/ownership, input scope/expiry,
 secret-free worker payloads, exact-SHA resolution, missing previews, setup failures
 without findings, redaction, provider cleanup and pre-initialization POST safety.

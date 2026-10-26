@@ -1,6 +1,7 @@
 import {
   automaticDatabase,
   automaticDatabaseUnavailable,
+  automaticDatabaseBlocked,
   inspectionFailure,
 } from "@/lib/automatic-database";
 import {
@@ -19,11 +20,25 @@ import {
   judgeStep,
   assessSeverity,
   summarizeFinding,
+  assessFinding,
   type AgentAction,
 } from "@/lib/models";
 import { uploadScreenshot } from "@/lib/evidence";
 import { MODEL_CONFIG } from "@/lib/model-config";
-import { createAgent, updateAgentStatus, createFinding } from "@/lib/schema";
+import {
+  createAgent,
+  updateAgentStatus,
+  createFinding,
+  recordTestResult,
+} from "@/lib/schema";
+import {
+  accessBlocker,
+  replayEligible,
+  safeReplayAction,
+  failureSignature,
+  findingEvidenceKey,
+  type AttemptedAction,
+} from "@/lib/finding-evidence";
 
 export type PlanStep = {
   id: string;
@@ -55,7 +70,7 @@ function describeAction(a: AgentAction): string {
     case "done":
       return `done — ${a.reasoning}`;
     case "report_bug":
-      return `BUG REPORTED: ${a.title} — ${a.detail}`;
+      return "Driver proposed an unverified candidate for independent assessment.";
   }
 }
 
@@ -148,6 +163,7 @@ export const browserAgent = task({
       page: Page,
       title: string,
       detail: string,
+      evidenceKey: string,
     ): Promise<void> => {
       try {
         const shot = await page.screenshot({ type: "jpeg", quality: 60 });
@@ -171,7 +187,7 @@ export const browserAgent = task({
           if (MODEL_CONFIG.judge.provider === "openai-decisions") throw error;
           // Legacy providers retain the default severity when triage is unavailable.
         }
-        let fixSummary = `${title}. Investigate the failing interaction, correct its handler or validation, and add a regression check for the observed behavior.`;
+        let fixSummary = `${title}. The unexpected result was reproduced in a fresh browser context. The cause has not been verified in source; investigate the recorded observations and add a regression check before choosing a fix.`;
         try {
           fixSummary = redact(
             await summarizeFinding({ title, detail: detail.slice(0, 3000) }),
@@ -179,7 +195,8 @@ export const browserAgent = task({
         } catch {
           /* Evidence remains useful if summarization is unavailable. */
         }
-        await createFinding({
+        const created = await createFinding({
+          evidenceKey,
           fixSummary,
           runId: payload.runId,
           agentId: agent.id,
@@ -196,7 +213,7 @@ export const browserAgent = task({
               .slice(0, 4000) || null,
           networkErrors: networkErrors.slice(stepNetworkStart),
         });
-        findingsCount++;
+        if (created !== false) findingsCount++;
       } catch (e) {
         consoleLogs.push(
           `[finding-error] ${e instanceof Error ? e.message : String(e)}`.slice(
@@ -280,6 +297,22 @@ export const browserAgent = task({
             step.databaseCheckId,
           );
         }
+        const attempted: AttemptedAction[] = [];
+        let candidate: { title: string; detail: string } | null = null;
+        const startUrl = page.url();
+        const outcome = async (
+          status: string,
+          summary: string,
+          evidence?: string,
+        ) => {
+          await recordTestResult(payload.runId, payload.agentIndex, {
+            step_id: step.id || `step-${stepIndex}`,
+            title: step.title,
+            status,
+            summary: redact(summary),
+            evidence: evidence ? redact(evidence) : undefined,
+          });
+        };
         let markerUsed = false;
         if (payload.verifyDatabase && !step.databaseCheckId) {
           try {
@@ -298,6 +331,8 @@ export const browserAgent = task({
           }
         }
         let databaseObserved = false;
+        let databasePassed = false;
+        let automaticInspectionFailed = false;
         let finished =
           payload.verifyDatabase === true &&
           step.id === "automatic-database-create" &&
@@ -348,7 +383,7 @@ export const browserAgent = task({
           }
           if (action.action === "report_bug") {
             finished = true;
-            await recordFinding(page, action.title, action.detail);
+            candidate = { title: action.title, detail: action.detail };
             break;
           }
           if (
@@ -378,21 +413,14 @@ export const browserAgent = task({
             const outcome = await databaseVerifier.after(before);
             databaseObserved = true;
             finished = true;
-            if (!outcome.passed)
-              await recordFinding(
-                page,
-                `Database change not confirmed: ${step.title}`,
-                outcome.summary,
-              );
+            databasePassed = outcome.passed;
+            attempted.push({
+              action,
+              result: "Activated the configured database-verified button.",
+            });
             break;
           }
           await automatic?.assertActive();
-          if (
-            automatic &&
-            action.action === "fill" &&
-            action.value.includes(automatic.marker)
-          )
-            markerUsed = true;
           const observe =
             automatic &&
             markerUsed &&
@@ -423,14 +451,29 @@ export const browserAgent = task({
             }
           }
           const result = await executeAction(page, action);
+          attempted.push({ action, result });
           actionLog.push(redact(`  → ${result}`));
+          if (
+            automatic &&
+            action.action === "fill" &&
+            action.value === automatic.marker &&
+            /name|title|label|description|project|draft|slug/i.test(
+              action.name,
+            ) &&
+            !result.startsWith("Action failed:")
+          )
+            markerUsed = true;
           if (before && automatic) {
             try {
-              await automatic.after(
-                before,
-                action.action === "click" ? action.name : "Enter",
-              );
+              if (!result.startsWith("Action failed:")) {
+                databaseObserved = true;
+                await automatic.after(
+                  before,
+                  action.action === "click" ? action.name : "Enter",
+                );
+              }
             } catch (error) {
+              automaticInspectionFailed = true;
               await automaticDatabaseUnavailable(
                 payload.runId,
                 payload.agentIndex,
@@ -443,71 +486,334 @@ export const browserAgent = task({
           await delay(1000);
         }
 
+        const network = networkErrors.slice(stepNetworkStart);
+        const blocked = accessBlocker(
+          new URL(payload.appUrl).origin,
+          page.url(),
+          network,
+        );
         if (
           payload.verifyDatabase &&
-          !markerUsed &&
+          !databaseObserved &&
           step.id === "automatic-database-create"
-        )
-          await automaticDatabaseUnavailable(
+        ) {
+          await automaticDatabaseBlocked(
             payload.runId,
             payload.agentIndex,
             stepIndex,
-            "No supported create workflow was exercised with a unique test marker. Database persistence has not been verified.",
+            blocked ||
+              (markerUsed
+                ? "The unique test name was entered, but no successful create/save submission was exercised. Persistence remains unverified."
+                : "The agent did not find and submit an accessible create form with a name/title field for the unique test marker. Check the test account's permissions and available workflows; the database connection alone cannot provide an app create workflow."),
           );
+        }
         await automatic?.close();
         automatic = null;
         if (!finished) {
+          await outcome(
+            "needs_review",
+            "The test reached its action limit before the goal could be evaluated. No application defect was established.",
+            actionLog.slice(stepLogStart).join("\n"),
+          );
           throw new Error(
             `Browser agent reached its action budget during "${step.title}". This test step was not evaluated.`,
           );
         }
-
         if (databaseVerifier) {
           if (!databaseObserved) {
             await databaseVerifier.inconclusive();
-            throw new DatabaseCheckError(
-              "The configured browser workflow did not activate its database-verified button.",
+            await outcome(
+              "blocked",
+              blocked ||
+                "The configured database-verified button was not successfully activated.",
             );
-          }
+          } else
+            await outcome(
+              databasePassed ? "passed" : "needs_review",
+              databasePassed
+                ? "The configured action produced the expected database change."
+                : "The database assertion was not satisfied. Confirm valid inputs and an accepted submission before treating this as an application defect.",
+            );
           await databaseVerifier.close();
           databaseVerifier = null;
           databaseCheckId = null;
-          continue; // The deterministic database assertion is the verdict for this workflow.
+          continue;
         }
-
-        // Judge only completed observations, never model/runner errors.
-        try {
+        const tree = redact(
+          (await page.locator("body").ariaSnapshot()).slice(0, 6000),
+        );
+        const observation = redact(
+          [
+            `Current URL: ${page.url()}`,
+            `Current page: ${tree}`,
+            "This step's actions:",
+            ...actionLog.slice(stepLogStart),
+            `Console output: ${consoleLogs.slice(stepConsoleStart).slice(-10).join(" | ") || "none"}`,
+            `Network errors: ${JSON.stringify(network.slice(-15))}`,
+          ].join("\n"),
+        ).slice(0, 12000);
+        if (blocked) {
+          await outcome("blocked", blocked, observation);
+          continue;
+        }
+        // A dedicated persistence workflow with no submission is inconclusive,
+        // regardless of what a model says about its inability to finish.
+        if (
+          step.id === "automatic-database-create" &&
+          automaticInspectionFailed
+        ) {
+          await outcome(
+            "blocked",
+            "The create command ran, but database inspection could not complete. See the database verification details; persistence remains unverified.",
+            observation,
+          );
+          continue;
+        }
+        if (step.id === "automatic-database-create" && !databaseObserved) {
+          await outcome(
+            "blocked",
+            "No supported marked create submission completed. Database persistence was not evaluated.",
+            observation,
+          );
+          continue;
+        }
+        if (!candidate) {
           const verdict = await judgeStep({
             stepTitle: step.title,
             stepDetail: step.detail,
-            observation: redact(
-              [
-                `Current URL: ${page.url()}`,
-                `Current page: ${(await page.locator("body").ariaSnapshot()).slice(0, 4000)}`,
-                `This step's actions:`,
-                ...actionLog.slice(stepLogStart),
-                `Console output: ${consoleLogs.slice(stepConsoleStart).slice(-5).join(" | ") || "none"}`,
-                `Network errors: ${
-                  networkErrors
-                    .slice(stepNetworkStart)
-                    .slice(-5)
-                    .map((n) => n.url)
-                    .join(" | ") || "none"
-                }`,
-              ].join("\n"),
-            ),
+            observation,
           });
-          if (verdict.verdict === "fail") {
-            await recordFinding(
-              page,
-              `Step failed: ${step.title}`,
-              `The agent could not complete this step.\n${actionLog.slice(stepLogStart).join("\n")}`,
-            );
+          if (verdict.verdict === "pass") {
+            await outcome("passed", "The observed step met its goal.");
+            continue;
           }
-        } catch (error) {
-          // A failed/refused decision is not a completed QA test.
-          if (MODEL_CONFIG.judge.provider === "openai-decisions") throw error;
-          console.warn("QA step judge unavailable", error);
+          candidate = {
+            title: `Unexpected result: ${step.title}`,
+            detail: "The step judge did not confirm the expected result.",
+          };
+        }
+        // Driver reports and failed goals are candidates, never findings by themselves.
+        let assessment;
+        try {
+          assessment = await assessFinding(
+            `Goal: ${step.title}. ${step.detail}\nCandidate claim (unverified): ${candidate.title}. ${candidate.detail}\nBrowser facts:\n${observation}`,
+          );
+        } catch {
+          await outcome(
+            "needs_review",
+            "Independent evidence assessment was unavailable. No application bug was confirmed.",
+            observation,
+          );
+          continue;
+        }
+        if (
+          assessment.category !== "application_bug" ||
+          !(assessment.confidence >= 0.9)
+        ) {
+          await outcome(
+            assessment.category === "blocked"
+              ? "blocked"
+              : assessment.category === "pass"
+                ? "passed"
+                : "needs_review",
+            assessment.category === "blocked"
+              ? "The evidence indicates an unavailable test prerequisite or workflow."
+              : assessment.category === "pass"
+                ? "Independent assessment found expected application behavior."
+                : "The evidence does not confidently establish an application defect.",
+            observation,
+          );
+          continue;
+        }
+        if (
+          !replayEligible(attempted, new URL(payload.appUrl).origin) ||
+          !safeReplayAction(
+            {
+              action: "goto",
+              value: startUrl,
+              reasoning: "Restore the starting page",
+            },
+            new URL(payload.appUrl).origin,
+          )
+        ) {
+          await outcome(
+            "needs_review",
+            "This candidate cannot be safely reproduced automatically. Submissions, destructive actions and unsupported prerequisites are not replayed.",
+            observation,
+          );
+          continue;
+        }
+        let replay: Page | null = null;
+        try {
+          // Load a fresh snapshot so revoked/expired profiles cannot be reused.
+          const freshAuth = payload.authProfileId
+            ? await getRunAuthentication(payload.runId)
+            : null;
+          replay = freshAuth
+            ? await authenticatedPage(browser, freshAuth)
+            : await browser.newPage({ viewport: { width: 1280, height: 800 } });
+          const replayNetwork: typeof networkErrors = [],
+            replayConsole: string[] = [];
+          replay.on("response", (r) => {
+            if (r.status() >= 400)
+              replayNetwork.push({
+                url: redact(r.url()).slice(0, 300),
+                status: r.status(),
+              });
+          });
+          replay.on("pageerror", (e) =>
+            replayConsole.push(
+              redact(`[pageerror] ${String(e).slice(0, 500)}`),
+            ),
+          );
+          await replay.goto(startUrl, {
+            waitUntil: "domcontentloaded",
+            timeout: 20000,
+          });
+          if (stepIndex > 0) {
+            replayNetwork.length = 0;
+            replayConsole.length = 0;
+          }
+          for (const attempt of attempted) {
+            if (
+              attempt.action.action === "click" &&
+              attempt.action.role === "link"
+            ) {
+              const href = await replay
+                .getByRole("link", { name: attempt.action.name })
+                .first()
+                .getAttribute("href");
+              if (
+                !href ||
+                !safeReplayAction(
+                  {
+                    action: "goto",
+                    value: new URL(href, replay.url()).href,
+                    reasoning: "Check replay destination",
+                  },
+                  new URL(payload.appUrl).origin,
+                )
+              )
+                throw new Error(
+                  "Replay would leave the allowed app or enter an unsafe workflow.",
+                );
+            }
+            const result = await executeAction(replay, attempt.action);
+            if (result.startsWith("Action failed:"))
+              throw new Error("Replay action could not be performed.");
+          }
+          await replay.waitForTimeout(1000);
+          const replayTree = redact(
+            (await replay.locator("body").ariaSnapshot()).slice(0, 6000),
+          );
+          const replayBlock = accessBlocker(
+            new URL(payload.appUrl).origin,
+            replay.url(),
+            replayNetwork,
+          );
+          if (replayBlock) {
+            await outcome("blocked", replayBlock, observation);
+            continue;
+          }
+          const signature = failureSignature(
+            page.url(),
+            tree,
+            network,
+            consoleLogs.slice(stepConsoleStart),
+          );
+          if (
+            signature !==
+            failureSignature(
+              replay.url(),
+              replayTree,
+              replayNetwork,
+              replayConsole,
+            )
+          ) {
+            await outcome(
+              "needs_review",
+              "The same failure was not reproduced in a fresh browser context.",
+              observation,
+            );
+            continue;
+          }
+          const replayFacts = redact(
+            `Fresh-context replay URL: ${replay.url()}\nPage: ${replayTree}\nRequests: ${JSON.stringify(replayNetwork.slice(-15))}\nConsole: ${replayConsole.join("\n")}`,
+          ).slice(0, 12000);
+          const compactFacts = (
+            url: string,
+            pageTree: string,
+            requests: typeof networkErrors,
+            errors: string[],
+          ) => ({
+            url: url.slice(0, 200),
+            page: pageTree.slice(0, 1200),
+            requests: requests
+              .slice(-4)
+              .map((r) => ({
+                url: r.url.slice(0, 200),
+                status: r.status,
+                failure: r.failure?.slice(0, 200),
+              })),
+            pageErrors: errors
+              .filter((e) => e.startsWith("[pageerror]"))
+              .slice(-2)
+              .map((e) => e.slice(0, 200)),
+          });
+          const pairedEvidence = JSON.stringify(
+            {
+              original: compactFacts(
+                page.url(),
+                tree,
+                network,
+                consoleLogs.slice(stepConsoleStart),
+              ),
+              freshContextReplay: compactFacts(
+                replay.url(),
+                replayTree,
+                replayNetwork,
+                replayConsole,
+              ),
+            },
+            null,
+            2,
+          );
+          const confirmed = await assessFinding(
+            `Verify the SAME application defect occurred on both independent attempts, with all prerequisites met. Goal: ${step.title}. ${step.detail}\nOriginal facts:\n${observation}\nReplay facts:\n${replayFacts}`,
+          );
+          if (
+            confirmed.category !== "application_bug" ||
+            !(confirmed.confidence >= 0.9)
+          ) {
+            await outcome(
+              confirmed.category === "blocked" ? "blocked" : "needs_review",
+              "Independent replay did not confidently confirm the candidate as an application defect.",
+              pairedEvidence,
+            );
+            continue;
+          }
+          await recordFinding(
+            page,
+            `Reproduced: ${step.title}`,
+            observation + "\n" + replayFacts,
+            findingEvidenceKey(signature, attempted),
+          );
+          await outcome(
+            "confirmed",
+            "The same unexpected behavior was independently reproduced in a fresh browser context.",
+            pairedEvidence,
+          );
+        } catch {
+          await outcome(
+            "needs_review",
+            "A fresh-context reproduction could not be completed. No additional application bug was confirmed.",
+            observation,
+          );
+        } finally {
+          await replay
+            ?.context()
+            .close()
+            .catch(() => {});
         }
       }
 

@@ -18,6 +18,9 @@ fall back to browser automation. Manual sign-in is a separate collapsed option.
   invalidates it. Generating another profile creates another isolated identity.
   Setup verifies the issued token through `/api/auth/session`; swarm agents
   start on the protected `/dashboard` page to exercise the app's UI.
+  They can create real projects in their isolated workspace for persistence
+  verification without a GitHub connection; see [evidence-gated findings and
+  database workflows](../finding-verification/README.md).
   The known apex → `www` redirect is normalized with the database connection
   re-encrypted for that origin; existing run snapshots keep working.
 - **Auth.js / NextAuth with Prisma database sessions:** discovers User/Session

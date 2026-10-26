@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { githubConnectionStatus } from "@/lib/github-connection-status";
 import {
   getGithubContext,
   listOwnedRepos,
@@ -23,13 +24,8 @@ export async function GET(req: NextRequest) {
     );
   }
   if (!ctx) {
-    return NextResponse.json(
-      {
-        error: "GitHub session expired. Please log in again.",
-        tokenMissing: true,
-      },
-      { status: 401 },
-    );
+    const issue = await githubConnectionStatus();
+    return NextResponse.json(issue.body, { status: issue.status });
   }
   try {
     const repos = await listOwnedRepos(ctx);

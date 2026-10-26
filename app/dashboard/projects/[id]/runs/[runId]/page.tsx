@@ -1,4 +1,5 @@
 import DatabaseCheckResults from "@/components/DatabaseCheckResults";
+import TestStepResults from "@/components/TestStepResults";
 import { BranchIcon } from "@/components/GitIcons";
 import RunArchiveButton from "@/components/RunArchiveButton";
 import FixesTable from "@/components/FixesTable";
@@ -110,6 +111,7 @@ export default async function RunReportPage({
           <RunReportRefresh active={active} />
         </div>
         <DatabaseCheckResults checks={report.databaseChecks || []} />
+        <TestStepResults results={report.testResults || []} />
         {!findings.length ? (
           <div className="mt-10 rounded-2xl bg-panel p-8">
             <h2 className="text-xl font-semibold">
@@ -121,7 +123,11 @@ export default async function RunReportPage({
               {active
                 ? "Findings will appear here as they are saved."
                 : ["completed", "done"].includes(run.status)
-                  ? "This run finished without any recorded findings."
+                  ? report.testResults?.some((r) =>
+                      ["blocked", "needs_review"].includes(r.status),
+                    )
+                    ? "No confirmed bugs were recorded. Some tests were blocked or need review; see test coverage above."
+                    : "This run finished without any recorded findings."
                   : "This run ended without recorded findings. You can start another run from the project."}
             </p>
           </div>

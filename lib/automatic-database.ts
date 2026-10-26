@@ -57,7 +57,7 @@ export async function automaticDatabase(
               ),
           ) ||
           before.some((b) => !after.some((r) => identity(b) === identity(r)));
-        for (let attempt = 0; attempt < 4 && !changed(); attempt++) {
+        for (let attempt = 0; attempt < 8 && !changed(); attempt++) {
           await delay(600);
           await runDatabaseConfig(runId);
           after = await observeRecords(client, targets, marker);
@@ -77,6 +77,7 @@ export async function automaticDatabase(
           ? `Confirmed a change to uniquely marked test records after clicking “${button.slice(0, 100)}”. Cleanup candidates are limited to records first observed during this run; tables with triggers or dependent records need manual cleanup.`
           : "No change to uniquely marked records was observed. This action is unverified; no application failure is inferred. Use an advanced check for unsupported tables or workflows.";
         await getSql()`UPDATE run_database_checks SET status=${changed() ? "passed" : "error"},summary=${summary},completed_at=NOW() WHERE run_id=${runId} AND check_id=${id}`;
+        return { passed: changed(), summary };
       },
       async close() {
         await client.end().catch(() => {});
@@ -86,6 +87,17 @@ export async function automaticDatabase(
     await client.end().catch(() => {});
     throw error;
   }
+}
+
+export async function automaticDatabaseBlocked(
+  runId: number,
+  agent: number,
+  step: number,
+  reason: string,
+) {
+  await getSql()`INSERT INTO run_database_checks(run_id,check_id,title,button_label,status,summary,completed_at)
+    VALUES(${runId},${`automatic-blocked-${agent}-${step}`},'Database workflow blocked','Automatic','blocked',${reason},NOW())
+    ON CONFLICT(run_id,check_id) DO UPDATE SET status='blocked',summary=EXCLUDED.summary,completed_at=NOW()`;
 }
 
 export async function automaticDatabaseUnavailable(

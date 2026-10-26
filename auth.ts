@@ -18,6 +18,7 @@ declare module "next-auth" {
     user: {
       githubId?: string;
       githubLogin?: string;
+      isTestUser?: boolean;
     } & DefaultSession["user"];
   }
 }
@@ -147,6 +148,7 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return token;
     },
     async session({ session, token }) {
+      session.user.isTestUser = token.preflightTestIdentity === true;
       if (token.sub) {
         session.user.githubId = token.sub;
       }

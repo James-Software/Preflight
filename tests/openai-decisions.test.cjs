@@ -135,6 +135,30 @@ test("severity uses choices and preserves the API's confidence, including zero",
     confidence: 0,
   });
 });
+test("finding assessment distinguishes blocked and unconfirmed evidence from application defects", async (t) => {
+  env(t, { OPENAI_API_KEY: "openai-test-key" });
+  t.mock.method(globalThis, "fetch", async (_url, options) => {
+    const q = JSON.parse(options.body).questions[0];
+    assert.equal(q.name, "finding_evidence");
+    assert.deepEqual(
+      q.choices.map((c) => c.value),
+      ["application_bug", "blocked", "needs_review", "pass"],
+    );
+    assert.match(
+      q.instructions,
+      /401.*does NOT prove the app session was lost/,
+    );
+    return Response.json({
+      answers: [
+        { type: "choice", name: q.name, choice: "blocked", confidence: 0.98 },
+      ],
+    });
+  });
+  assert.deepEqual(
+    await models().assessFinding("GitHub connection unavailable"),
+    { category: "blocked", confidence: 0.98 },
+  );
+});
 test("missing credentials or unsupported model never send a request", async (t) => {
   env(t, { OPENAI_API_KEY: undefined });
   t.mock.method(globalThis, "fetch", () => assert.fail("must not call OpenAI"));
@@ -320,6 +344,7 @@ function browserTask({ verdictError = false, severityError = false } = {}) {
     locator: () => ({ ariaSnapshot: async () => "button Pay" }),
   };
   const task = load("src/trigger/browser-agent.ts", {
+    "@/lib/finding-evidence": load("lib/finding-evidence.ts", {}),
     "@/lib/automatic-database": {},
     "@/lib/database-verification": {},
     "@/lib/database-check-config": {},
@@ -366,6 +391,7 @@ function browserTask({ verdictError = false, severityError = false } = {}) {
       createAgent: async () => ({ id: 56 }),
       updateAgentStatus: async (_id, status) => statuses.push(status),
       createFinding: async () => {},
+      recordTestResult: async () => {},
     },
   }).browserAgent;
   return {
@@ -380,17 +406,17 @@ function browserTask({ verdictError = false, severityError = false } = {}) {
     closed,
   };
 }
-test("failed or refused judgments fail the browser agent and close its cloud session", async () => {
-  for (const options of [{ verdictError: true }, { severityError: true }]) {
+test("failed step judgments fail the browser agent and close its cloud session", async () => {
+  for (const options of [{ verdictError: true }]) {
     const task = browserTask(options);
     await assert.rejects(task.run(), /OpenAI Decisions/);
     assert.deepEqual(task.statuses, ["running", "failed"]);
     assert.deepEqual(task.closed, ["session-test"]);
   }
 });
-test("a valid failing verdict records its finding and completes the agent", async () => {
+test("a failing step verdict alone cannot create an application finding", async () => {
   const task = browserTask();
-  assert.equal((await task.run()).findings, 1);
+  assert.equal((await task.run()).findings, 0);
   assert.deepEqual(task.statuses, ["running", "done"]);
   assert.deepEqual(task.closed, ["session-test"]);
 });

@@ -103,62 +103,85 @@ function agent({
   authenticationError = null,
   setupError = null,
   automatic = null,
+  assessment = { category: "application_bug", confidence: 0.99 },
+  reproduce = true,
+  redirectGithub = false,
+  providerBlocked = false,
 }) {
-  let currentUrl = "about:blank",
-    call = 0;
-  const events = {},
-    statuses = [],
+  let call = 0,
+    pagesCreated = 0;
+  const statuses = [],
     findings = [],
     judgments = [],
     driverInputs = [],
-    closed = [];
+    closed = [],
+    results = [],
+    blockedDatabase = [],
+    assessments = [];
   let severityCalls = 0;
-  const page = {
-    url: () => currentUrl,
-    on: (event, handler) => {
-      events[event] = handler;
-    },
-    goto: async (url) => {
-      currentUrl = url;
-      if (url.endsWith("/login")) {
-        events.console({
-          type: () => "warning",
-          text: () => "old-login-warning",
-        });
-        events.response({
-          status: () => 500,
-          url: () => "https://target.example/old-login-request",
-        });
-      }
-      if (url.endsWith("/terms")) {
-        events.console({
-          type: () => "error",
-          text: () => "current-terms-error",
-        });
-        events.response({
-          status: () => 500,
-          url: () => "https://target.example/current-terms-request",
-        });
-      }
-    },
-    waitForTimeout: async () => {},
-    screenshot: async () => Buffer.from("test-image"),
-    getByRole: () => ({
-      first: () => ({
-        fill: async () => {},
-        click: async () => {},
-        press: async () => {},
+  function makePage() {
+    const isReplay = pagesCreated++ > 0;
+    let currentUrl = "about:blank";
+    const events = {};
+    return {
+      url: () => currentUrl,
+      on: (event, handler) => {
+        events[event] = handler;
+      },
+      goto: async (url) => {
+        currentUrl = url;
+        if (url.endsWith("/new") && redirectGithub)
+          currentUrl = "https://github.com/login";
+        if (url.endsWith("/new") && providerBlocked)
+          events.response?.({
+            status: () => 409,
+            url: () => "https://target.example/api/github/repos",
+          });
+        if (url.endsWith("/login")) {
+          events.console?.({
+            type: () => "warning",
+            text: () => "old-login-warning",
+          });
+          events.response?.({
+            status: () => 500,
+            url: () => "https://target.example/old-login-request",
+          });
+        }
+        if (url.endsWith("/terms") && (!isReplay || reproduce)) {
+          events.console?.({
+            type: () => "error",
+            text: () => "current-terms-error",
+          });
+          events.response?.({
+            status: () => 500,
+            url: () => "https://target.example/current-terms-request",
+          });
+        }
+      },
+      waitForTimeout: async () => {},
+      screenshot: async () => Buffer.from("test-image"),
+      getByRole: () => ({
+        first: () => ({
+          fill: async () => {},
+          click: async () => {},
+          press: async () => {},
+          getAttribute: async () => "/terms",
+        }),
       }),
-    }),
-    locator: () => ({
-      ariaSnapshot: async () =>
-        `heading: ${currentUrl.endsWith("/terms") ? "Terms of Service" : "Sign in"}`,
-    }),
-  };
+      locator: () => ({
+        ariaSnapshot: async () =>
+          `heading: ${currentUrl.endsWith("/terms") ? "Terms of Service" : "Sign in"}`,
+      }),
+      context: () => ({ close: async () => {} }),
+    };
+  }
   const task = load("src/trigger/browser-agent.ts", {
+    "@/lib/finding-evidence": load("lib/finding-evidence.ts", {}),
     "@/lib/automatic-database": {
       automaticDatabase: async () => automatic,
       automaticDatabaseUnavailable: async () => {},
+      automaticDatabaseBlocked: async (...args) => blockedDatabase.push(args),
+      inspectionFailure: () => "Database inspection unavailable.",
     },
     "@/lib/database-verification": {},
     "@/lib/database-check-config": {},
@@ -172,7 +195,7 @@ function agent({
       profileRedactor: () => (text) => text,
       authenticatedPage: async () => {
         if (setupError) throw setupError;
-        return page;
+        return makePage();
       },
     },
     "@trigger.dev/sdk": { task: (config) => config },
@@ -180,7 +203,7 @@ function agent({
     "playwright-core": {
       chromium: {
         connectOverCDP: async () => ({
-          newPage: async () => page,
+          newPage: async () => makePage(),
           close: async () => {},
         }),
       },
@@ -204,6 +227,10 @@ function agent({
         judgments.push(input);
         return { verdict: verdict(input) };
       },
+      assessFinding: async (evidence) => {
+        assessments.push(evidence);
+        return assessment;
+      },
       assessSeverity: async () => {
         severityCalls++;
         return { severity: "medium", confidence: 0.8 };
@@ -219,6 +246,7 @@ function agent({
       createAgent: async () => ({ id: 56 }),
       updateAgentStatus: async (_id, status) => statuses.push(status),
       createFinding: async (finding) => findings.push(finding),
+      recordTestResult: async (_run, _agent, result) => results.push(result),
     },
   }).browserAgent;
   return {
@@ -234,6 +262,10 @@ function agent({
           : {}),
       }),
     findings,
+    results,
+    blockedDatabase,
+    assessments,
+    pagesCreated: () => pagesCreated,
     judgments,
     driverInputs,
     statuses,
@@ -295,7 +327,7 @@ test("later steps use only their own actions, console output and network evidenc
     ],
     verdict: (input) => (input.stepTitle === "Visit /terms" ? "fail" : "pass"),
   });
-  assert.equal((await a.run()).findings, 1);
+  assert.equal((await a.run()).findings, 1, JSON.stringify(a.results));
   const observation = a.judgments[1].observation;
   assert.match(observation, /Current URL: https:\/\/target.example\/terms/);
   assert.match(observation, /Terms of Service/);
@@ -410,4 +442,192 @@ test("automatic verification brackets a real marked form submission and closes i
   await a.run();
   assert.deepEqual(order, ["before", "Create project", "close"]);
   assert.match(a.driverInputs[0].goal, /Use preflight-test/);
+});
+
+test("a speculative driver report with no executed reproduction stays in review", async () => {
+  const a = agent({
+    actions: [
+      {
+        action: "report_bug",
+        title: "Session lost",
+        detail: "The app must have dropped its cookies",
+        reasoning: "Guess",
+      },
+    ],
+  });
+  assert.equal((await a.run()).findings, 0);
+  assert.equal(a.results[0].status, "needs_review");
+  assert.equal(a.judgments.length, 0);
+  assert.equal(a.severityCalls(), 0);
+});
+test("a driver-reported failure is verified once, never recorded again by the step judge", async () => {
+  const a = agent({
+    steps: [
+      {
+        title: "Visit terms",
+        detail: "Terms should load without server errors",
+      },
+    ],
+    actions: [
+      {
+        action: "goto",
+        value: "https://target.example/terms",
+        reasoning: "Visit terms",
+      },
+      {
+        action: "report_bug",
+        title: "Server error",
+        detail: "Terms request returned 500",
+        reasoning: "Observe",
+      },
+    ],
+  });
+  assert.equal((await a.run()).findings, 1);
+  assert.equal(a.judgments.length, 0);
+  assert.equal(a.assessments.length, 2);
+  assert.equal(a.results[0].status, "confirmed");
+  assert.match(a.findings[0].evidenceKey, /^[a-f0-9]{64}$/);
+});
+test("external GitHub sign-in and missing provider access are blocked rather than lost-session findings", async () => {
+  for (const options of [{ redirectGithub: true }, { providerBlocked: true }]) {
+    const a = agent({
+      ...options,
+      actions: [
+        {
+          action: "goto",
+          value: "https://target.example/new",
+          reasoning: "Open new project",
+        },
+        {
+          action: "report_bug",
+          title: "Lost session",
+          detail: "401 means cookies lost",
+          reasoning: "Guess",
+        },
+      ],
+    });
+    assert.equal((await a.run()).findings, 0);
+    assert.equal(a.results[0].status, "blocked");
+    assert.equal(a.judgments.length, 0);
+    assert.equal(a.assessments.length, 0);
+  }
+});
+test("a failure that disappears in the fresh context stays unconfirmed", async () => {
+  const a = agent({
+    reproduce: false,
+    actions: [
+      {
+        action: "goto",
+        value: "https://target.example/terms",
+        reasoning: "Visit",
+      },
+      done,
+    ],
+    verdict: () => "fail",
+  });
+  assert.equal((await a.run()).findings, 0);
+  assert.equal(a.results[0].status, "needs_review");
+  assert.match(a.results[0].summary, /not reproduced/);
+});
+test("low confidence and unsafe submissions cannot be promoted to confirmed bugs", async () => {
+  const uncertain = agent({
+    assessment: { category: "application_bug", confidence: 0.7 },
+    actions: [
+      {
+        action: "goto",
+        value: "https://target.example/terms",
+        reasoning: "Visit",
+      },
+      done,
+    ],
+    verdict: () => "fail",
+  });
+  assert.equal((await uncertain.run()).findings, 0);
+  assert.equal(uncertain.results[0].status, "needs_review");
+  assert.equal(uncertain.pagesCreated(), 1);
+  const mutation = agent({
+    actions: [
+      {
+        action: "click",
+        role: "button",
+        name: "Create project",
+        reasoning: "Create",
+      },
+      {
+        action: "report_bug",
+        title: "Save failed",
+        detail: "Did not see success",
+        reasoning: "Unsure",
+      },
+    ],
+  });
+  assert.equal((await mutation.run()).findings, 0);
+  assert.equal(mutation.results[0].status, "needs_review");
+  assert.equal(mutation.pagesCreated(), 1);
+});
+test("database workflow without a submission produces a specific blocker, never an app bug", async () => {
+  const a = agent({
+    steps: [{ id: "automatic-database-create", title: "Create a test record" }],
+    automatic: {
+      supported: true,
+      marker: "preflight-test",
+      assertActive: async () => {},
+      close: async () => {},
+      instructions: "Use preflight-test",
+    },
+    redirectGithub: true,
+    actions: [
+      {
+        action: "goto",
+        value: "https://target.example/new",
+        reasoning: "Open",
+      },
+      {
+        action: "report_bug",
+        title: "Cannot create",
+        detail: "GitHub needed",
+        reasoning: "Blocked",
+      },
+    ],
+  });
+  assert.equal((await a.run()).findings, 0);
+  assert.equal(a.results[0].status, "blocked");
+  assert.equal(a.blockedDatabase.length, 1);
+  assert.match(a.blockedDatabase[0][3], /external sign-in/);
+});
+
+test("a post-submission database inspection failure is not described as a missing create workflow", async () => {
+  const a = agent({
+    steps: [{ id: "automatic-database-create", title: "Create a test record" }],
+    automatic: {
+      supported: true,
+      marker: "preflight-test",
+      assertActive: async () => {},
+      before: async () => [],
+      after: async () => {
+        throw new Error("offline");
+      },
+      close: async () => {},
+    },
+    actions: [
+      {
+        action: "fill",
+        role: "textbox",
+        name: "Project name",
+        value: "preflight-test",
+        reasoning: "Name the test record",
+      },
+      {
+        action: "click",
+        role: "button",
+        name: "Create project",
+        reasoning: "Submit",
+      },
+      done,
+    ],
+  });
+  assert.equal((await a.run()).findings, 0);
+  assert.equal(a.results[0].status, "blocked");
+  assert.match(a.results[0].summary, /create command ran/);
+  assert.equal(a.blockedDatabase.length, 0);
 });

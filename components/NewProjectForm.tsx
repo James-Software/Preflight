@@ -5,7 +5,7 @@ import RepoPicker from "./RepoPicker";
 
 export type ProjectFormState = {
   error: string;
-  field?: "appUrl" | "repo";
+  field?: "appUrl" | "repo" | "name";
 } | null;
 export type ProjectFormAction = (
   state: ProjectFormState,
@@ -20,9 +20,11 @@ const ERRORS: Record<string, string> = {
 export default function NewProjectForm({
   action,
   error,
+  testAccount = false,
 }: {
   action: ProjectFormAction;
   error?: string;
+  testAccount?: boolean;
 }) {
   const [state, formAction, pending] = useActionState(action, null);
   const [appUrl, setAppUrl] = useState("");
@@ -38,6 +40,33 @@ export default function NewProjectForm({
       className="mt-8 space-y-6"
     >
       <fieldset disabled={pending} className="min-w-0 space-y-6">
+        <div>
+          <label
+            htmlFor="project-name"
+            className="mb-2 block text-sm font-medium"
+          >
+            Project name
+          </label>
+          <input
+            id="project-name"
+            name="name"
+            type="text"
+            maxLength={80}
+            required={testAccount}
+            placeholder="My app"
+            aria-invalid={state?.field === "name" || undefined}
+            aria-describedby={
+              state?.field === "name" ? "project-error" : undefined
+            }
+            className="w-full rounded-xl border border-line bg-surface px-4 py-3 text-base placeholder:text-muted focus:border-primary"
+          />
+          {testAccount && (
+            <p className="mt-2 text-sm text-muted">
+              This project stays in your test workspace. GitHub actions require
+              a separate connection.
+            </p>
+          )}
+        </div>
         <div>
           <label htmlFor="appUrl" className="mb-2 block text-sm font-medium">
             App URL
@@ -60,23 +89,26 @@ export default function NewProjectForm({
             id="app-url-help"
             className="mt-2 text-sm leading-relaxed text-muted"
           >
-            Optional. Leave blank to test the latest preview deployment of your
-            default branch.
+            {testAccount
+              ? "Optional. Add a deployed URL for this test project."
+              : "Optional. Leave blank to test the latest preview deployment of your default branch."}
           </p>
         </div>
-        <RepoPicker
-          name="repo"
-          onSelection={setSelectedRepo}
-          errorId={state?.field === "repo" ? "project-error" : undefined}
-          onHomepage={(homepage) => {
-            if (
-              homepage &&
-              !urlTouched &&
-              /^https?:\/\/.+\..+/.test(homepage.trim())
-            )
-              setAppUrl(homepage.trim());
-          }}
-        />
+        {!testAccount && (
+          <RepoPicker
+            name="repo"
+            onSelection={setSelectedRepo}
+            errorId={state?.field === "repo" ? "project-error" : undefined}
+            onHomepage={(homepage) => {
+              if (
+                homepage &&
+                !urlTouched &&
+                /^https?:\/\/.+\..+/.test(homepage.trim())
+              )
+                setAppUrl(homepage.trim());
+            }}
+          />
+        )}
         {message && (
           <p
             id="project-error"
@@ -88,7 +120,7 @@ export default function NewProjectForm({
         )}
         <button
           type="submit"
-          disabled={pending || !selectedRepo}
+          disabled={pending || (!testAccount && !selectedRepo)}
           className="pressable btn-primary min-h-11 rounded-full px-6 py-3 text-sm font-medium text-white disabled:cursor-not-allowed disabled:opacity-60"
         >
           {pending ? "Creating project…" : "Create project"}

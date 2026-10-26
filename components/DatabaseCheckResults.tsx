@@ -6,7 +6,7 @@ export default function DatabaseCheckResults({
 }) {
   if (!checks.length) return null;
   const isSetup = (check: DatabaseCheckReport) =>
-    check.status === "error" &&
+    ["error", "blocked"].includes(check.status) &&
     (check.button_label === "Automatic" || check.button_label === "Setup");
   const setup = [
     ...new Map(
@@ -34,12 +34,14 @@ export default function DatabaseCheckResults({
       <p className="mt-2 text-sm text-muted">
         {assertions.length
           ? `${assertions.filter((check) => check.status === "passed").length} of ${assertions.length} database checks confirmed the expected change.`
-          : "No database assertions completed. Database setup prevented verification."}
+          : "No database assertions completed. Persistence has not been verified."}
       </p>
       {setup.length > 0 && (
         <div className="mt-4 rounded-lg border border-line bg-panel p-4">
           <h3 className="text-sm font-semibold">
-            Database verification needs attention
+            {setup.some((c) => c.status === "error")
+              ? "Database verification needs attention"
+              : "Database workflow blocked"}
           </h3>
           <ul className="mt-2 space-y-2 text-sm text-muted">
             {setup.map((check) => (
@@ -47,8 +49,9 @@ export default function DatabaseCheckResults({
             ))}
           </ul>
           <p className="mt-3 text-xs text-muted">
-            These are verification setup issues, not application bugs. Start a
-            new run after resolving them.
+            {setup.some((c) => c.status === "error")
+              ? "Review the connection or permissions described above, then start a new run. These checks do not establish an application bug."
+              : "The agent could not complete a supported create action. A database connection alone does not grant access to every app workflow. Use a profile with the required access and run again."}
           </p>
         </div>
       )}

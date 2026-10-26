@@ -374,6 +374,177 @@ const { NextRequest } = require("next/server");
         ).status,
         "unavailable",
       );
+      const workspace = load("lib/test-workspace.ts", {
+        ...deps,
+        "@/lib/test-user-issuer": issuer,
+        "@/lib/auth-profile-state": state,
+        "@/lib/site": site,
+      });
+      const snapshot = await profiles.profileForRun(
+        "real-owner",
+        generated.profile.id,
+        site.SITE_URL,
+        self.id,
+      );
+      const database = await connections.databaseForRun(
+        self.id,
+        "real-owner",
+        site.SITE_URL,
+      );
+      const run = await schema.createRun(self.id, site.SITE_URL, {
+        profile: snapshot,
+        database,
+      });
+      const verificationClient = {
+        query: async (q, values) => {
+          const text = typeof q === "string" ? q : q.text,
+            params = typeof q === "string" ? values : q.values;
+          // PGlite has one connection for both the app writer and the reader.
+          // The real reader opens its own read-only connection; this fixture
+          // preserves observeRecords' actual BEGIN READ ONLY transactions.
+          if (text === "SET default_transaction_read_only = on")
+            return { rows: [] };
+          return db.query(text, params);
+        },
+        end: async () => {},
+      };
+      const records = load("lib/database-records.ts", {
+        "@/lib/database-check-config": config,
+      });
+      const automatic = load("lib/automatic-database.ts", {
+        ...deps,
+        "@/lib/database-check-config": config,
+        "@/lib/database-connections": connections,
+        "@/lib/postgres-verification": {
+          postgresClient: async () => verificationClient,
+        },
+        "@/lib/database-records": records,
+      });
+      const verifier = await automatic.automaticDatabase(run.id, 0, 0);
+      assert.equal(verifier.supported, true);
+      const beforeCreate = await verifier.before();
+      let formType = function TestForm() {};
+      const requestAuth = async () => {
+        const response = await actualAuth.handlers.GET(
+          new NextRequest(site.SITE_URL + "/api/auth/session", {
+            headers: {
+              cookie: issuer.TEST_USER_COOKIE + "=" + stored.cookies[0].value,
+            },
+          }),
+        );
+        return response.json();
+      };
+      const projectPage = load("app/dashboard/projects/new/page.tsx", {
+        "@/auth": { auth: requestAuth },
+        "next/navigation": {
+          redirect: (url) => {
+            throw Object.assign(new Error("redirect"), { destination: url });
+          },
+        },
+        "@/lib/schema": schema,
+        "@/lib/test-workspace": workspace,
+        "@/lib/auth-profile-state": state,
+        "@/components/NewProjectForm": { default: formType },
+      });
+      const tree = await projectPage.default({
+        searchParams: Promise.resolve({}),
+      });
+      const findForm = (node) =>
+        Array.isArray(node)
+          ? node.map(findForm).find(Boolean)
+          : node && typeof node === "object"
+            ? node.type === formType
+              ? node.props
+              : findForm(node.props?.children)
+            : null;
+      const form = findForm(tree);
+      assert.equal(form.testAccount, true);
+      const data = new FormData();
+      data.set("name", verifier.marker);
+      data.set("repo", "someone-else/private-repo");
+      let destination;
+      try {
+        await form.action(null, data);
+      } catch (error) {
+        destination = error.destination;
+      }
+      assert.match(destination, /^\/dashboard\/projects\/\d+$/);
+      const createdId = Number(destination.split("/").at(-1));
+      const created = await schema.getProject(createdId, minted.sub);
+      assert.equal(created.display_name, verifier.marker);
+      assert.equal(created.owner_github_id, minted.sub);
+      assert.equal(created.repo_full_name, "James-Software/Preflight");
+      assert.equal(await schema.getProject(createdId, "real-owner"), null);
+      assert.equal(
+        (await verifier.after(beforeCreate, "Create project")).passed,
+        true,
+      );
+      const checks = (
+        await db.query("SELECT * FROM run_database_checks WHERE run_id=$1", [
+          run.id,
+        ])
+      ).rows;
+      assert.equal(checks[0].status, "passed");
+      const proposals = (
+        await db.query("SELECT * FROM run_database_cleanup WHERE run_id=$1", [
+          run.id,
+        ])
+      ).rows;
+      assert.equal(proposals.length, 1);
+      assert.equal(proposals[0].status, "pending");
+      assert.equal(proposals[0].proposal.record.value, String(createdId));
+      assert.ok(await schema.getProject(createdId, minted.sub)); // proposal never executes DELETE
+      await assert.rejects(
+        workspace.createTestWorkspaceProject("real-owner", "fake", null),
+        /expired/,
+      );
+      const fingerprint = "a".repeat(64),
+        finding = {
+          runId: run.id,
+          agentId: null,
+          severity: "medium",
+          title: "fixture",
+          reproSteps: null,
+          screenshotUrl: null,
+          consoleLogs: null,
+          networkErrors: [],
+          evidenceKey: fingerprint,
+        };
+      const duplicateResults = await Promise.all([
+        schema.createFinding(finding),
+        schema.createFinding(finding),
+      ]);
+      assert.equal(duplicateResults.filter(Boolean).length, 1);
+      await schema.recordTestResult(run.id, 0, {
+        step_id: "blocked",
+        title: "Provider unavailable",
+        status: "blocked",
+        summary: "GitHub connection required.",
+      });
+      const report = await schema.getRunReport(self.id, run.id, "real-owner");
+      assert.equal(report.findings.length, 1);
+      assert.equal(report.testResults[0].status, "blocked");
+      assert.equal(
+        await schema.getRunReport(self.id, run.id, "other-owner"),
+        null,
+      );
+      await verifier.close();
+      console.log(
+        JSON.stringify({
+          actualPostgresWasm: true,
+          realNextAuthSession: true,
+          actualNewProjectServerAction: true,
+          isolatedProjectCreated: true,
+          untrustedRepositoryIgnored: true,
+          markedProjectReadBack: true,
+          persistenceCheckPassed: true,
+          cleanupProposedNotExecuted: true,
+          concurrentFindingsDeduplicated: true,
+          blockedResultsSeparateFromFindings: true,
+          ownerScopedReport: true,
+        }),
+      );
+
       wrongDatabase = true;
       const foreign = await generation.startProfileGeneration(
         "real-owner",

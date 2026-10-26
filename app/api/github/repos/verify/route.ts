@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getGithubContext, verifyRepo, GithubAuthError } from "@/lib/github";
+import { githubConnectionStatus } from "@/lib/github-connection-status";
 
 /**
  * GET /api/github/repos/verify?repo=owner/name — verifies a repo for project
@@ -20,13 +21,8 @@ export async function GET(req: NextRequest) {
     );
   }
   if (!ctx) {
-    return NextResponse.json(
-      {
-        error: "GitHub session expired. Please log in again.",
-        tokenMissing: true,
-      },
-      { status: 401 },
-    );
+    const issue = await githubConnectionStatus();
+    return NextResponse.json(issue.body, { status: issue.status });
   }
   const fullName = (req.nextUrl.searchParams.get("repo") ?? "").trim();
   const m = fullName.match(/^([A-Za-z0-9_.-]+)\/([A-Za-z0-9_.-]+)$/);

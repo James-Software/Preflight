@@ -180,6 +180,13 @@ async function initializeSchema(): Promise<void> {
     )
   `;
   await sql`ALTER TABLE findings ADD COLUMN IF NOT EXISTS fix_summary TEXT`;
+  await sql`ALTER TABLE findings ADD COLUMN IF NOT EXISTS evidence_key TEXT`;
+  await sql`CREATE UNIQUE INDEX IF NOT EXISTS finding_run_evidence ON findings(run_id,evidence_key) WHERE evidence_key IS NOT NULL`;
+  await sql`CREATE TABLE IF NOT EXISTS run_test_results (
+    id SERIAL PRIMARY KEY, run_id INT NOT NULL REFERENCES runs(id), agent_index INT NOT NULL,
+    step_id TEXT NOT NULL, title TEXT NOT NULL, status TEXT NOT NULL, summary TEXT NOT NULL,
+    evidence TEXT, completed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), UNIQUE(run_id,agent_index,step_id)
+  )`;
   await sql`
     CREATE TABLE IF NOT EXISTS diagnoses (
       id SERIAL PRIMARY KEY,
@@ -236,12 +243,13 @@ export async function createProject(
   ownerGithubId: string,
   appUrl: string | null,
   repoFullName: string,
+  displayName: string | null = null,
 ): Promise<Project> {
   await ensureSchema();
   const sql = getSql();
   const rows = await sql`
-    INSERT INTO projects (owner_github_id, app_url, repo_full_name)
-    VALUES (${ownerGithubId}, ${appUrl}, ${repoFullName})
+    INSERT INTO projects (owner_github_id, app_url, repo_full_name, display_name)
+    VALUES (${ownerGithubId}, ${appUrl}, ${repoFullName}, ${displayName})
     RETURNING id, owner_github_id, app_url, repo_full_name,
               github_installation_id, screenshot_retention_days, display_name, image_url, created_at
   `;
@@ -426,17 +434,38 @@ export async function createFinding(input: {
   consoleLogs: string | null;
   networkErrors: unknown;
   fixSummary?: string;
-}): Promise<void> {
+  evidenceKey?: string;
+}): Promise<boolean> {
   await ensureSchema();
-  await getSql()`
+  const rows = await getSql()`
     INSERT INTO findings
       (run_id, agent_id, severity, title, repro_steps, screenshot_url,
-       console_logs, network_errors, status, fix_summary)
+       console_logs, network_errors, status, fix_summary, evidence_key)
     VALUES
       (${input.runId}, ${input.agentId}, ${input.severity}, ${input.title},
        ${input.reproSteps}, ${input.screenshotUrl}, ${input.consoleLogs},
-       ${JSON.stringify(input.networkErrors)}::jsonb, 'open', ${input.fixSummary ?? null})
+       ${JSON.stringify(input.networkErrors)}::jsonb, 'open', ${input.fixSummary ?? null}, ${input.evidenceKey ?? null})
+    ON CONFLICT(run_id,evidence_key) WHERE evidence_key IS NOT NULL DO NOTHING RETURNING id
   `;
+  return Array.isArray(rows) && rows.length > 0;
+}
+
+export type TestStepResult = {
+  step_id: string;
+  title: string;
+  status: string;
+  summary: string;
+  evidence?: string | null;
+};
+export async function recordTestResult(
+  runId: number,
+  agentIndex: number,
+  result: TestStepResult,
+) {
+  await ensureSchema();
+  await getSql()`INSERT INTO run_test_results(run_id,agent_index,step_id,title,status,summary,evidence)
+    VALUES(${runId},${agentIndex},${result.step_id},${result.title.slice(0, 200)},${result.status},${result.summary.slice(0, 1000)},${result.evidence?.slice(0, 8000) || null})
+    ON CONFLICT(run_id,agent_index,step_id) DO UPDATE SET status=EXCLUDED.status,summary=EXCLUDED.summary,evidence=EXCLUDED.evidence,completed_at=NOW()`;
 }
 
 export interface DatabaseCheckReport {
@@ -478,6 +507,7 @@ export async function getRunReport(
   run: Run;
   findings: FindingReport[];
   databaseChecks: DatabaseCheckReport[];
+  testResults: TestStepResult[];
 } | null> {
   await ensureSchema();
   const sql = getSql();
@@ -511,12 +541,17 @@ export async function getRunReport(
   const databaseChecks =
     await sql`SELECT check_id, title, button_label, status, summary, completed_at
     FROM run_database_checks WHERE run_id = ${runId} ORDER BY id`;
+  const testResults =
+    await sql`SELECT step_id,title,status,summary,evidence FROM run_test_results WHERE run_id=${runId} ORDER BY id`;
   return {
     run: runs[0] as Run,
     findings: findings as FindingReport[],
     databaseChecks: (Array.isArray(databaseChecks)
       ? databaseChecks
       : []) as DatabaseCheckReport[],
+    testResults: Array.isArray(testResults)
+      ? (testResults as TestStepResult[])
+      : [],
   };
 }
 
