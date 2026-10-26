@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from "next/server";
-import { tasks } from "@trigger.dev/sdk";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { ProfileError } from "@/lib/auth-profile-state";
@@ -28,13 +27,13 @@ async function handle(
       { error: "Invalid request origin." },
       { status: 403, headers },
     );
-  const owner = (await auth())?.user?.githubId;
-  if (!owner)
-    return NextResponse.json(
-      { error: "Sign in again to create a profile." },
-      { status: 401, headers },
-    );
   try {
+    const owner = (await auth())?.user?.githubId;
+    if (!owner)
+      return NextResponse.json(
+        { error: "Sign in again to create a profile." },
+        { status: 401, headers },
+      );
     const projectId = Number(req.nextUrl.searchParams.get("projectId"));
     await profileProject(owner, projectId);
     if (action === "read")
@@ -67,6 +66,7 @@ async function handle(
     }
     // Resolve queue configuration before allocating a paid browser.
     const config = getTriggerClientConfig();
+    const { tasks } = await import("@trigger.dev/sdk");
     let id: string;
     if (action === "start")
       id = (await startProfileGeneration(owner, projectId, input)).id;
@@ -99,7 +99,7 @@ async function handle(
             ? error.message
             : "Could not complete automatic profile setup. Try again or use Sign in with browser.",
       },
-      { status: 400, headers },
+      { status: error instanceof ProfileError ? 400 : 500, headers },
     );
   }
 }

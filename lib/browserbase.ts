@@ -29,6 +29,7 @@ export async function createBrowserSession(
     body.projectId = process.env.BROWSERBASE_PROJECT_ID;
   }
   const res = await fetch(BB_API, {
+    signal: AbortSignal.timeout(15_000),
     method: "POST",
     headers: { "x-bb-api-key": key, "Content-Type": "application/json" },
     body: JSON.stringify(body),
@@ -49,6 +50,7 @@ export async function createBrowserSession(
 
 export async function closeBrowserSession(sessionId: string): Promise<void> {
   const res = await fetch(`${BB_API}/${sessionId}`, {
+    signal: AbortSignal.timeout(10_000),
     method: "POST",
     headers: { "x-bb-api-key": bbKey(), "Content-Type": "application/json" },
     body: JSON.stringify({
@@ -74,6 +76,7 @@ export async function browserLiveUrl(sessionId: string) {
   const response = await fetch(
     `${BB_API}/${encodeURIComponent(sessionId)}/debug`,
     {
+      signal: AbortSignal.timeout(10_000),
       headers: { "x-bb-api-key": bbKey() },
       cache: "no-store",
     },

@@ -7,10 +7,6 @@ import {
   decryptProfile,
   ProfileError,
 } from "@/lib/auth-profile-state";
-import {
-  startProfileCapture,
-  finishProfileCapture,
-} from "@/lib/profile-capture";
 import { browserLiveUrl } from "@/lib/browserbase";
 
 export const generationMessages = {
@@ -118,6 +114,7 @@ export async function startProfileGeneration(
   projectId: number,
   input: { origin?: unknown; email?: unknown },
 ) {
+  const { startProfileCapture } = await import("@/lib/profile-capture");
   await profileProject(owner, projectId);
   const project = await getProject(projectId, owner);
   const origin =
@@ -222,6 +219,7 @@ export async function cancelProfileGeneration(
   projectId: number,
   id: string,
 ) {
+  const { finishProfileCapture } = await import("@/lib/profile-capture");
   await finishProfileCapture(owner, id, projectId, true);
 }
 export async function failGenerationQueue(

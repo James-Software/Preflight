@@ -1,0 +1,2 @@
+{"version":"before","actualPostgresWasm":true,"coldStatusRead":{"statements":156,"migrationBatches":3},"warmStatusRead":{"statements":156,"migrationBatches":3},"resultPreserved":true,"noBrowserOrQueueAllocation":true}
+{"version":"after","actualPostgresWasm":true,"coldStatusRead":{"statements":54,"migrationBatches":1},"warmStatusRead":{"statements":3,"migrationBatches":0},"resultPreserved":true,"noBrowserOrQueueAllocation":true}

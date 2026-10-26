@@ -37,7 +37,20 @@ export interface Run {
   repo_full_name?: string | null;
 }
 
-export async function ensureSchema(): Promise<void> {
+let schemaInitialization: Promise<void> | undefined;
+
+/** Share initialization across concurrent requests; retry a failed attempt. */
+export function ensureSchema(): Promise<void> {
+  if (!schemaInitialization) {
+    schemaInitialization = initializeSchema().catch((error) => {
+      schemaInitialization = undefined;
+      throw error;
+    });
+  }
+  return schemaInitialization;
+}
+
+async function initializeSchema(): Promise<void> {
   const sql = getSql();
   await sql`
     CREATE TABLE IF NOT EXISTS projects (

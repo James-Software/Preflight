@@ -2,6 +2,11 @@
 import { useEffect, useRef, useState } from "react";
 import type { AuthProfile } from "@/lib/auth-profiles";
 import type { ProfileGeneration } from "@/lib/profile-generation";
+import {
+  readProfileSetupResponse,
+  ProfileSetupResponseError,
+  profileSetupErrorMessage,
+} from "@/lib/profile-setup-response";
 
 export default function AutomaticProfileSetup({
   projectId,
@@ -18,6 +23,8 @@ export default function AutomaticProfileSetup({
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
   const [showBrowser, setShowBrowser] = useState(false);
+  const [statusAttempt, setStatusAttempt] = useState(0);
+  const [statusFailed, setStatusFailed] = useState(false);
   const saved = useRef(onSaved);
   saved.current = onSaved;
   const delivered = useRef<string | null>(null);
@@ -26,21 +33,43 @@ export default function AutomaticProfileSetup({
     ["queued", "running", "waiting"].includes(generation.status);
   useEffect(() => {
     const controller = new AbortController();
-    void fetch(endpoint, { cache: "no-store", signal: controller.signal })
-      .then(async (response) => {
-        const data = await response.json();
-        if (!response.ok)
-          throw new Error(data.error || "Could not restore profile setup.");
-        if (!controller.signal.aborted) setGeneration(data.generation);
-      })
-      .catch((error) => {
-        if (!controller.signal.aborted) setError(error.message);
-      })
-      .finally(() => {
-        if (!controller.signal.aborted) setReady(true);
-      });
-    return () => controller.abort();
-  }, [endpoint]);
+    let attempts = 0,
+      timer: ReturnType<typeof setTimeout>;
+    setReady(false);
+    setError("");
+    setStatusFailed(false);
+    async function check() {
+      try {
+        const response = await fetch(endpoint, {
+          cache: "no-store",
+          signal: controller.signal,
+        });
+        const data = await readProfileSetupResponse(response);
+        if (controller.signal.aborted) return;
+        setGeneration(data.generation);
+        setError("");
+        setReady(true);
+      } catch (error) {
+        if (controller.signal.aborted) return;
+        attempts++;
+        if (
+          attempts < 3 &&
+          (!(error instanceof ProfileSetupResponseError) || error.retryable)
+        ) {
+          timer = setTimeout(check, 1000 * attempts);
+        } else {
+          setError(profileSetupErrorMessage(error));
+          setStatusFailed(true);
+          setReady(true);
+        }
+      }
+    }
+    void check();
+    return () => {
+      controller.abort();
+      clearTimeout(timer);
+    };
+  }, [endpoint, statusAttempt]);
   useEffect(() => {
     if (!generation || !active) return;
     const id = generation.id;
@@ -53,9 +82,7 @@ export default function AutomaticProfileSetup({
           `${endpoint}&id=${encodeURIComponent(id)}`,
           { cache: "no-store", signal: controller.signal },
         );
-        const data = await response.json();
-        if (!response.ok)
-          throw new Error(data.error || "Could not check profile setup.");
+        const data = await readProfileSetupResponse(response);
         if (stopped) return;
         if (!data.generation)
           throw new Error(
@@ -66,12 +93,7 @@ export default function AutomaticProfileSetup({
         if (!["queued", "running", "waiting"].includes(data.generation.status))
           return;
       } catch (error) {
-        if (!stopped)
-          setError(
-            error instanceof Error
-              ? error.message
-              : "Connection lost. Retrying…",
-          );
+        if (!stopped) setError(profileSetupErrorMessage(error));
       }
       if (!stopped) timer = setTimeout(poll, 3000);
     }
@@ -101,15 +123,40 @@ export default function AutomaticProfileSetup({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(input),
       });
-      const data = await response.json();
-      if (!response.ok)
-        throw new Error(data.error || "Could not complete automatic setup.");
+      const data = await readProfileSetupResponse(response);
       setGeneration(data.generation);
       setShowBrowser(false);
+      setStatusFailed(false);
     } catch (error) {
-      setError(
-        error instanceof Error ? error.message : "Connection lost. Try again.",
-      );
+      // A timed-out POST can still have queued a job. Read its status rather
+      // than resending a mutation that might create another test account.
+      let recovered = false;
+      if (!(error instanceof ProfileSetupResponseError) || error.retryable) {
+        try {
+          const id = method === "POST" ? undefined : generation?.id;
+          const response = await fetch(
+            `${endpoint}${id ? `&id=${encodeURIComponent(id)}` : ""}`,
+            { cache: "no-store" },
+          );
+          const data = await readProfileSetupResponse(response);
+          if (data.generation) {
+            setGeneration(data.generation);
+            const status = data.generation.status;
+            recovered =
+              method === "DELETE"
+                ? status === "cancelled"
+                : method === "PATCH"
+                  ? ["queued", "running", "completed"].includes(status)
+                  : !["cancelled", "expired", "error"].includes(status);
+          }
+        } catch {
+          /* Keep the existing setup and the original useful error. */
+        }
+      }
+      if (recovered) {
+        setError("");
+        setStatusFailed(false);
+      } else setError(profileSetupErrorMessage(error));
     } finally {
       setBusy(false);
     }
@@ -142,9 +189,21 @@ export default function AutomaticProfileSetup({
         verified session for this project.
       </p>
       {error && (
-        <p role="alert" className="mt-4 text-sm text-red-700 dark:text-red-300">
-          {error}
-        </p>
+        <div className="mt-4">
+          <p role="alert" className="text-sm text-red-700 dark:text-red-300">
+            {error}
+          </p>
+          {statusFailed && (
+            <button
+              type="button"
+              disabled={!ready || busy}
+              onClick={() => setStatusAttempt((attempt) => attempt + 1)}
+              className="mt-2 min-h-11 rounded-lg border border-line px-4 text-sm hover:bg-panel disabled:opacity-50"
+            >
+              Retry status
+            </button>
+          )}
+        </div>
       )}
       {!active ? (
         <form
@@ -196,7 +255,11 @@ export default function AutomaticProfileSetup({
             className="btn-primary min-h-11 px-5 text-sm font-medium disabled:opacity-50"
             aria-busy={busy}
           >
-            {busy ? "Starting agent…" : "Generate profile"}
+            {!ready
+              ? "Checking profiles…"
+              : busy
+                ? "Starting agent…"
+                : "Generate profile"}
           </button>
         </form>
       ) : (

@@ -77,3 +77,34 @@ viewports, both themes, using synthetic API/live-browser responses. They cover
 optional inbox entry, failed-start retry, handoff, completion, returning to run
 setup with the new ID, reload restoration, cancellation, no overflow and zero
 Axe WCAG A/AA violations. This is not a live-provider production smoke test.
+
+## Status-response recovery
+
+The status data path previously ran the complete migration sequence three times
+per read (156 database statements), including every poll. `ensureSchema` now
+shares one initialization promise per server process, coalesces concurrent calls,
+and clears a failed initialization for retry. Ownership/data reads remain fresh.
+The first status read needs 54 statements; warm reads need only three data
+queries. These counts exclude the surrounding authentication layer. See the
+[actual PostgreSQL comparison](status-storage.jsonl).
+
+Status reads no longer initialize Playwright or the Trigger SDK. Authentication
+failures stay inside the JSON response boundary. Browserbase create/debug/release
+requests have individual timeouts so an unresponsive provider cannot hang them
+indefinitely.
+
+The client validates responses before using them. Empty, malformed or HTML error
+responses produce a readable error with the HTTP status instead of a JSON parser
+exception. Startup reads retry up to three times, with a manual **Retry status**
+after persistent failure. Poll errors preserve the existing setup. An uncertain
+start/resume/cancel result triggers a status read, never an automatic repeat of
+that mutation; a successfully queued job can therefore resume without creating
+another account.
+
+Production build and **157 unit tests** pass. [Recovery UI checks](response-ui.jsonl)
+cover desktop/phone viewports with injected empty 200/502/504 responses at startup,
+polling and all mutation boundaries, including recovery without duplicate writes.
+The existing actual PostgreSQL/Chromium account-creation, verification, handoff,
+cancellation and shared-key integration checks still pass. The live production
+endpoint could not be inspected through this environment's network proxy, so these
+checks do not establish the original production response status or timing.
