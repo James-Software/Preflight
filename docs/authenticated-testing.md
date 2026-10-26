@@ -35,7 +35,10 @@ plaintext credentials; Trigger payloads carry IDs/URLs rather than credentials.
   request/fulfill step prevents header overrides following cross-origin redirects.
 - Session state uses AES-256-GCM with a random IV, authenticated against owner ID
   and origin. Stored profile values cannot be viewed after saving. To refresh
-  credentials, create a replacement profile and remove the old one.
+  credentials for an imported session, create a replacement profile and remove
+  the old one. Saved PreFlight-generated profiles renew their short-lived sessions
+  automatically at launch and worker startup; their test identities persist until
+  revoked.
 - Fields remain disabled until initialization and the native form method is POST,
   preventing browser fallback from putting credentials in a GET URL.
 - Choose a protected signed-in page and optional visible text marker. Each agent
@@ -48,8 +51,8 @@ plaintext credentials; Trigger payloads carry IDs/URLs rather than credentials.
   loaded again by each agent. Revocation blocks future profile loads, including
   queued runs. It does not invalidate a session already loaded by a running agent
   or revoke the account's session at its auth provider.
-  PreFlight's own generated test identities additionally check database expiry
-  and profile revocation on every app session; see [automatic profiles](automatic-profiles/README.md).
+  PreFlight's own generated test identities additionally check token expiry and
+  profile/account revocation on every app session; see [automatic profiles](automatic-profiles/README.md).
 - Authenticated Browserbase sessions disable provider recording/logging. Known
   credential strings are redacted from text observations/logs before model input
   or storage. Screenshots still depict the app, so use test accounts. Browserbase
@@ -58,7 +61,7 @@ plaintext credentials; Trigger payloads carry IDs/URLs rather than credentials.
   the configured signed-in page, navigation and a non-destructive interaction.
 
 Interactive OAuth/MFA capture, IndexedDB/session-storage imports, automatic session
-refresh and account pools are not implemented. IndexedDB imports are rejected
+refresh for arbitrary imported/provider sessions and account pools are not implemented. IndexedDB imports are rejected
 rather than silently discarded. Browser isolation still shares the underlying
 account/data; use separate profiles/accounts when parallel mutations require it.
 Auth-header requests use Playwright's request/fulfill transport, which can have a

@@ -80,6 +80,19 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
     async jwt({ token, profile, account }) {
       const t = token as unknown as Record<string, unknown>;
       if (t.preflightTestIdentity === true && !account) {
+        // Auth.js may rotate a cookie with its normal session maxAge. Keep
+        // test credentials bounded independently from the persistent identity.
+        const expiresAt =
+          typeof t.preflightSessionExpiresAt === "number"
+            ? t.preflightSessionExpiresAt
+            : typeof token.exp === "number"
+              ? token.exp * 1000
+              : null;
+        if (expiresAt !== null) {
+          if (!Number.isFinite(expiresAt) || expiresAt <= Date.now())
+            return null;
+          t.preflightSessionExpiresAt = expiresAt;
+        }
         if (!token.sub || !(await validateTestUserSession(token.sub)))
           return null;
         delete t.githubLogin;
@@ -87,7 +100,10 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
         delete t.githubRefreshToken;
         return token;
       }
-      if (account) delete t.preflightTestIdentity;
+      if (account) {
+        delete t.preflightTestIdentity;
+        delete t.preflightSessionExpiresAt;
+      }
       const p = profile as { login?: string } | undefined;
       if (p?.login) {
         t.githubLogin = p.login.toLowerCase();

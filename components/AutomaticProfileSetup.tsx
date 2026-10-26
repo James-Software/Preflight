@@ -244,7 +244,8 @@ export default function AutomaticProfileSetup({
           <p className="max-w-xl text-xs leading-relaxed text-muted">
             Connect this project’s database first. Supported authentication
             systems issue a test session automatically; this does not open an
-            interactive browser.
+            interactive browser. Saved PreFlight test accounts stay available
+            until removed; their sessions renew automatically before runs.
           </p>
           <button
             type="submit"

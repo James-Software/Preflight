@@ -332,6 +332,7 @@ test("database setup fails before browser allocation, and confirmed automatic ac
     const payloads = [],
       statuses = [];
     const task = load("src/trigger/run-swarm.ts", {
+      "@/lib/run-authentication": { renewRunAuthentication: async () => false },
       "@/lib/automatic-database": {
         preflightAutomaticDatabase: async () => true,
       },

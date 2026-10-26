@@ -139,7 +139,9 @@ export const generateAuthProfile = task({
               "PreFlight's test-user issuer could not authorize this setup. Wait for the web and Trigger deployments, confirm their shared encryption key matches, and retry.",
             );
           state = parseProfileState(
-            capture.origin, JSON.stringify(result.state), "{}",
+            capture.origin,
+            JSON.stringify(result.state),
+            "{}",
           );
         } else if (plan.kind === "authjs") {
           await inspectAuthTables(client, plan);
@@ -203,10 +205,15 @@ export const generateAuthProfile = task({
       const encrypted = encryptProfile(state, payload.owner, capture.origin);
       // Verify the issued token above, but start PreFlight agents in its
       // protected UI rather than leaving them on the session JSON endpoint.
-      const verificationPath = plan.kind === "preflight" ? "/dashboard" : plan.kind === "authjs" ? "/api/auth/session" : "/";
+      const verificationPath =
+        plan.kind === "preflight"
+          ? "/dashboard"
+          : plan.kind === "authjs"
+            ? "/api/auth/session"
+            : "/";
       const verificationText = plan.kind === "authjs" ? account.email : null;
       const saved =
-        await sql`WITH capture_grant AS (UPDATE profile_captures SET status='completed',automation_credentials=NULL,automation_auth_state=NULL,automation_github_grant=NULL,automation_live_url=NULL WHERE id=${capture.id}::uuid AND owner_github_id=${payload.owner} AND project_id=${payload.projectId} AND automation_token=${token}::uuid AND status='active' AND expires_at>NOW() RETURNING *) INSERT INTO auth_profiles(owner_github_id,name,origin,encrypted_state,verification_path,verification_text,project_id,source_capture_id) SELECT owner_github_id,name,origin,${encrypted},${verificationPath},${verificationText},project_id,id FROM capture_grant RETURNING id`;
+        await sql`WITH capture_grant AS (UPDATE profile_captures SET status='completed',automation_credentials=NULL,automation_auth_state=NULL,automation_github_grant=NULL,automation_live_url=NULL WHERE id=${capture.id}::uuid AND owner_github_id=${payload.owner} AND project_id=${payload.projectId} AND automation_token=${token}::uuid AND status='active' AND expires_at>NOW() RETURNING *), saved_profile AS (INSERT INTO auth_profiles(owner_github_id,name,origin,encrypted_state,verification_path,verification_text,project_id,source_capture_id) SELECT owner_github_id,name,origin,${encrypted},${verificationPath},${verificationText},project_id,id FROM capture_grant RETURNING id,source_capture_id), persistent_identity AS (UPDATE test_users SET expires_at=NULL WHERE capture_id IN (SELECT source_capture_id FROM saved_profile) AND owner_github_id=${payload.owner} AND project_id=${payload.projectId} AND revoked_at IS NULL RETURNING id) SELECT id FROM saved_profile`;
       if (!(saved as any[]).length)
         throw new ProvisioningError(
           "Setup was cancelled before the profile could be saved. The marked test user was not deleted.",

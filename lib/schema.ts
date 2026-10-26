@@ -94,6 +94,7 @@ async function initializeSchema(): Promise<void> {
     project_id INT NOT NULL REFERENCES projects(id), name TEXT NOT NULL, email TEXT NOT NULL,
     expires_at TIMESTAMPTZ NOT NULL, revoked_at TIMESTAMPTZ, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )`;
+  await sql`ALTER TABLE test_users ALTER COLUMN expires_at DROP NOT NULL`;
   await sql`CREATE TABLE IF NOT EXISTS profile_captures (
     id UUID PRIMARY KEY, owner_github_id TEXT NOT NULL, name TEXT NOT NULL,
     origin TEXT NOT NULL, verification_path TEXT NOT NULL, verification_text TEXT NOT NULL,

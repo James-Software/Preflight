@@ -24,29 +24,44 @@ export async function authenticatedPage(
       } else await route.continue();
     });
   const page = await context.newPage();
+  let reason = "The signed-in page did not finish loading.";
   try {
     const response = await page.goto(
       new URL(authentication.verification_path, origin).href,
       { waitUntil: "domcontentloaded", timeout: 25_000 },
     );
     const url = new URL(page.url());
-    if (
-      !response ||
-      response.status() >= 400 ||
-      url.origin !== origin ||
-      /\/(?:log-?in|sign-?in)(?:\/|$)/i.test(url.pathname) ||
-      (await page.locator('input[type="password"]').first().isVisible())
-    )
+    if (!response) {
+      reason = "The signed-in page returned no response.";
       throw new Error();
-    if (authentication.verification_text)
+    }
+    if (response.status() >= 400) {
+      reason = `The signed-in page returned HTTP ${response.status()}.`;
+      throw new Error();
+    }
+    if (url.origin !== origin) {
+      reason = "The signed-in page redirected to a different origin.";
+      throw new Error();
+    }
+    if (/\/(?:log-?in|sign-?in)(?:\/|$)/i.test(url.pathname)) {
+      reason = "The app redirected to its sign-in page.";
+      throw new Error();
+    }
+    if (await page.locator('input[type="password"]').first().isVisible()) {
+      reason = "The verification page displayed a password form.";
+      throw new Error();
+    }
+    if (authentication.verification_text) {
+      reason = "The configured signed-in text was not found.";
       await page
         .getByText(authentication.verification_text, { exact: false })
         .first()
         .waitFor({ state: "visible", timeout: 10_000 });
+    }
   } catch {
     await context.close().catch(() => {});
     throw new Error(
-      "Authentication check failed. Refresh the saved session or check the profile’s signed-in page and text marker. This is a setup failure, not an app finding.",
+      `Authentication check failed. ${reason} Check the saved profile’s session, signed-in page and text marker. This is a setup failure, not an app finding.`,
     );
   }
   return page;

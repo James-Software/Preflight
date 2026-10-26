@@ -4,6 +4,7 @@ import {
   databaseVerificationError,
 } from "@/lib/database-verification";
 import { getRunAuthentication } from "@/lib/auth-profiles";
+import { renewRunAuthentication } from "@/lib/run-authentication";
 import { task, tasks } from "@trigger.dev/sdk";
 import { getSql } from "@/lib/db";
 import { updateRunStatus } from "@/lib/schema";
@@ -73,8 +74,10 @@ export const runSwarm = task({
     let databaseChecks: Awaited<ReturnType<typeof preflightRunDatabase>> = [];
     try {
       assertSwarmModelConfig();
-      if (run.auth_profile_id || run.auth_profile_snapshot)
+      if (run.auth_profile_id || run.auth_profile_snapshot) {
+        await renewRunAuthentication(payload.runId);
         await getRunAuthentication(payload.runId);
+      }
       if (run.database_snapshot)
         databaseChecks = await preflightRunDatabase(payload.runId);
     } catch (error) {

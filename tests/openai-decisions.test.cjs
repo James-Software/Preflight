@@ -263,6 +263,7 @@ function parentTask({
   const statuses = [];
   let batches = 0;
   const task = load("src/trigger/run-swarm.ts", {
+    "@/lib/run-authentication": { renewRunAuthentication: async () => false },
     "@/lib/automatic-database": {
       preflightAutomaticDatabase: async () => true,
     },

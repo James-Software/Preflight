@@ -284,11 +284,17 @@ test("concurrent sign-ins keep the first canonical owner and encrypt for that ow
   );
 });
 
-function authConfiguration({ previous = null, canonical = null, testUserValid = false } = {}) {
+function authConfiguration({
+  previous = null,
+  canonical = null,
+  testUserValid = false,
+} = {}) {
   let config;
   const saved = [];
   load("auth.ts", {
-    "@/lib/test-user-issuer": { validateTestUserSession: async () => testUserValid },
+    "@/lib/test-user-issuer": {
+      validateTestUserSession: async () => testUserValid,
+    },
     "next-auth": {
       default: (options) => {
         config = options;
@@ -311,7 +317,13 @@ function authConfiguration({ previous = null, canonical = null, testUserValid = 
   return { callbacks: config.callbacks, saved };
 }
 test("test-user JWTs cannot inherit GitHub credentials and revoked identities fail authentication", async () => {
-  const token = { sub: "test:isolated", preflightTestIdentity: true, githubLogin: "owner", githubAccessToken: "private", githubRefreshToken: "private" };
+  const token = {
+    sub: "test:isolated",
+    preflightTestIdentity: true,
+    githubLogin: "owner",
+    githubAccessToken: "private",
+    githubRefreshToken: "private",
+  };
   const { callbacks, saved } = authConfiguration({ testUserValid: true });
   const checked = await callbacks.jwt({ token });
   assert.equal(checked.sub, "test:isolated");
@@ -320,6 +332,30 @@ test("test-user JWTs cannot inherit GitHub credentials and revoked identities fa
   assert.equal(checked.githubRefreshToken, undefined);
   assert.equal(saved.length, 0);
   assert.equal(await authConfiguration().callbacks.jwt({ token }), null);
+});
+test("cookie rotation cannot extend a test token past its absolute deadline", async () => {
+  const { callbacks } = authConfiguration({ testUserValid: true });
+  assert.equal(
+    await callbacks.jwt({
+      token: {
+        sub: "test:isolated",
+        preflightTestIdentity: true,
+        exp: Date.now() / 1000 + 30 * 86400,
+        preflightSessionExpiresAt: Date.now() - 1000,
+      },
+    }),
+    null,
+  );
+  const deadline = Date.now() + 60000;
+  const token = await callbacks.jwt({
+    token: {
+      sub: "test:isolated",
+      preflightTestIdentity: true,
+      exp: Date.now() / 1000 + 30 * 86400,
+      preflightSessionExpiresAt: deadline,
+    },
+  });
+  assert.equal(token.preflightSessionExpiresAt, deadline);
 });
 const account = () => ({
   providerAccountId: "123",

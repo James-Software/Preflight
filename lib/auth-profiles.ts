@@ -108,9 +108,14 @@ export async function profileForRun(
   await profileProject(owner, projectId);
   await ensureSchema();
   const rows =
-    await getSql()`SELECT id, name, origin, encrypted_state, verification_path, verification_text FROM auth_profiles WHERE id = ${id} AND owner_github_id = ${owner} AND project_id = ${projectId} AND revoked_at IS NULL`;
+    await getSql()`SELECT id, name, origin, encrypted_state, verification_path, verification_text, source_capture_id FROM auth_profiles WHERE id = ${id} AND owner_github_id = ${owner} AND project_id = ${projectId} AND revoked_at IS NULL`;
   const p = Array.isArray(rows)
-    ? (rows[0] as (AuthProfile & { encrypted_state: string }) | undefined)
+    ? (rows[0] as
+        | (AuthProfile & {
+            encrypted_state: string;
+            source_capture_id?: string;
+          })
+        | undefined)
     : null;
   if (!p)
     throw new ProfileError(
@@ -120,6 +125,12 @@ export async function profileForRun(
     throw new ProfileError(
       `This profile is for ${p.origin}. Create or choose a profile for ${new URL(targetUrl).origin}.`,
     );
+  if (p.origin === "https://www.trypreflight.dev" && p.source_capture_id) {
+    const { refreshTestUserProfile } = await import("@/lib/test-user-issuer");
+    const refreshed = await refreshTestUserProfile(owner, projectId, id);
+    if (refreshed)
+      p.encrypted_state = encryptProfile(refreshed, owner, p.origin);
+  }
   decryptProfile(p.encrypted_state, owner, p.origin);
   return {
     id: p.id as number,

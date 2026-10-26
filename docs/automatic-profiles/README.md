@@ -13,9 +13,13 @@ fall back to browser automation. Manual sign-in is a separate collapsed option.
   `AUTH_SECRET`. The worker must prove the selected database is this same instance,
   and the request needs a signed, current, owner/project-scoped setup grant.
   The identity is `test:<setup ID>`, never the owner's ID; it has no admin login
-  or inherited GitHub connection. Its one-hour lifetime is enforced in the database
-  on every session check. Cancellation, failed setup, expiry or profile revocation
-  invalidates it. Generating another profile creates another isolated identity.
+  or inherited GitHub connection. Once setup completes, its identity and saved
+  profile persist until revoked. The web app issues a fresh one-hour session at
+  run selection and the worker requests another at startup to cover queue delays.
+  An absolute token deadline prevents Auth.js cookie rotation extending that
+  credential indefinitely. Revocation is checked on every app session request.
+  Incomplete/abandoned setups still expire; generating another profile creates
+  another isolated identity.
   Setup verifies the issued token through `/api/auth/session`; swarm agents
   start on the protected `/dashboard` page to exercise the app's UI.
   They can create real projects in their isolated workspace for persistence
@@ -92,9 +96,19 @@ PreFlight-issued test sessions are immediately invalidated through the database
 check when their saved profile is revoked. GitHub-dependent workflows still need
 their own GitHub connection; test users never borrow the owner's credentials.
 
+Existing PreFlight profiles with the old one-hour account deadline recover
+automatically when selected for a new run. Their existing identity is retained;
+no duplicate user or replacement profile is created. The worker renewal endpoint
+requires a current signed request and a queued/planning/running run with the
+same owner, project, profile and canonical app origin. It atomically rechecks
+revocation while updating the encrypted profile and run snapshot. Only renewal
+status is returned, never cookies. Completed, failed or canceled runs cannot
+renew. The signing secret remains in the web app. This issuer cannot refresh
+arbitrary imported sessions or third-party identities.
+
 ## Validation
 
-Production build and 168 unit tests passed. [Database integration](database-provisioning.jsonl)
+Production build and 191 unit tests passed. [Database integration](database-provisioning.jsonl)
 uses actual PostgreSQL WASM databases for both PreFlight and the customer app,
 with immutable-source transport and a session endpoint adapter. It checks real
 user/session inserts, acceptance of the issued opaque token, encrypted profiles,
@@ -111,6 +125,14 @@ The worker-to-issuer-to-session-to-profile flow uses actual route handlers and
 auth callbacks with local HTTP transport adapters, including the real NextAuth
 session handler accepting the generated cookie. A foreign database is rejected
 before issuing any identity. These checks do not establish live deployment health.
+
+[Session renewal integration](session-renewal.jsonl) additionally exercises an
+expired saved profile, recovery of its existing identity, the actual parent
+worker's signed renewal call, a renewed queued-run snapshot accepted by real
+Auth.js handlers, and rejection of revoked identities/profiles and inactive runs.
+Authentication setup errors identify the observed condition (HTTP status,
+redirect, password form or missing marker) without including cookies or private
+verification text.
 
 Reproduce the issuer integration on Node 24 with the optional PostgreSQL WASM
 test dependency (not needed by the app):

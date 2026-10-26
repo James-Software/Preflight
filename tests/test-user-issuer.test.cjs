@@ -18,7 +18,11 @@ async function fixture(t, sql = async () => []) {
     "next-auth/jwt": jwt,
     "@/lib/db": { getSql: () => sql },
     "@/lib/schema": { ensureSchema: async () => {} },
-    "@/lib/auth-profile-state": { profileKey: () => key },
+    "@/lib/auth-profile-state": {
+      profileKey: () => key,
+      encryptProfile: () => "encrypted-test-state",
+      ProfileError: class extends Error {},
+    },
     "@/lib/profile-generation": {
       openTestAccount: () => ({ email: "qa@example.com", name: "QA" }),
     },
@@ -131,4 +135,82 @@ test("test sessions fail closed when identity is revoked or the database is unav
   assert.equal(await issuer.validateTestUserSession(id), false);
   mode = "offline";
   assert.equal(await issuer.validateTestUserSession(id), false);
+});
+test("saved managed profiles get short-lived sessions for the same persistent identity", async (t) => {
+  const id = "test:" + randomUUID(),
+    queries = [];
+  const { issuer, jwt } = await fixture(t, async (parts, ...values) => {
+    const q = parts.join("?");
+    queries.push(q);
+    if (q.includes("SELECT u.id,u.name,u.email"))
+      return [{ id, name: "QA", email: "qa@example.com", revoked_at: null }];
+    if (q.includes("WITH run_grant")) return [{ id: 8 }];
+    return [];
+  });
+  const state = await issuer.refreshTestUserProfile("owner", 2, 8);
+  const decoded = await jwt.decode({
+    token: state.cookies[0].value,
+    secret: process.env.AUTH_SECRET,
+    salt: issuer.TEST_USER_COOKIE,
+  });
+  assert.equal(decoded.sub, id);
+  assert.equal(decoded.preflightTestIdentity, true);
+  assert.ok(decoded.exp <= Date.now() / 1000 + 3601);
+  assert.equal(decoded.githubLogin, undefined);
+  assert.ok(queries.some((q) => q.includes("SET expires_at=NULL")));
+  assert.ok(!queries.some((q) => q.includes("INSERT INTO test_users")));
+});
+test("renewal never impersonates unsupported accounts or reactivates a revoked identity", async (t) => {
+  let user = null,
+    writes = 0;
+  const { issuer } = await fixture(t, async (parts) => {
+    if (parts.join("").includes("WITH run_grant")) writes++;
+    return user ? [user] : [];
+  });
+  assert.equal(await issuer.refreshTestUserProfile("owner", 2, 8), null);
+  user = {
+    id: "test:" + randomUUID(),
+    name: "QA",
+    email: "qa@example.com",
+    revoked_at: new Date(),
+  };
+  await assert.rejects(issuer.refreshTestUserProfile("owner", 2, 8), /revoked/);
+  assert.equal(writes, 0);
+});
+test("worker renewal endpoint requires a fresh signed run grant and returns no credentials", async (t) => {
+  const { issuer } = await fixture(t);
+  const renewed = [];
+  const route = load("app/api/profiles/renew/route.ts", {
+    "@/lib/test-user-issuer": {
+      ...issuer,
+      refreshRunTestUser: async (id) => {
+        renewed.push(id);
+        return { privateToken: "must-not-return" };
+      },
+    },
+  });
+  const request = (input, signed = true) => {
+    const body = JSON.stringify(input);
+    return new NextRequest(SITE_URL + "/api/profiles/renew", {
+      method: "POST",
+      headers: {
+        "x-preflight-issuer-signature": signed
+          ? issuer.signTestUserRequest(body)
+          : "",
+      },
+      body,
+    });
+  };
+  const input = { action: "renew-run", runId: 19, timestamp: Date.now() };
+  assert.equal((await route.POST(request(input, false))).status, 403);
+  assert.equal(
+    (await route.POST(request({ ...input, timestamp: Date.now() - 120000 })))
+      .status,
+    400,
+  );
+  assert.deepEqual(renewed, []);
+  const response = await route.POST(request(input));
+  assert.equal(response.status, 200);
+  assert.deepEqual(await response.json(), { renewed: true });
+  assert.deepEqual(renewed, [19]);
 });

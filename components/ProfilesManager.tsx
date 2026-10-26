@@ -339,8 +339,9 @@ export default function ProfilesManager({
             </details>
             <p className="text-xs leading-relaxed text-muted">
               Use a test account. Session data is encrypted and cannot be viewed
-              after saving. To refresh an expired session, create a replacement
-              profile.
+              after saving. Profiles stay saved until removed. PreFlight test
+              sessions renew automatically; imported sessions may need fresh
+              cookies when their provider expires them.
             </p>
             <div className="flex justify-end gap-3">
               <button

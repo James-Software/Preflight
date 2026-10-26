@@ -26,7 +26,9 @@ const { NextRequest } = require("next/server");
   const deps = { "@/lib/db": { getSql: () => sql } },
     schema = load("lib/schema.ts", deps),
     state = load("lib/auth-profile-state.ts", {});
+  const issuerBoundary = {};
   const profiles = load("lib/auth-profiles.ts", {
+    "@/lib/test-user-issuer": issuerBoundary,
     ...deps,
     "@/lib/schema": schema,
     "@/lib/auth-profile-state": state,
@@ -46,6 +48,7 @@ const { NextRequest } = require("next/server");
     "@/lib/site": site,
     "next-auth/jwt": jwt,
   });
+  Object.assign(issuerBoundary, issuer);
   const route = load("app/api/profiles/issue/route.ts", {
     "@/lib/test-user-issuer": issuer,
   });
@@ -314,7 +317,12 @@ const { NextRequest } = require("next/server");
       secret: process.env.AUTH_SECRET,
     });
     const realFetch = global.fetch;
+    const renewalRoute = load("app/api/profiles/renew/route.ts", {
+      "@/lib/test-user-issuer": issuer,
+    });
     global.fetch = async (url, init) => {
+      if (new URL(url).pathname === "/api/profiles/renew")
+        return renewalRoute.POST(new NextRequest(String(url), init));
       const path = new URL(url).pathname;
       if (path === "/api/profiles/issue") {
         issuerCalls++;
@@ -496,7 +504,7 @@ const { NextRequest } = require("next/server");
       assert.ok(await schema.getProject(createdId, minted.sub)); // proposal never executes DELETE
       await assert.rejects(
         workspace.createTestWorkspaceProject("real-owner", "fake", null),
-        /expired/,
+        /no longer available/,
       );
       const fingerprint = "a".repeat(64),
         finding = {
@@ -542,6 +550,188 @@ const { NextRequest } = require("next/server");
           concurrentFindingsDeduplicated: true,
           blockedResultsSeparateFromFindings: true,
           ownerScopedReport: true,
+        }),
+      );
+
+      // Reproduce an old saved profile whose account deadline and cookie expired.
+      const expiryBefore = (
+        await db.query("SELECT expires_at FROM test_users WHERE id=$1", [
+          minted.sub,
+        ])
+      ).rows[0].expires_at;
+      assert.equal(expiryBefore, null);
+      const expiredState = structuredClone(stored);
+      expiredState.cookies[0].value = await jwt.encode({
+        secret: process.env.AUTH_SECRET,
+        salt: issuer.TEST_USER_COOKIE,
+        maxAge: -60,
+        token: {
+          sub: minted.sub,
+          name: minted.name,
+          email: minted.email,
+          preflightTestIdentity: true,
+          preflightSessionExpiresAt: Date.now() - 60000,
+        },
+      });
+      expiredState.cookies[0].expires = Date.now() / 1000 - 60;
+      const expiredCipher = state.encryptProfile(
+        expiredState,
+        "real-owner",
+        site.SITE_URL,
+      );
+      await sql`UPDATE test_users SET expires_at=NOW()-INTERVAL '2 hours' WHERE id=${minted.sub}`;
+      await sql`UPDATE auth_profiles SET encrypted_state=${expiredCipher} WHERE id=${generated.profile.id}`;
+      assert.equal(await issuer.validateTestUserSession(minted.sub), false);
+      const recovered = await profiles.profileForRun(
+        "real-owner",
+        generated.profile.id,
+        site.SITE_URL,
+        self.id,
+      );
+      const recoveredState = state.decryptProfile(
+        recovered.snapshot.encrypted_state,
+        "real-owner",
+        site.SITE_URL,
+      );
+      const recoveredToken = await jwt.decode({
+        token: recoveredState.cookies[0].value,
+        secret: process.env.AUTH_SECRET,
+        salt: issuer.TEST_USER_COOKIE,
+      });
+      assert.equal(recoveredToken.sub, minted.sub);
+      assert.ok(recoveredToken.exp > Date.now() / 1000);
+      assert.equal(
+        (
+          await db.query("SELECT expires_at FROM test_users WHERE id=$1", [
+            minted.sub,
+          ])
+        ).rows[0].expires_at,
+        null,
+      );
+      assert.equal(await issuer.validateTestUserSession(minted.sub), true);
+      assert.equal(
+        await issuer.refreshTestUserProfile(
+          "other-owner",
+          self.id,
+          generated.profile.id,
+        ),
+        null,
+      );
+      const renew = load("lib/run-authentication.ts", {
+        ...deps,
+        "@/lib/auth-profile-state": state,
+        "@/lib/test-user-issuer": issuer,
+        "@/lib/site": site,
+      });
+      const runSnapshot = {
+        ...recovered.snapshot,
+        encrypted_state: expiredCipher,
+      };
+      await sql`UPDATE runs SET auth_profile_snapshot=${JSON.stringify(runSnapshot)}::jsonb,plan=${JSON.stringify([{ id: "page", title: "Signed-in page", detail: "Inspect dashboard" }])}::jsonb,status='queued' WHERE id=${run.id}`;
+      await sql`UPDATE auth_profiles SET encrypted_state=${expiredCipher} WHERE id=${generated.profile.id}`;
+      const parent = load("src/trigger/run-swarm.ts", {
+        ...deps,
+        "@trigger.dev/sdk": {
+          task: (x) => x,
+          tasks: {
+            batchTriggerAndWait: async () => {
+              const auth = await profiles.getRunAuthentication(run.id);
+              const response = await actualAuth.handlers.GET(
+                new NextRequest(site.SITE_URL + "/api/auth/session", {
+                  headers: {
+                    cookie:
+                      issuer.TEST_USER_COOKIE +
+                      "=" +
+                      auth.state.cookies[0].value,
+                  },
+                }),
+              );
+              const session = await response.json();
+              assert.equal(session.user.githubId, minted.sub);
+              assert.equal(session.user.githubLogin, undefined);
+              assert.equal(session.user.isTestUser, true);
+              return { runs: [{ ok: true }] };
+            },
+          },
+        },
+        "@/lib/automatic-database": {
+          preflightAutomaticDatabase: async () => false,
+        },
+        "@/lib/database-verification": { preflightRunDatabase: async () => [] },
+        "@/lib/auth-profiles": profiles,
+        "@/lib/run-authentication": renew,
+        "@/lib/schema": schema,
+        "@/lib/model-config": { assertSwarmModelConfig: () => {} },
+      }).runSwarm;
+      assert.equal((await parent.run({ runId: run.id })).runId, run.id);
+      assert.equal(
+        (await db.query("SELECT status FROM runs WHERE id=$1", [run.id]))
+          .rows[0].status,
+        "done",
+      );
+      const renewedSnapshot = (
+        await db.query("SELECT auth_profile_snapshot FROM runs WHERE id=$1", [
+          run.id,
+        ])
+      ).rows[0].auth_profile_snapshot;
+      assert.notEqual(renewedSnapshot.encrypted_state, expiredCipher);
+      assert.equal(
+        (
+          await db.query(
+            "SELECT count(*)::int AS c FROM test_users WHERE id=$1",
+            [minted.sub],
+          )
+        ).rows[0].c,
+        1,
+      );
+      const beforeDenied = (
+        await db.query(
+          "SELECT encrypted_state FROM auth_profiles WHERE id=$1",
+          [generated.profile.id],
+        )
+      ).rows[0].encrypted_state;
+      for (const status of ["done", "failed", "cancelled"]) {
+        await sql`UPDATE runs SET status=${status} WHERE id=${run.id}`;
+        await assert.rejects(issuer.refreshRunTestUser(run.id), /cannot renew/);
+      }
+      await sql`UPDATE runs SET status='queued' WHERE id=${run.id}`;
+      await sql`UPDATE test_users SET revoked_at=NOW() WHERE id=${minted.sub}`;
+      await assert.rejects(issuer.refreshRunTestUser(run.id), /revoked/);
+      assert.equal(
+        (
+          await db.query(
+            "SELECT encrypted_state FROM auth_profiles WHERE id=$1",
+            [generated.profile.id],
+          )
+        ).rows[0].encrypted_state,
+        beforeDenied,
+      );
+      await sql`UPDATE test_users SET revoked_at=NULL WHERE id=${minted.sub}`;
+      await profiles.revokeAuthProfile(
+        "real-owner",
+        generated.profile.id,
+        self.id,
+      );
+      await assert.rejects(
+        issuer.refreshRunTestUser(run.id),
+        /supported automatic/,
+      );
+      assert.equal(await issuer.validateTestUserSession(minted.sub), false);
+      console.log(
+        JSON.stringify({
+          actualPostgresWasm: true,
+          persistentIdentityAfterSave: true,
+          expiredSavedProfileRecovered: true,
+          sameTestIdentityReused: true,
+          webLaunchSessionRenewed: true,
+          queuedRunSnapshotRenewed: true,
+          actualParentPreflightRenewal: true,
+          realAuthJsSessionAccepted: true,
+          revokedIdentityCannotRenew: true,
+          revokedProfileCannotRenew: true,
+          finishedFailedAndCancelledRunsCannotRenew: true,
+          noDuplicateTestUser: true,
+          noGithubDelegation: true,
         }),
       );
 

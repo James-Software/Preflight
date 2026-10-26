@@ -13,13 +13,13 @@ export async function createTestWorkspaceProject(
     throw new ProfileError("Enter a project name of up to 80 characters.");
   if (!(await validateTestUserSession(owner)))
     throw new ProfileError(
-      "This test session expired. Generate a new profile.",
+      "This test identity is no longer available. Use an active profile.",
     );
   const rows =
     await getSql()`INSERT INTO projects(owner_github_id,app_url,repo_full_name,display_name)
     SELECT u.id,${appUrl},p.repo_full_name,${name.trim()} FROM test_users u
     JOIN profile_captures c ON c.id=u.capture_id JOIN projects p ON p.id=u.project_id
-    WHERE u.id=${owner} AND u.revoked_at IS NULL AND u.expires_at>NOW()
+    WHERE u.id=${owner} AND u.revoked_at IS NULL AND (u.expires_at IS NULL OR u.expires_at>NOW())
       AND p.owner_github_id=u.owner_github_id AND c.origin=${SITE_URL}
       AND p.repo_full_name='James-Software/Preflight'
       AND (SELECT count(*) FROM projects WHERE owner_github_id=u.id)<20
