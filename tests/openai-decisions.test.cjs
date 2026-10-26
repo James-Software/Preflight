@@ -259,10 +259,16 @@ function parentTask({
   validate = () => {},
   agents = [{ ok: true }],
   status = "queued",
+  findings = 0,
+  observed = 0,
+  incomplete = 0,
 } = {}) {
-  const statuses = [];
+  const statuses = [],
+    reasons = [],
+    recorded = [];
   let batches = 0;
   const task = load("src/trigger/run-swarm.ts", {
+    "@/lib/run-details": load("lib/run-details.ts", {}),
     "@/lib/run-authentication": { renewRunAuthentication: async () => false },
     "@/lib/automatic-database": {
       preflightAutomaticDatabase: async () => true,
@@ -279,26 +285,39 @@ function parentTask({
       },
     },
     "@/lib/db": {
-      getSql: () => async (parts) =>
-        /COUNT/.test(parts.join(""))
-          ? [{ c: 0 }]
-          : [
-              {
-                id: 34,
-                status,
-                plan: [{ title: "Checkout", detail: "Pay" }],
-                target_url: "https://example.com",
-              },
-            ],
+      getSql: () => async (parts) => {
+        const q = parts.join("");
+        if (q.includes("COUNT")) {
+          if (q.includes("FROM run_test_results"))
+            return [{ observed, incomplete }];
+          if (q.includes("FROM run_database_checks"))
+            return [{ observed: 0, incomplete: 0 }];
+          return [{ c: findings }];
+        }
+        return [
+          {
+            id: 34,
+            status,
+            plan: [{ title: "Checkout", detail: "Pay" }],
+            target_url: "https://example.com",
+          },
+        ];
+      },
     },
     "@/lib/schema": {
-      updateRunStatus: async (_id, value) => statuses.push(value),
+      updateRunStatus: async (_id, value, reason) => {
+        statuses.push(value);
+        reasons.push(reason);
+      },
+      recordTestResult: async (...args) => recorded.push(args),
     },
     "@/lib/model-config": { assertSwarmModelConfig: validate },
   }).runSwarm;
   return {
     run: () => task.run({ runId: 34 }),
     statuses,
+    reasons,
+    recorded,
     batches: () => batches,
   };
 }
@@ -312,18 +331,42 @@ test("missing worker OpenAI key fails before planning or allocating browser agen
   assert.deepEqual(parent.statuses, ["failed"]);
   assert.equal(parent.batches(), 0);
 });
-test("a failed browser agent cannot produce a completed swarm", async () => {
+test("one failed browser agent preserves successful work as a partial run", async () => {
   const parent = parentTask({
     agents: [
       { ok: true },
       { ok: false, error: { message: "OpenAI Decisions API error 403" } },
     ],
   });
-  await assert.rejects(parent.run(), /browser agent failed/);
-  assert.deepEqual(parent.statuses, ["running", "failed"]);
+  assert.equal((await parent.run()).status, "partial");
+  assert.deepEqual(parent.statuses, ["running", "partial"]);
+  assert.match(parent.reasons.at(-1), /HTTP 403/);
+  assert.ok(parent.recorded.every((args) => args[3] === false));
   const success = parentTask();
   assert.equal((await success.run()).findings, 0);
   assert.deepEqual(success.statuses, ["running", "done"]);
+});
+
+test("all failed workers remain a genuine failure unless completed observations were saved", async () => {
+  const failed = parentTask({
+    agents: [{ ok: false, error: { message: "private-secret-detail" } }],
+  });
+  await assert.rejects(failed.run(), /No browser checks completed/);
+  assert.equal(failed.statuses.at(-1), "failed");
+  assert.ok(!failed.reasons.at(-1).includes("private-secret-detail"));
+  const partial = parentTask({
+    agents: [{ ok: false, error: { message: "driver unavailable" } }],
+    findings: 2,
+  });
+  const result = await partial.run();
+  assert.equal(result.status, "partial");
+  assert.equal(result.findings, 2);
+});
+test("unconfirmed checks finish partially without becoming bugs or requiring review", async () => {
+  const run = parentTask({ observed: 2, incomplete: 2 });
+  const result = await run.run();
+  assert.equal(result.status, "partial");
+  assert.equal(result.findings, 0);
 });
 test("cancelled runs skip model validation and never allocate browsers", async () => {
   const parent = parentTask({

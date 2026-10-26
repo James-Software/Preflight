@@ -279,9 +279,22 @@ export const browserAgent = task({
 
       for (const [stepIndex, step] of payload.assignment.steps.entries()) {
         if (actionsUsed >= MAX_ACTIONS) {
-          throw new Error(
-            "Browser agent reached its action budget before all steps were tested.",
-          );
+          for (const [index, remaining] of payload.assignment.steps.entries()) {
+            if (index < stepIndex) continue;
+            await recordTestResult(
+              payload.runId,
+              payload.agentIndex,
+              {
+                step_id: remaining.id || `step-${index}`,
+                title: remaining.title,
+                status: "not_tested",
+                summary:
+                  "The agent used its browser action limit before reaching this check. Completed results were kept.",
+              },
+              false,
+            );
+          }
+          break;
         }
         // Keep initial navigation evidence for the first step, then isolate each goal.
         if (stepIndex > 0) {
@@ -511,13 +524,17 @@ export const browserAgent = task({
         automatic = null;
         if (!finished) {
           await outcome(
-            "needs_review",
+            "inconclusive",
             "The test reached its action limit before the goal could be evaluated. No application defect was established.",
             actionLog.slice(stepLogStart).join("\n"),
           );
-          throw new Error(
-            `Browser agent reached its action budget during "${step.title}". This test step was not evaluated.`,
-          );
+          if (databaseVerifier) {
+            await databaseVerifier.inconclusive();
+            await databaseVerifier.close();
+            databaseVerifier = null;
+            databaseCheckId = null;
+          }
+          continue;
         }
         if (databaseVerifier) {
           if (!databaseObserved) {
@@ -529,7 +546,7 @@ export const browserAgent = task({
             );
           } else
             await outcome(
-              databasePassed ? "passed" : "needs_review",
+              databasePassed ? "passed" : "inconclusive",
               databasePassed
                 ? "The configured action produced the expected database change."
                 : "The database assertion was not satisfied. Confirm valid inputs and an accepted submission before treating this as an application defect.",
@@ -600,8 +617,8 @@ export const browserAgent = task({
           );
         } catch {
           await outcome(
-            "needs_review",
-            "Independent evidence assessment was unavailable. No application bug was confirmed.",
+            "inconclusive",
+            "Automatic verification could not complete. This observation was not counted as a bug.",
             observation,
           );
           continue;
@@ -615,7 +632,7 @@ export const browserAgent = task({
               ? "blocked"
               : assessment.category === "pass"
                 ? "passed"
-                : "needs_review",
+                : "inconclusive",
             assessment.category === "blocked"
               ? "The evidence indicates an unavailable test prerequisite or workflow."
               : assessment.category === "pass"
@@ -637,7 +654,7 @@ export const browserAgent = task({
           )
         ) {
           await outcome(
-            "needs_review",
+            "inconclusive",
             "This candidate cannot be safely reproduced automatically. Submissions, destructive actions and unsupported prerequisites are not replayed.",
             observation,
           );
@@ -731,7 +748,7 @@ export const browserAgent = task({
             )
           ) {
             await outcome(
-              "needs_review",
+              "inconclusive",
               "The same failure was not reproduced in a fresh browser context.",
               observation,
             );
@@ -748,13 +765,11 @@ export const browserAgent = task({
           ) => ({
             url: url.slice(0, 200),
             page: pageTree.slice(0, 1200),
-            requests: requests
-              .slice(-4)
-              .map((r) => ({
-                url: r.url.slice(0, 200),
-                status: r.status,
-                failure: r.failure?.slice(0, 200),
-              })),
+            requests: requests.slice(-4).map((r) => ({
+              url: r.url.slice(0, 200),
+              status: r.status,
+              failure: r.failure?.slice(0, 200),
+            })),
             pageErrors: errors
               .filter((e) => e.startsWith("[pageerror]"))
               .slice(-2)
@@ -786,7 +801,7 @@ export const browserAgent = task({
             !(confirmed.confidence >= 0.9)
           ) {
             await outcome(
-              confirmed.category === "blocked" ? "blocked" : "needs_review",
+              confirmed.category === "blocked" ? "blocked" : "inconclusive",
               "Independent replay did not confidently confirm the candidate as an application defect.",
               pairedEvidence,
             );
@@ -805,7 +820,7 @@ export const browserAgent = task({
           );
         } catch {
           await outcome(
-            "needs_review",
+            "inconclusive",
             "A fresh-context reproduction could not be completed. No additional application bug was confirmed.",
             observation,
           );

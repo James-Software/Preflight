@@ -79,11 +79,13 @@ function reportPage(user, getProject, getRunReport) {
     "@/lib/schema": { getProject, getRunReport },
     "@/components/GitIcons": load("components/GitIcons.tsx", {}),
     "@/components/RunReportRefresh": { default: () => null },
+    "@/components/CopyRunDetails": { default: () => null },
+    "@/lib/run-details": load("lib/run-details.ts", {}),
     "@/components/FixesTable": { default: () => null },
     "@/components/ProjectLogo": { default: () => null },
     "@/components/RunArchiveButton": { default: () => null },
     "@/components/DatabaseCleanup": { default: () => null },
-    "@/components/TestStepResults": {default:()=>null},
+    "@/components/TestStepResults": { default: () => null },
     "@/components/DatabaseCheckResults": { default: () => null },
   }).default;
 }
@@ -357,6 +359,12 @@ test("a missing remote worker branch fails the run and returns recovery instruct
     { params: Promise.resolve({ id: "12" }) },
   );
   assert.equal(response.status, 500);
-  assert.deepEqual(updates, [[34, "failed"]]);
+  assert.deepEqual(updates, [
+    [
+      34,
+      "failed",
+      "The run could not be queued. Check the worker deployment configuration.",
+    ],
+  ]);
   assert.match((await response.json()).error, /deploy the matching branch/);
 });

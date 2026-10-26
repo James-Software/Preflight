@@ -351,15 +351,16 @@ test("later steps use only their own actions, console output and network evidenc
     ["https://target.example/current-terms-request"],
   );
 });
-test("running out of step actions cannot become a website bug or a completed agent", async () => {
+test("step action limits preserve an inconclusive result without crashing the agent", async () => {
   const a = agent({
     actions: () => ({ action: "wait", value: 0, reasoning: "Still observing" }),
   });
-  await assert.rejects(a.run(), /action budget/);
+  assert.equal((await a.run()).status, "done");
+  assert.equal(a.results[0].status, "inconclusive");
   assert.equal(a.driverInputs.length, 6);
   assert.equal(a.judgments.length, 0);
   assert.equal(a.findings.length, 0);
-  assert.deepEqual(a.statuses, ["running", "failed"]);
+  assert.deepEqual(a.statuses, ["running", "done"]);
 });
 test("running out of overall actions cannot silently skip the remaining planned steps", async () => {
   const a = agent({
@@ -374,10 +375,11 @@ test("running out of overall actions cannot silently skip the remaining planned 
         ? done
         : { action: "wait", value: 0, reasoning: "Observe" },
   });
-  await assert.rejects(a.run(), /before all steps were tested/);
+  assert.equal((await a.run()).status, "done");
+  assert.equal(a.results.at(-1).status, "not_tested");
   assert.equal(a.judgments.length, 3);
   assert.equal(a.findings.length, 0);
-  assert.deepEqual(a.statuses, ["running", "failed"]);
+  assert.deepEqual(a.statuses, ["running", "done"]);
 });
 
 test("authentication setup failures never become app findings or model judgments", async () => {
@@ -456,7 +458,7 @@ test("a speculative driver report with no executed reproduction stays in review"
     ],
   });
   assert.equal((await a.run()).findings, 0);
-  assert.equal(a.results[0].status, "needs_review");
+  assert.equal(a.results[0].status, "inconclusive");
   assert.equal(a.judgments.length, 0);
   assert.equal(a.severityCalls(), 0);
 });
@@ -526,7 +528,7 @@ test("a failure that disappears in the fresh context stays unconfirmed", async (
     verdict: () => "fail",
   });
   assert.equal((await a.run()).findings, 0);
-  assert.equal(a.results[0].status, "needs_review");
+  assert.equal(a.results[0].status, "inconclusive");
   assert.match(a.results[0].summary, /not reproduced/);
 });
 test("low confidence and unsafe submissions cannot be promoted to confirmed bugs", async () => {
@@ -543,7 +545,7 @@ test("low confidence and unsafe submissions cannot be promoted to confirmed bugs
     verdict: () => "fail",
   });
   assert.equal((await uncertain.run()).findings, 0);
-  assert.equal(uncertain.results[0].status, "needs_review");
+  assert.equal(uncertain.results[0].status, "inconclusive");
   assert.equal(uncertain.pagesCreated(), 1);
   const mutation = agent({
     actions: [
@@ -562,7 +564,7 @@ test("low confidence and unsafe submissions cannot be promoted to confirmed bugs
     ],
   });
   assert.equal((await mutation.run()).findings, 0);
-  assert.equal(mutation.results[0].status, "needs_review");
+  assert.equal(mutation.results[0].status, "inconclusive");
   assert.equal(mutation.pagesCreated(), 1);
 });
 test("database workflow without a submission produces a specific blocker, never an app bug", async () => {

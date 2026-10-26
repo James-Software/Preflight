@@ -23,6 +23,7 @@ export interface Run {
   id: number;
   project_id: number;
   status: string;
+  failure_reason?: string | null;
   plan: unknown;
   target_url: string | null;
   created_at: string;
@@ -83,6 +84,7 @@ async function initializeSchema(): Promise<void> {
   await sql`UPDATE runs SET repo_full_name=p.repo_full_name FROM projects p WHERE runs.project_id=p.id AND runs.repo_full_name IS NULL`;
   await sql`ALTER TABLE runs ADD COLUMN IF NOT EXISTS target_url TEXT`;
   await sql`ALTER TABLE runs ADD COLUMN IF NOT EXISTS archived_at TIMESTAMPTZ`;
+  await sql`ALTER TABLE runs ADD COLUMN IF NOT EXISTS failure_reason TEXT`;
   await sql`CREATE TABLE IF NOT EXISTS auth_profiles (
     id SERIAL PRIMARY KEY, owner_github_id TEXT NOT NULL, name TEXT NOT NULL,
     origin TEXT NOT NULL, encrypted_state TEXT NOT NULL,
@@ -301,7 +303,13 @@ export async function listRuns(projectId: number): Promise<RunSummary[]> {
   await ensureSchema();
   const sql = getSql();
   const rows = await sql`
-    SELECT id, project_id, status, plan, target_url, created_at, started_at, finished_at, archived_at, target_ref, target_sha, auth_profile_name,
+    SELECT id, project_id,
+      CASE WHEN runs.status='failed' AND (
+        EXISTS(SELECT 1 FROM findings f WHERE f.run_id=runs.id AND f.deleted_at IS NULL)
+        OR EXISTS(SELECT 1 FROM run_test_results t WHERE t.run_id=runs.id AND t.status<>'not_tested')
+        OR EXISTS(SELECT 1 FROM run_database_checks d WHERE d.run_id=runs.id AND d.status IN ('passed','failed'))
+      ) THEN 'partial' ELSE runs.status END AS status,
+      plan, target_url, created_at, started_at, finished_at, archived_at, target_ref, target_sha, auth_profile_name,
       (SELECT COUNT(*)::int FROM findings WHERE findings.run_id = runs.id AND findings.deleted_at IS NULL) AS "findingsCount"
     FROM runs
     WHERE project_id = ${projectId}
@@ -386,7 +394,7 @@ export async function setRunArchived(
     FROM projects p
     WHERE r.id = ${runId} AND r.project_id = ${projectId} AND p.id = r.project_id
       AND p.owner_github_id = ${owner}
-      AND (${archived} = FALSE OR r.status IN ('done', 'completed', 'failed', 'cancelled'))
+      AND (${archived} = FALSE OR r.status IN ('done', 'completed', 'partial', 'failed', 'cancelled'))
     RETURNING r.id
   `;
   return Array.isArray(rows) && rows.length > 0;
@@ -395,9 +403,12 @@ export async function setRunArchived(
 export async function updateRunStatus(
   runId: number,
   status: string,
+  reason: string | null = null,
 ): Promise<void> {
   await ensureSchema();
-  await getSql()`UPDATE runs SET status = ${status} WHERE id = ${runId} AND (status <> 'cancelled' OR ${status} = 'cancelled')`;
+  await getSql()`UPDATE runs SET status = ${status}, failure_reason=${reason?.slice(0, 1000) || null},
+    finished_at=CASE WHEN ${status} IN ('done','completed','partial','failed','cancelled') THEN COALESCE(finished_at,NOW()) ELSE finished_at END
+    WHERE id = ${runId} AND (status <> 'cancelled' OR ${status} = 'cancelled')`;
 }
 
 export async function createAgent(
@@ -462,11 +473,12 @@ export async function recordTestResult(
   runId: number,
   agentIndex: number,
   result: TestStepResult,
+  replace = true,
 ) {
   await ensureSchema();
   await getSql()`INSERT INTO run_test_results(run_id,agent_index,step_id,title,status,summary,evidence)
     VALUES(${runId},${agentIndex},${result.step_id},${result.title.slice(0, 200)},${result.status},${result.summary.slice(0, 1000)},${result.evidence?.slice(0, 8000) || null})
-    ON CONFLICT(run_id,agent_index,step_id) DO UPDATE SET status=EXCLUDED.status,summary=EXCLUDED.summary,evidence=EXCLUDED.evidence,completed_at=NOW()`;
+    ON CONFLICT(run_id,agent_index,step_id) DO UPDATE SET status=EXCLUDED.status,summary=EXCLUDED.summary,evidence=EXCLUDED.evidence,completed_at=NOW() WHERE ${replace}`;
 }
 
 export interface DatabaseCheckReport {

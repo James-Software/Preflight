@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import RunArchiveButton from "@/components/RunArchiveButton";
+import { runStatusLabel } from "@/lib/run-details";
 
 export type RunRow = {
   id: number;
@@ -192,7 +193,7 @@ export default function RunsList({
                     aria-hidden="true"
                   />
                 )}
-                {run.status}
+                {runStatusLabel(run.status)}
               </span>
               {ACTIVE.has(run.status) && (
                 <button

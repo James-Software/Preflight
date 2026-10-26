@@ -1,4 +1,7 @@
-import { preflightAutomaticDatabase } from "@/lib/automatic-database";
+import {
+  preflightAutomaticDatabase,
+  automaticDatabaseBlocked,
+} from "@/lib/automatic-database";
 import {
   preflightRunDatabase,
   databaseVerificationError,
@@ -7,7 +10,8 @@ import { getRunAuthentication } from "@/lib/auth-profiles";
 import { renewRunAuthentication } from "@/lib/run-authentication";
 import { task, tasks } from "@trigger.dev/sdk";
 import { getSql } from "@/lib/db";
-import { updateRunStatus } from "@/lib/schema";
+import { updateRunStatus, recordTestResult } from "@/lib/schema";
+import { safeRunFailure } from "@/lib/run-details";
 import { assertSwarmModelConfig } from "@/lib/model-config";
 import type { Assignment, PlanStep } from "./browser-agent";
 
@@ -53,7 +57,9 @@ export const runSwarm = task({
     if (
       run.status === "cancelled" ||
       run.status === "failed" ||
-      run.status === "done"
+      run.status === "done" ||
+      run.status === "completed" ||
+      run.status === "partial"
     ) {
       return {
         runId: payload.runId,
@@ -65,7 +71,11 @@ export const runSwarm = task({
     const targetUrl =
       payload.targetUrl ?? run.target_url ?? run.app_url ?? null;
     if (!targetUrl) {
-      await updateRunStatus(payload.runId, "failed");
+      await updateRunStatus(
+        payload.runId,
+        "failed",
+        "No app URL is configured for this run.",
+      );
       throw new Error(
         "Run has no target URL: set an App URL on the project or connect a hosting provider for preview deployments.",
       );
@@ -81,7 +91,7 @@ export const runSwarm = task({
       if (run.database_snapshot)
         databaseChecks = await preflightRunDatabase(payload.runId);
     } catch (error) {
-      await updateRunStatus(payload.runId, "failed");
+      await updateRunStatus(payload.runId, "failed", safeRunFailure(error));
       throw error;
     }
 
@@ -108,17 +118,26 @@ export const runSwarm = task({
     let plan = run.plan as PlanStep[] | null;
     if (!Array.isArray(plan) || plan.length === 0) {
       await updateRunStatus(payload.runId, "planning");
-      await tasks.triggerAndWait("generate-test-plan", {
-        runId: payload.runId,
-      });
-      const r2 = await sql`SELECT plan FROM runs WHERE id = ${payload.runId}`;
-      plan =
-        Array.isArray(r2) && r2.length > 0
-          ? ((r2[0] as { plan: unknown }).plan as PlanStep[])
-          : null;
+      try {
+        await tasks.triggerAndWait("generate-test-plan", {
+          runId: payload.runId,
+        });
+        const r2 = await sql`SELECT plan FROM runs WHERE id = ${payload.runId}`;
+        plan =
+          Array.isArray(r2) && r2.length > 0
+            ? ((r2[0] as { plan: unknown }).plan as PlanStep[])
+            : null;
+      } catch (error) {
+        await updateRunStatus(payload.runId, "failed", safeRunFailure(error));
+        throw error;
+      }
     }
     if (!Array.isArray(plan) || plan.length === 0) {
-      await updateRunStatus(payload.runId, "failed");
+      await updateRunStatus(
+        payload.runId,
+        "failed",
+        "No test plan was available for this run.",
+      );
       throw new Error("No test plan available for this run");
     }
 
@@ -132,6 +151,28 @@ export const runSwarm = task({
       steps,
     }));
 
+    const problems: string[] = [];
+    let completedAgents = 0;
+    const interrupted = async (
+      index: number,
+      steps: PlanStep[],
+      error: unknown,
+    ) => {
+      const reason = safeRunFailure(error);
+      problems.push(reason);
+      for (const [stepIndex, step] of steps.entries())
+        await recordTestResult(
+          payload.runId,
+          index,
+          {
+            step_id: step.id || `step-${stepIndex}`,
+            title: step.title,
+            status: "not_tested",
+            summary: reason,
+          },
+          false,
+        );
+    };
     try {
       const result = await tasks.batchTriggerAndWait(
         "browser-agent",
@@ -148,11 +189,23 @@ export const runSwarm = task({
           },
         })),
       );
-      if (result.runs.some((agent) => !agent.ok)) {
-        throw new Error(
-          "A browser agent failed. Check its Trigger.dev task log for model or browser errors.",
-        );
+      for (const [index, resultRun] of result.runs.entries()) {
+        if (resultRun.ok) completedAgents++;
+        else
+          await interrupted(
+            index,
+            assignments[index]?.steps || [
+              { id: `agent-${index}`, title: "Browser checks", detail: "" },
+            ],
+            resultRun.error,
+          );
       }
+      for (let index = result.runs.length; index < assignments.length; index++)
+        await interrupted(
+          index,
+          assignments[index].steps,
+          new Error("Browser agent did not return a result."),
+        );
       if (await cancelled())
         return { runId: payload.runId, status: "cancelled" };
       const confirmedAutomatic = automaticReady
@@ -162,6 +215,7 @@ export const runSwarm = task({
       // allocate the fallback workflow when no automatic assertion succeeded.
       if (
         automaticReady &&
+        completedAgents > 0 &&
         (!Array.isArray(confirmedAutomatic) || !confirmedAutomatic.length)
       ) {
         const automatic = await tasks.triggerAndWait("browser-agent", {
@@ -184,12 +238,41 @@ export const runSwarm = task({
             ? { authProfileId: run.auth_profile_id }
             : {}),
         });
-        if (!automatic.ok)
-          throw new Error(
-            "The automatic database workflow could not complete. Review the run report before cleaning up test records.",
+        if (!automatic.ok) {
+          await interrupted(
+            assignments.length,
+            [
+              {
+                id: "automatic-database-create",
+                title: "Create a test record",
+                detail: "",
+              },
+            ],
+            automatic.error,
           );
+          await automaticDatabaseBlocked(
+            payload.runId,
+            assignments.length,
+            0,
+            "The database workflow agent stopped before completing verification. Other results were kept.",
+          );
+        } else completedAgents++;
       }
+      if (!completedAgents && run.database_snapshot)
+        await databaseVerificationError(
+          payload.runId,
+          null,
+          "Browser checks could not complete, so database verification was not evaluated.",
+        );
       for (const [index, check] of databaseChecks.entries()) {
+        if (!completedAgents) {
+          await interrupted(
+            assignments.length + 1 + index,
+            [{ id: `database-${check.id}`, title: check.title, detail: "" }],
+            new Error("Browser checks could not start."),
+          );
+          continue;
+        }
         if (await cancelled())
           return { runId: payload.runId, status: "cancelled" };
         const verified = await tasks.triggerAndWait("browser-agent", {
@@ -211,10 +294,18 @@ export const runSwarm = task({
             ? { authProfileId: run.auth_profile_id }
             : {}),
         });
-        if (!verified.ok)
-          throw new Error(
-            "A database verification workflow could not complete. Check the database results in the run report.",
+        if (!verified.ok) {
+          await interrupted(
+            assignments.length + 1 + index,
+            [{ id: `database-${check.id}`, title: check.title, detail: "" }],
+            verified.error,
           );
+          await databaseVerificationError(
+            payload.runId,
+            check.id,
+            "This database workflow stopped before completing verification. Other results were kept.",
+          );
+        } else completedAgents++;
       }
     } catch (e) {
       if (run.database_snapshot)
@@ -223,19 +314,51 @@ export const runSwarm = task({
           null,
           "The run stopped before this database check completed. It has not been verified.",
         );
-      await updateRunStatus(payload.runId, "failed");
-      throw e;
+      problems.push(safeRunFailure(e));
+      await recordTestResult(
+        payload.runId,
+        -1,
+        {
+          step_id: "run-interrupted",
+          title: "Remaining checks",
+          status: "not_tested",
+          summary: problems.at(-1)!,
+        },
+        false,
+      );
     }
 
     if (await cancelled()) return { runId: payload.runId, status: "cancelled" };
-    const frows = await sql`
-      SELECT COUNT(*)::int AS c FROM findings WHERE run_id = ${payload.runId}
-    `;
-    const findings =
-      Array.isArray(frows) && frows.length > 0
-        ? ((frows[0] as { c: number }).c ?? 0)
-        : 0;
-    await updateRunStatus(payload.runId, "done");
-    return { runId: payload.runId, findings };
+    const [frows, coverage, database] = await Promise.all([
+      sql`SELECT COUNT(*)::int AS c FROM findings WHERE run_id=${payload.runId} AND deleted_at IS NULL`,
+      sql`SELECT COUNT(*) FILTER(WHERE status<>'not_tested')::int AS observed,
+        COUNT(*) FILTER(WHERE status IN ('not_tested','inconclusive','needs_review','blocked'))::int AS incomplete
+        FROM run_test_results WHERE run_id=${payload.runId}`,
+      sql`SELECT COUNT(*) FILTER(WHERE status IN ('passed','failed'))::int AS observed,
+        COUNT(*) FILTER(WHERE status<>'passed')::int AS incomplete FROM run_database_checks WHERE run_id=${payload.runId}`,
+    ]);
+    const findings = Number((frows as any[])[0]?.c) || 0;
+    const observed =
+      (Number((coverage as any[])[0]?.observed) || 0) +
+      (Number((database as any[])[0]?.observed) || 0);
+    const incomplete =
+      (Number((coverage as any[])[0]?.incomplete) || 0) +
+      (Number((database as any[])[0]?.incomplete) || 0);
+    const status =
+      problems.length && !completedAgents && !findings && !observed
+        ? "failed"
+        : problems.length || incomplete
+          ? "partial"
+          : "done";
+    const reason =
+      status === "failed"
+        ? `No browser checks completed. ${problems[0]}`
+        : status === "partial"
+          ? problems[0] ||
+            "Some checks could not be completed or confirmed. Completed findings remain available."
+          : null;
+    await updateRunStatus(payload.runId, status, reason);
+    if (status === "failed") throw new Error(reason!);
+    return { runId: payload.runId, findings, status };
   },
 });

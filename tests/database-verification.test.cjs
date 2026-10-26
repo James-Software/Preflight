@@ -332,6 +332,7 @@ test("database setup fails before browser allocation, and confirmed automatic ac
     const payloads = [],
       statuses = [];
     const task = load("src/trigger/run-swarm.ts", {
+      "@/lib/run-details": load("lib/run-details.ts", {}),
       "@/lib/run-authentication": { renewRunAuthentication: async () => false },
       "@/lib/automatic-database": {
         preflightAutomaticDatabase: async () => true,
@@ -343,7 +344,10 @@ test("database setup fails before browser allocation, and confirmed automatic ac
           () =>
           async (parts, ...values) => {
             const query = parts.join("");
-            if (query.includes("FROM run_database_checks")) {
+            if (
+              query.includes("FROM run_database_checks") &&
+              !query.includes("COUNT")
+            ) {
               assert.equal(batches, 1);
               assert.deepEqual(values, [1]);
               assert.match(query, /status='passed'/);
@@ -367,6 +371,7 @@ test("database setup fails before browser allocation, and confirmed automatic ac
       },
       "@/lib/schema": {
         updateRunStatus: async (_id, status) => statuses.push(status),
+        recordTestResult: async () => {},
       },
       "@/lib/database-verification": {
         preflightRunDatabase: async () => {

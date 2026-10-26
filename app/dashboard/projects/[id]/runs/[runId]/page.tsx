@@ -8,6 +8,8 @@ import { auth } from "@/auth";
 import { redirect, notFound } from "next/navigation";
 import { getProject, getRunReport } from "@/lib/schema";
 import RunReportRefresh from "@/components/RunReportRefresh";
+import CopyRunDetails from "@/components/CopyRunDetails";
+import { runDetails, runStatusLabel } from "@/lib/run-details";
 
 export default async function RunReportPage({
   params,
@@ -35,6 +37,7 @@ export default async function RunReportPage({
   const report = await getRunReport(projectId, runNumber, owner);
   if (!report) notFound();
   const { run, findings } = report;
+  const details = runDetails(report);
   const active = ["queued", "planning", "planned", "running"].includes(
     run.status,
   );
@@ -51,12 +54,15 @@ export default async function RunReportPage({
           <h1 className="text-3xl font-semibold tracking-tight">
             Run #{run.id}
           </h1>
-          <RunArchiveButton
-            projectId={projectId}
-            runId={runNumber}
-            archived={!!run.archived_at}
-            active={active}
-          />
+          <div className="flex flex-wrap items-center gap-3">
+            <CopyRunDetails details={JSON.stringify(details, null, 2)} />
+            <RunArchiveButton
+              projectId={projectId}
+              runId={runNumber}
+              archived={!!run.archived_at}
+              active={active}
+            />
+          </div>
         </div>
         {run.archived_at && (
           <p role="status" className="mt-4 text-sm text-muted">
@@ -77,7 +83,7 @@ export default async function RunReportPage({
         </div>
         <div className="mt-6 flex flex-wrap items-center gap-4 text-sm">
           <span className="rounded-full bg-panel px-3 py-1.5 capitalize">
-            {run.status}
+            {runStatusLabel(details.status)}
           </span>
           <span>
             {findings.length} finding{findings.length === 1 ? "" : "s"}
@@ -89,6 +95,11 @@ export default async function RunReportPage({
             })}
           </time>
         </div>
+        {details.reason && (
+          <p role="status" className="mt-4 text-sm text-muted">
+            {details.reason}
+          </p>
+        )}
         {(run.target_ref || run.auth_profile_name) && (
           <div className="mt-4 flex flex-wrap gap-x-5 gap-y-2 text-sm text-muted">
             {run.target_ref && (
@@ -107,9 +118,7 @@ export default async function RunReportPage({
             Tested URL: {run.target_url}
           </p>
         )}
-        <div className="mt-6">
-          <RunReportRefresh active={active} />
-        </div>
+        <RunReportRefresh active={active} />
         <DatabaseCheckResults checks={report.databaseChecks || []} />
         <TestStepResults results={report.testResults || []} />
         {!findings.length ? (
@@ -122,11 +131,16 @@ export default async function RunReportPage({
             <p className="mt-3 text-muted">
               {active
                 ? "Findings will appear here as they are saved."
-                : ["completed", "done"].includes(run.status)
+                : ["completed", "done", "partial"].includes(details.status)
                   ? report.testResults?.some((r) =>
-                      ["blocked", "needs_review"].includes(r.status),
+                      [
+                        "blocked",
+                        "needs_review",
+                        "inconclusive",
+                        "not_tested",
+                      ].includes(r.status),
                     )
-                    ? "No confirmed bugs were recorded. Some tests were blocked or need review; see test coverage above."
+                    ? "No confirmed bugs were recorded. Some checks could not be completed or confirmed; their observations are available above."
                     : "This run finished without any recorded findings."
                   : "This run ended without recorded findings. You can start another run from the project."}
             </p>
@@ -143,7 +157,7 @@ export default async function RunReportPage({
             href={`/dashboard/projects/${projectId}/database?run=${runNumber}#cleanup`}
             className="pressable mt-8 inline-flex min-h-11 items-center gap-2 rounded-lg border border-line px-4 text-sm font-medium hover:bg-panel"
           >
-            Review cleanup for this run →
+            Cleanup for this run →
           </a>
         )}
       </div>

@@ -629,7 +629,9 @@ const { NextRequest } = require("next/server");
       };
       await sql`UPDATE runs SET auth_profile_snapshot=${JSON.stringify(runSnapshot)}::jsonb,plan=${JSON.stringify([{ id: "page", title: "Signed-in page", detail: "Inspect dashboard" }])}::jsonb,status='queued' WHERE id=${run.id}`;
       await sql`UPDATE auth_profiles SET encrypted_state=${expiredCipher} WHERE id=${generated.profile.id}`;
+      let failWorker = false;
       const parent = load("src/trigger/run-swarm.ts", {
+        "@/lib/run-details": load("lib/run-details.ts", {}),
         ...deps,
         "@trigger.dev/sdk": {
           task: (x) => x,
@@ -650,14 +652,30 @@ const { NextRequest } = require("next/server");
               assert.equal(session.user.githubId, minted.sub);
               assert.equal(session.user.githubLogin, undefined);
               assert.equal(session.user.isTestUser, true);
-              return { runs: [{ ok: true }] };
+              return {
+                runs: failWorker
+                  ? [
+                      {
+                        ok: false,
+                        error: { message: "OpenAI Decisions API error 403" },
+                      },
+                    ]
+                  : [{ ok: true }],
+              };
             },
           },
         },
         "@/lib/automatic-database": {
           preflightAutomaticDatabase: async () => false,
         },
-        "@/lib/database-verification": { preflightRunDatabase: async () => [] },
+        "@/lib/database-verification": {
+          preflightRunDatabase: async () => [],
+          databaseVerificationError: load("lib/database-verification.ts", {...deps,
+            "@/lib/database-connections": connections,
+            "@/lib/postgres-verification": {},
+            "@/lib/database-check-config": config,
+          }).databaseVerificationError,
+        },
         "@/lib/auth-profiles": profiles,
         "@/lib/run-authentication": renew,
         "@/lib/schema": schema,
@@ -667,7 +685,7 @@ const { NextRequest } = require("next/server");
       assert.equal(
         (await db.query("SELECT status FROM runs WHERE id=$1", [run.id]))
           .rows[0].status,
-        "done",
+        "partial",
       );
       const renewedSnapshot = (
         await db.query("SELECT auth_profile_snapshot FROM runs WHERE id=$1", [
@@ -684,13 +702,65 @@ const { NextRequest } = require("next/server");
         ).rows[0].c,
         1,
       );
+      // A later failed worker must preserve completed results and their status.
+      await schema.recordTestResult(run.id, 0, {
+        step_id: "page",
+        title: "Signed-in page",
+        status: "passed",
+        summary: "Page loaded.",
+      });
+      await sql`UPDATE runs SET status='queued' WHERE id=${run.id}`;
+      failWorker = true;
+      assert.equal((await parent.run({ runId: run.id })).status, "partial");
+      assert.equal(
+        (
+          await db.query(
+            "SELECT status FROM run_test_results WHERE run_id=$1 AND agent_index=0 AND step_id='page'",
+            [run.id],
+          )
+        ).rows[0].status,
+        "passed",
+      );
+      assert.match(
+        (
+          await db.query("SELECT failure_reason FROM runs WHERE id=$1", [
+            run.id,
+          ])
+        ).rows[0].failure_reason,
+        /HTTP 403/,
+      );
+      assert.equal(
+        await schema.setRunArchived(run.id, self.id, "real-owner", true),
+        true,
+      );
+      await schema.setRunArchived(run.id, self.id, "real-owner", false);
+      await sql`UPDATE runs SET status='failed' WHERE id=${run.id}`;
+      assert.equal(
+        (await schema.listRuns(self.id)).find((r) => r.id === run.id).status,
+        "partial",
+      );
+      assert.equal(
+        (await db.query("SELECT status FROM runs WHERE id=$1", [run.id]))
+          .rows[0].status,
+        "failed",
+      );
+      console.log(
+        JSON.stringify({
+          partialRunPreservesFindings: true,
+          completedChecksNotOverwritten: true,
+          interruptionReasonSaved: true,
+          partialRunsArchivable: true,
+          legacyFailedReportsWithResultsReadAsPartial: true,
+          storedHistoryPreserved: true,
+        }),
+      );
       const beforeDenied = (
         await db.query(
           "SELECT encrypted_state FROM auth_profiles WHERE id=$1",
           [generated.profile.id],
         )
       ).rows[0].encrypted_state;
-      for (const status of ["done", "failed", "cancelled"]) {
+      for (const status of ["done", "partial", "failed", "cancelled"]) {
         await sql`UPDATE runs SET status=${status} WHERE id=${run.id}`;
         await assert.rejects(issuer.refreshRunTestUser(run.id), /cannot renew/);
       }

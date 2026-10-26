@@ -282,8 +282,13 @@ export async function POST(
     });
   } catch (e) {
     console.error("tasks.trigger(run-swarm) failed", e);
-    await updateRunStatus(run.id, "failed").catch(() => {});
-    return NextResponse.json({ error: swarmStartError(e) }, { status: 500 });
+    const reason = swarmStartError(e);
+    await updateRunStatus(
+      run.id,
+      "failed",
+      "The run could not be queued. Check the worker deployment configuration.",
+    ).catch(() => {});
+    return NextResponse.json({ error: reason }, { status: 500 });
   }
   return NextResponse.json({ run });
 }
