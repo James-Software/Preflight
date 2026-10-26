@@ -103,6 +103,8 @@ async function initializeSchema(): Promise<void> {
   await sql`ALTER TABLE profile_captures ADD COLUMN IF NOT EXISTS automation_token UUID`;
   await sql`ALTER TABLE profile_captures ADD COLUMN IF NOT EXISTS automation_resume BOOLEAN NOT NULL DEFAULT FALSE`;
   await sql`ALTER TABLE profile_captures ADD COLUMN IF NOT EXISTS automation_live_url TEXT`;
+  await sql`ALTER TABLE profile_captures ADD COLUMN IF NOT EXISTS automation_github_grant TEXT`;
+  await sql`ALTER TABLE profile_captures ADD COLUMN IF NOT EXISTS automation_auth_state TEXT`;
   await sql`ALTER TABLE auth_profiles ADD COLUMN IF NOT EXISTS source_capture_id UUID`;
   await sql`CREATE UNIQUE INDEX IF NOT EXISTS auth_profile_source_capture ON auth_profiles(source_capture_id) WHERE source_capture_id IS NOT NULL`;
   await sql`DROP INDEX IF EXISTS profile_capture_active_owner`;

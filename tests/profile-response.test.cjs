@@ -130,6 +130,14 @@ test("initial profile status reads do not load queue configuration and auth fail
       },
     },
     "@/lib/profile-generation": { getProfileGeneration: async () => null },
+    "@/lib/github": {
+      getGithubContext: async () => ({
+        login: "owner",
+        accessToken: "synthetic",
+      }),
+    },
+    "@/lib/fix-github-grant": { sealFixGithubGrant: () => "encrypted-grant" },
+    "@/lib/db": { getSql: () => async () => [] },
     "next/cache": { revalidatePath() {} },
   });
   const request = () =>
@@ -175,6 +183,14 @@ test("start reports missing queue configuration before reserving a setup, and da
         });
       },
     },
+    "@/lib/github": {
+      getGithubContext: async () => ({
+        login: "owner",
+        accessToken: "synthetic",
+      }),
+    },
+    "@/lib/fix-github-grant": { sealFixGithubGrant: () => "encrypted-grant" },
+    "@/lib/db": { getSql: () => async () => [] },
     "next/cache": { revalidatePath() {} },
   });
   const request = () =>

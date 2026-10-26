@@ -12,7 +12,7 @@ import {
 
 export const generationMessages = {
   queued: "Preparing a private browser…",
-  running: "Finding sign-up and creating your test account…",
+  running: "Inspecting authentication code and provisioning a test user…",
   verifying: "Checking the saved session in a fresh browser…",
   email_verification:
     "Open the browser and complete email verification, then continue. A generated @example.com address has no inbox; use your own test inbox if your app requires email verification.",
@@ -182,7 +182,7 @@ export async function startProfileGeneration(
   await ensureSchema();
   const sql = getSql(),
     id = randomUUID();
-  await sql`UPDATE profile_captures SET status='expired',automation_credentials=NULL,automation_live_url=NULL WHERE owner_github_id=${owner} AND expires_at<=NOW() AND status IN ('active','saving')`;
+  await sql`UPDATE profile_captures SET status='expired',automation_credentials=NULL,automation_live_url=NULL,automation_github_grant=NULL,automation_auth_state=NULL WHERE owner_github_id=${owner} AND expires_at<=NOW() AND status IN ('active','saving')`;
   const rows =
     await sql`INSERT INTO profile_captures(id,owner_github_id,name,origin,verification_path,verification_text,project_id,automation_status,automation_message,automation_credentials)
     VALUES(${id},${owner},${account.name},${appOrigin},'/','Automatic setup pending',${projectId},'queued',${generationMessages.queued},${sealTestAccount(account, owner, appOrigin, id)}) ON CONFLICT DO NOTHING RETURNING id,expires_at`;
@@ -203,7 +203,7 @@ export async function getProfileGeneration(
   if (id && !/^[0-9a-f-]{36}$/i.test(id))
     throw new ProfileError("Choose a valid profile setup.");
   const rows =
-    await getSql()`SELECT c.id,c.status,c.automation_status,c.automation_message,c.automation_live_url,c.origin AS setup_origin,c.expires_at,
+    await getSql()`SELECT c.id,c.status,c.automation_status,c.automation_message,c.automation_live_url,c.origin AS setup_origin,c.expires_at,(c.session_id IS NOT NULL) AS legacy_browser,
     a.id AS profile_id,a.name,a.origin,a.verification_path,a.verification_text,a.created_at
     FROM profile_captures c LEFT JOIN auth_profiles a ON a.source_capture_id=c.id AND a.owner_github_id=c.owner_github_id AND a.project_id=c.project_id AND a.revoked_at IS NULL
     WHERE c.owner_github_id=${owner} AND c.project_id=${projectId} AND c.automation_status IS NOT NULL
@@ -237,26 +237,9 @@ export async function getProfileGeneration(
           ? "Test account verified. Your profile is ready."
           : row.automation_message || generationMessages.running,
   };
-  if (status === "waiting" && row.automation_live_url) {
-    try {
-      result.liveUrl = openGenerationLiveUrl(
-        row.automation_live_url,
-        owner,
-        row.setup_origin,
-        row.id,
-      );
-    } catch {
-      result.message =
-        "Could not unlock the private browser link. Cancel setup, check the shared encryption key, then generate a new profile.";
-    }
-  } else if (
-    status === "waiting" &&
-    !row.automation_live_url &&
-    !/PROFILE_ENCRYPTION_KEY/.test(result.message)
-  ) {
-    result.message +=
-      " No browser link is available. Cancel setup and try again after the web and Trigger deployments finish.";
-  }
+  if (row.legacy_browser && ["queued", "running", "waiting"].includes(status))
+    result.message =
+      "Cancel this older browser-based setup, then generate a new profile to provision a test user from code and database.";
   if (status === "completed" && row.profile_id)
     result.profile = {
       id: row.profile_id,
@@ -293,7 +276,7 @@ export async function cancelProfileGeneration(
   if (!/^[0-9a-f-]{36}$/i.test(id))
     throw new ProfileError("Choose a valid profile setup.");
   const rows =
-    await getSql()`UPDATE profile_captures SET status='cancelled',automation_credentials=NULL,automation_live_url=NULL
+    await getSql()`UPDATE profile_captures SET status='cancelled',automation_credentials=NULL,automation_live_url=NULL,automation_github_grant=NULL,automation_auth_state=NULL
     WHERE id=${id}::uuid AND owner_github_id=${owner} AND project_id=${projectId} AND automation_status IS NOT NULL AND status IN ('active','saving') RETURNING id`;
   if (!(rows as any[]).length)
     throw new ProfileError(

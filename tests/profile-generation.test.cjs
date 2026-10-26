@@ -189,142 +189,6 @@ test("status is owner/project scoped and never selects encrypted state or creden
   );
   assert.ok(query.values.includes("owner") && query.values.includes(12));
 });
-test("action executor uses server-held values and rejects password exfiltration and unrelated actions", async () => {
-  const api = load("lib/profile-generation-browser.ts", {
-    "@/lib/profile-capture": {},
-    "@/lib/browser-auth": {},
-    "@/lib/models": {},
-  });
-  const values = [],
-    el = {
-      fill: async (value) => values.push(value),
-      click: async () => values.push("clicked"),
-    };
-  const account = { password: "private-password", email: "test@example.com" };
-  const page = { url: () => "https://app.example.com/signup" };
-  const view = {
-    handles: [el],
-    controls: [{ tag: "input", type: "password", label: "Password", href: "" }],
-  };
-  const action = { action: "fill", field: "password", index: 0 };
-  await api.applySetupAction(
-    page,
-    view,
-    action,
-    account,
-    "https://app.example.com",
-  );
-  assert.deepEqual(values, [account.password]);
-  await assert.rejects(
-    api.applySetupAction(
-      page,
-      { ...view, controls: [{ tag: "input", type: "text" }] },
-      action,
-      account,
-      "https://app.example.com",
-    ),
-  );
-  for (const label of ["Delete account", "Pay now", "Sign out", "Upgrade"])
-    await assert.rejects(
-      api.applySetupAction(
-        page,
-        { ...view, controls: [{ tag: "button", label, href: "" }] },
-        { action: "click", index: 0 },
-        account,
-        "https://app.example.com",
-      ),
-    );
-  assert.equal(
-    await api.applySetupAction(
-      page,
-      {
-        ...view,
-        controls: [
-          { tag: "a", label: "Google", href: "https://accounts.google.com" },
-        ],
-      },
-      { action: "click", index: 0 },
-      account,
-      "https://app.example.com",
-    ),
-    "oauth",
-  );
-  let wait = 0;
-  await api.applySetupAction(
-    {
-      waitForTimeout: async (ms) => {
-        wait = ms;
-      },
-    },
-    { handles: [], controls: [] },
-    { action: "wait" },
-    account,
-    "https://app.example.com",
-  );
-  assert.equal(wait, 1000);
-});
-test("profile agent response rejects unsupported actions and handoff reasons", async () => {
-  let reply = {
-    action: "handoff",
-    index: 0,
-    field: "name",
-    marker: "",
-    reason: "captcha",
-  };
-  const api = load("lib/profile-generation-browser.ts", {
-    "@/lib/profile-capture": {},
-    "@/lib/browser-auth": {},
-    "@/lib/models": { profileSetupJson: async () => reply },
-  });
-  assert.equal((await api.decideSetup({})).reason, "captcha");
-  reply = { ...reply, reason: "__proto__" };
-  await assert.rejects(api.decideSetup({}));
-  reply = { ...reply, action: "goto" };
-  await assert.rejects(api.decideSetup({}));
-});
-test("setup snapshots omit input values and redact credentials before truncating text", async () => {
-  const browserAuth = load("lib/browser-auth.ts", {});
-  const api = load("lib/profile-generation-browser.ts", {
-    "@/lib/profile-capture": {},
-    "@/lib/browser-auth": browserAuth,
-    "@/lib/models": {},
-  });
-  const account = {
-    password: "Pf!generated-password-never-for-the-model",
-    email: "qa@example.org",
-    name: "QA",
-    username: "qa",
-  };
-  const token = "private-session-cookie";
-  const handle = {
-    isVisible: async () => true,
-    evaluate: async () => ({
-      tag: "input",
-      type: "password",
-      label: "x".repeat(150) + account.password,
-      href: "",
-    }),
-  };
-  const page = {
-    url: () => "https://app.example.com/signup",
-    context: () => ({
-      storageState: async () => ({ cookies: [{ value: token }], origins: [] }),
-    }),
-    locator: (selector) =>
-      selector === "body"
-        ? {
-            innerText: async () =>
-              `${token}\n${"x".repeat(9980)}${account.password}`,
-          }
-        : { elementHandles: async () => [handle] },
-  };
-  const view = await api.setupView(page, account);
-  const input = JSON.stringify(view.input);
-  assert.ok(!input.includes(token));
-  assert.ok(!input.includes(account.password.slice(0, 8)));
-  assert.ok(!input.includes('"value"'));
-  assert.ok(view.input.text.includes("[redacted]"));
-});
 test("generation API gates writes before browser allocation, uses credential-free task payloads and cancels failed queues", async () => {
   const { NextRequest } = require("next/server");
   let user = null,
@@ -333,6 +197,14 @@ test("generation API gates writes before browser allocation, uses credential-fre
   const calls = [];
   const route = load("app/api/profiles/generate/route.ts", {
     "@/auth": { auth: async () => user },
+    "@/lib/github": {
+      getGithubContext: async () => ({
+        login: "owner",
+        accessToken: "synthetic",
+      }),
+    },
+    "@/lib/fix-github-grant": { sealFixGithubGrant: () => "encrypted-grant" },
+    "@/lib/db": { getSql: () => async () => [] },
     "next/cache": { revalidatePath() {} },
     "@/lib/auth-profile-state": state,
     "@/lib/auth-profiles": {

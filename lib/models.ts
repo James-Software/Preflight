@@ -524,22 +524,3 @@ export async function fixModelJson(
     }),
   );
 }
-
-/** Short, bounded decisions for private account setup; no credentials in input. */
-export async function profileSetupJson(
-  system: string,
-  input: unknown,
-  schema: Record<string, unknown>,
-) {
-  return JSON.parse(
-    await postChat({
-      model: MODEL_CONFIG.driver.model,
-      system,
-      user: [{ type: "text", text: JSON.stringify(input) }],
-      schema,
-      maxTokens: 900,
-      timeoutMs: 20_000,
-      attempts: 1,
-    }),
-  );
-}

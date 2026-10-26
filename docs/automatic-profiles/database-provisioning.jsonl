@@ -1,0 +1,2 @@
+{"actualPostgresWasm":true,"immutableCodeInspected":true,"databaseSchemaInspected":true,"newUserAndDatabaseSessionCreated":true,"appAcceptedRealSessionToken":true,"encryptedReusableProfile":true,"existingCustomerUnchanged":true,"duplicateWorkerNoNewUser":true,"noBrowserOrModelUsed":true}
+{"jwtNeverForged":true,"unsupportedAuthNoDatabaseWrites":true,"readOnlyPermissionExplained":true,"failedProvisionRollsBack":true,"rawDatabaseErrorNotExposed":true}

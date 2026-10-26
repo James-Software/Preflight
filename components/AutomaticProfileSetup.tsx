@@ -22,7 +22,6 @@ export default function AutomaticProfileSetup({
   const [ready, setReady] = useState(false),
     [busy, setBusy] = useState(false),
     [error, setError] = useState("");
-  const [showBrowser, setShowBrowser] = useState(false);
   const [statusAttempt, setStatusAttempt] = useState(0);
   const [statusFailed, setStatusFailed] = useState(false);
   const saved = useRef(onSaved);
@@ -125,7 +124,6 @@ export default function AutomaticProfileSetup({
       });
       const data = await readProfileSetupResponse(response);
       setGeneration(data.generation);
-      setShowBrowser(false);
       setStatusFailed(false);
     } catch (error) {
       // A timed-out POST can still have queued a job. Read its status rather
@@ -185,8 +183,8 @@ export default function AutomaticProfileSetup({
         </h2>
       </div>
       <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted">
-        An agent creates a test account in your app, signs in, and saves a
-        verified session for this project.
+        PreFlight inspects your code and database, provisions a dedicated test
+        user, and saves its real authentication tokens for this project.
       </p>
       {error && (
         <div className="mt-4">
@@ -225,7 +223,7 @@ export default function AutomaticProfileSetup({
           )}
           <details>
             <summary className="min-h-11 py-2 text-sm font-medium">
-              Use a test inbox (optional)
+              Test email (optional)
             </summary>
             <label className="mt-2 block text-sm">
               Test email
@@ -239,15 +237,14 @@ export default function AutomaticProfileSetup({
               />
             </label>
             <p className="mt-2 max-w-lg text-xs leading-relaxed text-muted">
-              Use a dedicated test address you can open if your app requires
-              email verification. Otherwise, we generate an @example.com test
-              address.
+              Leave blank to generate a unique test address. Your existing users
+              are not modified.
             </p>
           </details>
           <p className="max-w-xl text-xs leading-relaxed text-muted">
-            Uses your app’s sign-up flow. If email verification, a CAPTCHA, or
-            an invitation is required, we’ll ask you to finish that step in a
-            private browser.
+            Connect this project’s database first. Supported authentication
+            systems issue a test session automatically; this does not open an
+            interactive browser.
           </p>
           <button
             type="submit"
@@ -271,58 +268,7 @@ export default function AutomaticProfileSetup({
           >
             {generation.message}
           </p>
-          {generation.status === "waiting" && generation.liveUrl && (
-            <>
-              <div className="mt-4 flex flex-wrap items-center gap-4">
-                <button
-                  type="button"
-                  onClick={() => setShowBrowser((value) => !value)}
-                  className="min-h-11 rounded-lg border border-line px-4 text-sm hover:bg-panel"
-                  aria-expanded={showBrowser}
-                >
-                  {showBrowser ? "Hide browser" : "Open browser"}
-                </button>
-                <a
-                  href={generation.liveUrl}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="pressable inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-primary"
-                >
-                  Open in new tab
-                  <svg
-                    aria-hidden="true"
-                    viewBox="0 0 24 24"
-                    className="h-3.5 w-3.5"
-                    fill="none"
-                    stroke="currentColor"
-                    strokeWidth="1.8"
-                  >
-                    <path d="M14 4h6v6M20 4 10 14M10 4H4v16h16v-6" />
-                  </svg>
-                </a>
-              </div>
-              {showBrowser && (
-                <iframe
-                  title="Automatic profile sign-up browser"
-                  src={generation.liveUrl}
-                  referrerPolicy="no-referrer"
-                  allow="clipboard-write"
-                  className="mt-3 h-[65svh] min-h-80 w-full rounded-lg border border-line bg-black"
-                />
-              )}
-            </>
-          )}
           <div className="mt-5 flex flex-wrap gap-3">
-            {generation.status === "waiting" && (
-              <button
-                type="button"
-                disabled={busy}
-                onClick={() => void request("PATCH", { id: generation.id })}
-                className="btn-primary min-h-11 px-5 text-sm font-medium disabled:opacity-50"
-              >
-                {busy ? "Continuing…" : "I’ve finished — continue"}
-              </button>
-            )}
             <button
               type="button"
               disabled={busy}
@@ -333,9 +279,8 @@ export default function AutomaticProfileSetup({
             </button>
           </div>
           <p className="mt-3 text-xs leading-relaxed text-muted">
-            Private browser expires after 10 minutes. Session recording is off.
-            Cancelling stops setup; it does not delete an account already
-            created in your app.
+            Setup expires after 10 minutes. Cancelling stops setup; it does not
+            delete an account already created in your app.
           </p>
         </div>
       )}

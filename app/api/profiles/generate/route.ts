@@ -4,6 +4,9 @@ import { auth } from "@/auth";
 import { ProfileError } from "@/lib/auth-profile-state";
 import { profileProject } from "@/lib/auth-profiles";
 import { getTriggerClientConfig } from "@/lib/trigger-client";
+import { getGithubContext } from "@/lib/github";
+import { sealFixGithubGrant } from "@/lib/fix-github-grant";
+import { getSql } from "@/lib/db";
 import {
   getProfileGeneration,
   startProfileGeneration,
@@ -95,9 +98,20 @@ async function handle(
     const { tasks } = await import("@trigger.dev/sdk");
     stage = "PROFILE_RESERVE";
     let id: string;
-    if (action === "start")
+    if (action === "start") {
+      const github = await getGithubContext(req);
+      if (!github)
+        throw new ProfileError(
+          "Reconnect GitHub so PreFlight can inspect this project's authentication code.",
+        );
       id = (await startProfileGeneration(owner, projectId, input)).id;
-    else {
+      try {
+        await getSql()`UPDATE profile_captures SET automation_github_grant=${sealFixGithubGrant(`profile:${id}`, owner, github)} WHERE id=${id}::uuid AND owner_github_id=${owner} AND project_id=${projectId} AND status='active'`;
+      } catch (error) {
+        await failGenerationQueue(owner, projectId, id);
+        throw error;
+      }
+    } else {
       await resumeProfileGeneration(owner, projectId, input.id);
       id = input.id;
     }

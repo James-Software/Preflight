@@ -1,26 +1,25 @@
 import { task } from "@trigger.dev/sdk";
-import { chromium } from "playwright-core";
 import { getSql } from "@/lib/db";
+import { getProject } from "@/lib/schema";
 import { profileProject } from "@/lib/auth-profiles";
 import {
-  browserConnectUrl,
-  browserLiveUrl,
-  createBrowserSession,
-  closeBrowserSession,
-} from "@/lib/browserbase";
-import { finishProfileCapture } from "@/lib/profile-capture";
+  encryptProfile,
+  decryptProfile,
+  ProfileError,
+} from "@/lib/auth-profile-state";
+import { generationToken, openTestAccount } from "@/lib/profile-generation";
+import { openFixGithubGrant } from "@/lib/fix-github-grant";
+import { profileProvisioningDatabase } from "@/lib/database-connections";
+import { postgresClient } from "@/lib/postgres-verification";
+import { DatabaseCheckError } from "@/lib/database-check-config";
 import {
-  generationToken,
-  openTestAccount,
-  generationMessages,
-  sealGenerationLiveUrl,
-} from "@/lib/profile-generation";
-import {
-  setupView,
-  decideSetup,
-  applySetupAction,
-  verifyGeneratedAccess,
-} from "@/lib/profile-generation-browser";
+  ProvisioningError,
+  inspectAuthSource,
+  detectProvisioning,
+  inspectAuthTables,
+  provisionDatabaseSession,
+  provisionSupabase,
+} from "@/lib/profile-provisioning";
 
 export const generateAuthProfile = task({
   id: "generate-auth-profile",
@@ -35,245 +34,148 @@ export const generateAuthProfile = task({
     const sql = getSql(),
       token = generationToken();
     const rows =
-      await sql`UPDATE profile_captures SET automation_status='running',automation_message=${generationMessages.running},automation_token=${token}::uuid
-      WHERE id=${payload.captureId}::uuid AND owner_github_id=${payload.owner} AND project_id=${payload.projectId} AND status='active' AND automation_status='queued' AND expires_at>NOW() RETURNING *`;
+      await sql`UPDATE profile_captures SET automation_status='running',automation_message='Inspecting authentication code and database…',automation_token=${token}::uuid WHERE id=${payload.captureId}::uuid AND owner_github_id=${payload.owner} AND project_id=${payload.projectId} AND status='active' AND automation_status='queued' AND expires_at>NOW() RETURNING *`;
     const capture = (rows as any[])[0];
     if (!capture) return { status: "unavailable" };
-    let browser:
-      | Awaited<ReturnType<typeof chromium.connectOverCDP>>
-      | undefined;
-    let context:
-      | ReturnType<NonNullable<typeof browser>["contexts"]>[number]
-      | undefined;
-    let guard: Parameters<NonNullable<typeof context>["route"]>[1] | undefined;
-    let unlocked = false;
+    let client: Awaited<ReturnType<typeof postgresClient>> | undefined;
     async function active() {
-      const result =
-        await sql`SELECT id FROM profile_captures WHERE id=${payload.captureId}::uuid AND owner_github_id=${payload.owner} AND project_id=${payload.projectId} AND automation_token=${token}::uuid AND status='active' AND expires_at>NOW()`;
-      if (!(result as any[]).length) throw new Error("Setup no longer active");
-    }
-    async function handoff(
-      reason: keyof typeof generationMessages,
-      message = generationMessages[reason],
-    ) {
-      let live: string | null = null;
-      if (unlocked && capture.session_id) {
-        try {
-          live = sealGenerationLiveUrl(
-            await browserLiveUrl(capture.session_id),
-            payload.owner,
-            capture.origin,
-            capture.id,
-          );
-        } catch {
-          message +=
-            " The browser link could not be restored. Cancel setup and try again.";
-        }
-      }
-      await sql`UPDATE profile_captures SET automation_status='waiting',automation_message=${message},automation_live_url=COALESCE(${live},automation_live_url),automation_token=NULL WHERE id=${payload.captureId}::uuid AND owner_github_id=${payload.owner} AND project_id=${payload.projectId} AND status='active' AND automation_token=${token}::uuid`;
-      return { status: "waiting" };
-    }
-    async function fail(message: string) {
-      await sql`UPDATE profile_captures SET status='error',automation_message=${message},automation_credentials=NULL,automation_live_url=NULL WHERE id=${capture.id}::uuid AND owner_github_id=${payload.owner} AND project_id=${payload.projectId} AND status='active' AND automation_token=${token}::uuid`;
-      return { status: "error" };
+      const r =
+        await sql`SELECT id FROM profile_captures WHERE id=${capture.id}::uuid AND owner_github_id=${payload.owner} AND project_id=${payload.projectId} AND automation_token=${token}::uuid AND status='active' AND expires_at>NOW()`;
+      if (!(r as any[]).length)
+        throw new ProvisioningError("Setup cancelled or expired.");
     }
     try {
-      let account: ReturnType<typeof openTestAccount>;
-      try {
-        account = openTestAccount(
-          capture.automation_credentials,
+      const project = await getProject(payload.projectId, payload.owner);
+      if (!project || !capture.automation_github_grant)
+        throw new ProvisioningError(
+          "Reconnect GitHub and start a new profile so PreFlight can inspect the authentication implementation.",
+        );
+      const github = openFixGithubGrant(
+        capture.automation_github_grant,
+        `profile:${capture.id}`,
+        payload.owner,
+      );
+      const source = await inspectAuthSource(github, project.repo_full_name),
+        plan = detectProvisioning(source);
+      const connection = await profileProvisioningDatabase(
+        payload.owner,
+        payload.projectId,
+        capture.origin,
+      );
+      client = await postgresClient(connection);
+      await client.query(
+        "SET application_name='PreFlight test-user provisioning'",
+      );
+      const account = openTestAccount(
+        capture.automation_credentials,
+        payload.owner,
+        capture.origin,
+        capture.id,
+      );
+      await active();
+      if (
+        (await profileProvisioningDatabase(
           payload.owner,
+          payload.projectId,
           capture.origin,
-          capture.id,
+        )) !== connection
+      )
+        throw new ProvisioningError(
+          "The database connection changed during setup. Generate a new profile using the current connection.",
         );
-      } catch {
-        return await handoff(
-          "failed",
-          "Could not unlock automatic setup. Cancel setup, check that PROFILE_ENCRYPTION_KEY matches in Vercel and Trigger.dev, then generate a new profile.",
-        );
-      }
-      unlocked = true;
-      if (!process.env.BROWSERBASE_API_KEY?.trim())
-        return await fail(
-          "BROWSERBASE_API_KEY is missing in Trigger.dev. Add the same browser credentials used by swarm runs, redeploy the worker, then generate a new profile.",
-        );
-      if (!process.env.OPENROUTER_API_KEY?.trim())
-        return await fail(
-          "OPENROUTER_API_KEY is missing in Trigger.dev. Add the browser driver's key, redeploy the worker, then generate a new profile.",
-        );
-      const fresh = !capture.session_id;
-      if (fresh) {
-        const remaining =
-          Math.floor(
-            (new Date(capture.expires_at).getTime() - Date.now()) / 1000,
-          ) - 10;
-        if (remaining < 60)
-          return await fail(
-            "This setup expired before its browser could start. Generate a new profile to try again.",
-          );
-        const session = await createBrowserSession(true, true, remaining);
-        capture.session_id = session.id;
-        const linked =
-          await sql`UPDATE profile_captures SET session_id=${session.id} WHERE id=${capture.id}::uuid AND status='active' AND automation_token=${token}::uuid AND expires_at>NOW() RETURNING id`;
-        if (!(linked as any[]).length) {
-          await closeBrowserSession(session.id).catch(() => {});
-          return { status: "unavailable" };
-        }
-      }
-      browser = await chromium.connectOverCDP(
-        browserConnectUrl(capture.session_id),
-        { timeout: 15_000 },
-      );
-      context = browser.contexts()[0];
-      if (!context) throw new Error("No browser");
-      const pages = context.pages();
-      // OAuth and some verification flows return in a new tab. Resume the
-      // latest app tab rather than the original, now-stale sign-in form.
-      const page =
-        pages
-          .filter((page) => {
-            try {
-              return new URL(page.url()).origin === capture.origin;
-            } catch {
-              return false;
-            }
-          })
-          .at(-1) ||
-        pages.at(-1) ||
-        (await context.newPage());
-      if (fresh)
-        await page.goto(capture.origin, {
-          waitUntil: "domcontentloaded",
-          timeout: 25_000,
-        });
-      let external = false;
-      // During automation, the agent never leaves the project's app. Remove
-      // this guard before human handoff so the owner can complete OAuth.
-      guard = async (route) => {
-        const req = route.request();
-        if (
-          req.isNavigationRequest() &&
-          !req.frame().parentFrame() &&
-          new URL(req.url()).origin !== capture.origin
-        ) {
-          external = true;
-          await route.abort();
-        } else await route.fallback();
-      };
-      await context.route("**/*", guard);
-      const history: string[] = [];
-      const deadline = Math.min(
-        Date.now() + 450_000,
-        new Date(capture.expires_at).getTime() - 10_000,
-      );
-      for (let step = 0; step < 18 && Date.now() < deadline; step++) {
-        await active();
-        const current = new URL(page.url());
-        if (external || current.origin !== capture.origin) {
-          const original = new URL(capture.origin);
-          if (
-            current.protocol === "https:" &&
-            current.hostname.replace(/^www\./, "") ===
-              original.hostname.replace(/^www\./, "") &&
-            current.origin !== original.origin
+      await sql`UPDATE profile_captures SET automation_message='Provisioning a dedicated test user and issuing its authentication tokens…' WHERE id=${capture.id}::uuid AND automation_token=${token}::uuid AND status='active'`;
+      let state = capture.automation_auth_state
+        ? decryptProfile(
+            capture.automation_auth_state,
+            payload.owner,
+            capture.origin,
           )
-            return await handoff(
-              "unsupported",
-              `Your app redirects to ${current.origin}. Cancel setup, update the App URL in General info to that address, then generate a new profile.`,
-            );
-          return await handoff("oauth");
-        }
-        let view: Awaited<ReturnType<typeof setupView>>;
-        try {
-          await page.waitForLoadState("domcontentloaded", { timeout: 5000 });
-          view = await setupView(page, account);
-        } catch {
-          // Client-side auth redirects may replace the document as we inspect
-          // it, especially immediately after the owner resumes verification.
-          await page.waitForTimeout(500);
-          continue;
-        }
-        try {
-          const action = await decideSetup({
-            ...view.input,
-            resuming: !!capture.automation_resume,
-            history,
-          });
+        : null;
+      if (!state) {
+        if (plan.kind === "authjs") {
+          await inspectAuthTables(client, plan);
           await active();
-          if (action.action === "handoff")
-            return await handoff(
-              action.reason in generationMessages
-                ? action.reason
-                : "unsupported",
-            );
-          if (action.action === "verify") {
-            await sql`UPDATE profile_captures SET automation_message=${generationMessages.verifying} WHERE id=${capture.id}::uuid AND automation_token=${token}::uuid AND status='active'`;
-            try {
-              const proof = await verifyGeneratedAccess(
-                browser,
-                page,
-                capture.origin,
-                action.marker,
-              );
-              await active();
-              await sql`UPDATE profile_captures SET verification_path=${proof.path},verification_text=${proof.text} WHERE id=${capture.id}::uuid AND automation_token=${token}::uuid AND status='active' AND expires_at>NOW()`;
-              await finishProfileCapture(
-                payload.owner,
-                capture.id,
-                payload.projectId,
-                false,
-                token,
-              );
-              return { status: "completed" };
-            } catch {
-              history.push(
-                "Verification did not confirm a replayable signed-in session. Finish signing in or expose a Sign out menu item; do not create another account.",
-              );
-            }
-          } else {
-            try {
-              const result = await applySetupAction(
-                page,
-                view,
-                action,
-                account,
-                capture.origin,
-              );
-              if (result === "oauth") return await handoff("oauth");
-              history.push(
-                `${action.action} control ${action.index}${action.action === "fill" ? ` using ${action.field}` : ""}`,
-              );
-              await page.waitForTimeout(700);
-            } catch {
-              history.push(
-                "The action did not complete. Inspect the updated controls before trying again.",
-              );
-            }
-          }
-        } finally {
-          await Promise.allSettled(
-            view.handles.map((handle) => handle.dispose()),
+          state = await provisionDatabaseSession(
+            client,
+            plan,
+            account,
+            capture.id,
+            payload.owner,
+            capture.origin,
           );
+        } else {
+          await active();
+          state = (
+            await provisionSupabase(
+              payload.owner,
+              connection,
+              account,
+              capture.id,
+              plan.ssr,
+              capture.origin,
+            )
+          ).state;
         }
+        const encrypted = encryptProfile(state, payload.owner, capture.origin);
+        await sql`UPDATE profile_captures SET automation_auth_state=${encrypted} WHERE id=${capture.id}::uuid AND automation_token=${token}::uuid AND status='active'`;
       }
-      return await handoff("unsupported");
-    } catch {
-      if (!capture.session_id)
-        return await fail(
-          "Could not open the private browser in Trigger.dev. Check BROWSERBASE_API_KEY, the Browserbase project and interactive-session support, then try again.",
+      await active();
+      if (plan.kind === "authjs") {
+        const response = await fetch(
+          new URL("/api/auth/session", capture.origin),
+          {
+            headers: {
+              Cookie: state.cookies
+                .map((c) => `${c.name}=${c.value}`)
+                .join("; "),
+            },
+            redirect: "error",
+            signal: AbortSignal.timeout(15000),
+            cache: "no-store",
+          },
         );
-      return await handoff("failed");
-    } finally {
-      if (context && guard)
-        await context.unroute("**/*", guard).catch(() => {});
-      await browser?.close().catch(() => {}); // keepAlive preserves the private live browser.
-      if (capture.session_id) {
-        const current =
-          await sql`SELECT status FROM profile_captures WHERE id=${capture.id}::uuid AND owner_github_id=${payload.owner} AND project_id=${payload.projectId}`;
-        const row = (current as { status: string }[])[0];
-        if (row && !["active", "saving"].includes(row.status))
-          await closeBrowserSession(capture.session_id).catch(() => {});
+        const result = await response.json().catch(() => null);
+        if (!response.ok || result?.user?.email !== account.email)
+          throw new ProvisioningError(
+            "The app did not accept the database-issued session. The marked test user remains available; check session callbacks and the selected database.",
+          );
+      } else {
+        const storage = JSON.parse(state.origins[0].localStorage[0].value);
+        const result = await client.query({
+          text: "SELECT id FROM auth.users WHERE id=$1 AND email=$2",
+          values: [storage.user.id, account.email],
+        });
+        if (result.rows.length !== 1)
+          throw new ProvisioningError(
+            "The provisioned Supabase identity was not found in the connected database.",
+          );
       }
+      await active();
+      const encrypted = encryptProfile(state, payload.owner, capture.origin);
+      const saved =
+        await sql`WITH capture_grant AS (UPDATE profile_captures SET status='completed',automation_credentials=NULL,automation_auth_state=NULL,automation_github_grant=NULL,automation_live_url=NULL WHERE id=${capture.id}::uuid AND owner_github_id=${payload.owner} AND project_id=${payload.projectId} AND automation_token=${token}::uuid AND status='active' AND expires_at>NOW() RETURNING *) INSERT INTO auth_profiles(owner_github_id,name,origin,encrypted_state,verification_path,verification_text,project_id,source_capture_id) SELECT owner_github_id,name,origin,${encrypted},${plan.kind === "authjs" ? "/api/auth/session" : "/"},${plan.kind === "authjs" ? account.email : null},project_id,id FROM capture_grant RETURNING id`;
+      if (!(saved as any[]).length)
+        throw new ProvisioningError(
+          "Setup was cancelled before the profile could be saved. The marked test user was not deleted.",
+        );
+      return { status: "completed" };
+    } catch (error) {
+      const code =
+        error && typeof error === "object" && "code" in error
+          ? String(error.code)
+          : "";
+      const message =
+        error instanceof ProvisioningError ||
+        error instanceof ProfileError ||
+        error instanceof DatabaseCheckError
+          ? error.message.slice(0, 650)
+          : code === "42501" || code === "25006"
+            ? "Use a writable database endpoint and a role with SELECT and INSERT on the authentication user/session tables. Read-only verification permissions cannot provision users."
+            : "Could not provision the test user. Check database and auth-provider permissions. Existing users were not edited; new test identities are marked by their setup ID.";
+      await sql`UPDATE profile_captures SET status='error',automation_message=${message},automation_credentials=NULL,automation_github_grant=NULL,automation_live_url=NULL WHERE id=${capture.id}::uuid AND automation_token=${token}::uuid AND status='active'`;
+      return { status: "error" };
+    } finally {
+      await client?.end().catch(() => {});
     }
   },
 });

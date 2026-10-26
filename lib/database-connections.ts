@@ -92,6 +92,23 @@ function unseal(
     );
   }
 }
+/** Server/worker only: scoped connection for explicit test-user provisioning. */
+export async function profileProvisioningDatabase(
+  owner: string,
+  projectId: number,
+  origin: string,
+) {
+  await ensureSchema();
+  const rows =
+    await getSql()`SELECT d.encrypted_config FROM project_database_connections d JOIN projects p ON p.id=d.project_id WHERE p.id=${projectId} AND p.owner_github_id=${owner} AND d.origin=${origin} AND d.revoked_at IS NULL ORDER BY d.updated_at DESC LIMIT 1`;
+  const row = (rows as { encrypted_config: string }[])[0];
+  if (!row)
+    throw new DatabaseCheckError(
+      "Connect this app's database in the project's Database tab before generating a test user.",
+    );
+  return unseal(row.encrypted_config, owner, projectId, origin)
+    .connectionString;
+}
 export async function listProjectDatabases(
   projectId: number,
   owner: string,

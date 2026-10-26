@@ -197,18 +197,23 @@ export default function ProfilesManager({
               );
             }}
           />
-          <BrowserProfileSetup
-            projectId={projectId}
-            initialOrigin={initialOrigin}
-            onSaved={(profile) => {
-              setProfiles((previous) => [profile, ...previous]);
-              setSavedId(profile.id);
-              setCreating(false);
-              setNotice(
-                "Profile verified and saved. Choose it when you start a swarm.",
-              );
-            }}
-          />
+          <details className="mt-5">
+            <summary className="min-h-11 py-2 text-sm font-medium">
+              Manual sign-in instead
+            </summary>
+            <BrowserProfileSetup
+              projectId={projectId}
+              initialOrigin={initialOrigin}
+              onSaved={(profile) => {
+                setProfiles((previous) => [profile, ...previous]);
+                setSavedId(profile.id);
+                setCreating(false);
+                setNotice(
+                  "Profile verified and saved. Choose it when you start a swarm.",
+                );
+              }}
+            />
+          </details>
           <button
             type="button"
             className="mt-4 min-h-11 text-sm text-muted hover:text-primary"
