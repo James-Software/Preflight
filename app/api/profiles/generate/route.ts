@@ -22,6 +22,7 @@ async function handle(
   req: NextRequest,
   action: "read" | "start" | "resume" | "cancel",
 ) {
+  let stage = "PROFILE_AUTH";
   if (action !== "read" && req.headers.get("origin") !== req.nextUrl.origin)
     return NextResponse.json(
       { error: "Invalid request origin." },
@@ -35,8 +36,10 @@ async function handle(
         { status: 401, headers },
       );
     const projectId = Number(req.nextUrl.searchParams.get("projectId"));
+    stage = "PROFILE_PROJECT";
     await profileProject(owner, projectId);
-    if (action === "read")
+    if (action === "read") {
+      stage = "PROFILE_STATUS";
       return NextResponse.json(
         {
           generation: await getProfileGeneration(
@@ -47,6 +50,8 @@ async function handle(
         },
         { headers },
       );
+    }
+    stage = "PROFILE_INPUT";
     const text = await req.text();
     if (text.length > 5000)
       throw new ProfileError("Profile settings are too large.");
@@ -61,12 +66,34 @@ async function handle(
     if (action !== "start" && typeof input.id !== "string")
       throw new ProfileError("Choose a profile setup.");
     if (action === "cancel") {
+      stage = "PROFILE_CANCEL";
       await cancelProfileGeneration(owner, projectId, input.id);
+      try {
+        const { tasks } = await import("@trigger.dev/sdk");
+        await tasks.trigger(
+          "release-profile-browser",
+          { owner, projectId, captureId: input.id },
+          getTriggerClientConfig(),
+        );
+      } catch {
+        /* Database cancellation is durable; provider TTL bounds release failures. */
+      }
       return NextResponse.json({ generation: null }, { headers });
     }
-    // Resolve queue configuration before allocating a paid browser.
-    const config = getTriggerClientConfig();
+    stage = "PROFILE_QUEUE_CONFIG";
+    let config;
+    try {
+      config = getTriggerClientConfig();
+    } catch (error) {
+      throw new ProfileError(
+        error instanceof Error
+          ? error.message
+          : "Check the web app's Trigger.dev configuration.",
+      );
+    }
+    stage = "PROFILE_QUEUE_RUNTIME";
     const { tasks } = await import("@trigger.dev/sdk");
+    stage = "PROFILE_RESERVE";
     let id: string;
     if (action === "start")
       id = (await startProfileGeneration(owner, projectId, input)).id;
@@ -75,6 +102,7 @@ async function handle(
       id = input.id;
     }
     try {
+      stage = "PROFILE_QUEUE";
       await tasks.trigger(
         "generate-auth-profile",
         { owner, projectId, captureId: id },
@@ -87,17 +115,37 @@ async function handle(
       );
     }
     revalidatePath(`/dashboard/projects/${projectId}/profiles`);
+    stage = "PROFILE_STATUS";
     return NextResponse.json(
       { generation: await getProfileGeneration(owner, projectId, id) },
       { status: 202, headers },
     );
   } catch (error) {
+    const databaseCode =
+      error &&
+      typeof error === "object" &&
+      "code" in error &&
+      typeof error.code === "string" &&
+      /^[A-Z0-9]{5}$/.test(error.code)
+        ? error.code
+        : "";
+    if (!(error instanceof ProfileError))
+      console.error("Automatic profile setup failed", {
+        stage,
+        databaseCode,
+        errorName: error instanceof Error ? error.name : "unknown",
+      });
+    const diagnostic = databaseCode ? `${stage}/${databaseCode}` : stage;
+    const message =
+      databaseCode === "42501"
+        ? `PreFlight's database role cannot save profile setup records. Check its table permissions (${diagnostic}).`
+        : stage === "PROFILE_QUEUE_RUNTIME"
+          ? `The web app could not load the task queue. Redeploy the web app (${diagnostic}).`
+          : `Profile setup failed during ${stage === "PROFILE_RESERVE" ? "saving the setup" : stage === "PROFILE_STATUS" ? "reading its status" : stage === "PROFILE_AUTH" ? "checking sign-in" : "preparation"} (${diagnostic}). Retry; if it persists, report this code.`;
     return NextResponse.json(
       {
-        error:
-          error instanceof ProfileError
-            ? error.message
-            : "Could not complete automatic profile setup. Try again or use Sign in with browser.",
+        error: error instanceof ProfileError ? error.message : message,
+        code: diagnostic,
       },
       { status: error instanceof ProfileError ? 400 : 500, headers },
     );

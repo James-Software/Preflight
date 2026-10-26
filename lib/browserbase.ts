@@ -19,10 +19,15 @@ function bbKey(): string {
 export async function createBrowserSession(
   privateSession = false,
   interactive = false,
+  timeoutSeconds = 600,
 ): Promise<BrowserSession> {
   const key = bbKey();
   const body: Record<string, unknown> = {};
-  if (interactive) Object.assign(body, { keepAlive: true, timeout: 600 });
+  if (interactive)
+    Object.assign(body, {
+      keepAlive: true,
+      timeout: Math.max(60, Math.min(600, Math.floor(timeoutSeconds))),
+    });
   if (privateSession)
     body.browserSettings = { recordSession: false, logSession: false };
   if (process.env.BROWSERBASE_PROJECT_ID) {

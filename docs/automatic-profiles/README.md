@@ -17,13 +17,19 @@ collect mail-provider credentials or bypass an app's sign-up restrictions.
 
 ## Deployment
 
-Deploy the web app and Trigger workers together, including `generate-auth-profile`
-and the `expire-profile-setups` schedule. They use existing `DATABASE_URL`,
-`BROWSERBASE_API_KEY`, optional `BROWSERBASE_PROJECT_ID`, and the same
-`PROFILE_ENCRYPTION_KEY`. The web app also needs the existing correct environment's
-`TRIGGER_SECRET_KEY`. The worker uses `OPENROUTER_API_KEY` and the configured driver
-model; the web app needs no model key. Browserbase must support private keep-alive
-sessions. Schema changes are additive and run through existing `ensureSchema`.
+Deploy the web app and Trigger workers together, including `generate-auth-profile`,
+`release-profile-browser`, and the `expire-profile-setups` schedule.
+
+The web app needs `DATABASE_URL`, the shared `PROFILE_ENCRYPTION_KEY`, and the
+correct environment's `TRIGGER_SECRET_KEY`. It only reserves a setup and enqueues
+IDs; it does not import Playwright, open a browser or call Browserbase.
+
+The Trigger worker uses `DATABASE_URL`, that same `PROFILE_ENCRYPTION_KEY`,
+`BROWSERBASE_API_KEY`, optional `BROWSERBASE_PROJECT_ID`, and `OPENROUTER_API_KEY`.
+These are the existing worker credentials used by swarm runs. Browserbase must
+support private keep-alive sessions. The separate manual **Sign in with browser**
+option still requires Browserbase credentials in Vercel. Schema changes are
+additive and run through existing `ensureSchema`.
 
 ## Verification and lifecycle
 
@@ -41,16 +47,17 @@ sessions. Schema changes are additive and run through existing `ensureSchema`.
 - Temporary credentials are encrypted with owner/origin/setup-specific binding.
   Trigger payloads contain only owner, project and setup IDs. Recording and
   browser console logging are disabled. No screenshots are uploaded. Live-view
-  access links are owner-only, no-store and never persisted in local storage.
+  access links are encrypted in temporary setup metadata with a separate owner/origin/setup binding, returned only to the owner with no-store, and never persisted in local storage. They are erased on save, cancellation and expiry.
 - Before saving, the candidate must replay in a fresh authenticated browser.
   A separate signed-out browser must be gated, or lack an exact Sign out/Log out
   marker that appears in the replay. Analytics cookies and public-page text
   cannot establish authentication. Saving performs another replay, then
   atomically consumes the capture, stores encrypted app-only cookies/storage,
   links the source capture and erases temporary account credentials.
-- Cancel checks the grant before further actions, requests browser release and
-  erases temporary credentials. It does not undo an account already created.
-  Browserbase's hard 10-minute timeout releases abandoned sessions. A 15-minute
+- Cancel checks the grant before further actions, queues browser release in Trigger and
+  erases temporary credentials and the encrypted live link. A worker that finishes
+  allocating a browser after cancellation releases it without acting. It does not undo an account already created.
+  Browserbase's timeout is capped to the setup grant's remaining time (at most 10 minutes), releasing abandoned sessions. A 15-minute
   sweep expires abandoned grants and clears their remaining encrypted passwords.
   Saved auth profiles are unchanged by that sweep. Generated accounts are not
   automatically deleted from the customer's app/database.
@@ -62,7 +69,7 @@ sessions. Schema changes are additive and run through existing `ensureSchema`.
 
 ## Validation
 
-Production build/typecheck and **152 tests** passed. [Integration checks](integration.jsonl)
+Production build/typecheck and **159 tests** passed. [Integration checks](integration.jsonl)
 use the actual schema/helpers/worker with PostgreSQL WASM and real Chromium,
 synthetic sign-up/verification pages and deterministic model decisions. Browserbase
 transport is adapted to local contexts; no real customer account, paid browser,
@@ -84,8 +91,8 @@ The status data path previously ran the complete migration sequence three times
 per read (156 database statements), including every poll. `ensureSchema` now
 shares one initialization promise per server process, coalesces concurrent calls,
 and clears a failed initialization for retry. Ownership/data reads remain fresh.
-The first status read needs 54 statements; warm reads need only three data
-queries. These counts exclude the surrounding authentication layer. See the
+The recorded comparison measured 54 statements for the first read before the
+latest schema additions; warm reads need only three data queries. These counts exclude the surrounding authentication layer. See the
 [actual PostgreSQL comparison](status-storage.jsonl).
 
 Status reads no longer initialize Playwright or the Trigger SDK. Authentication
@@ -108,3 +115,26 @@ The existing actual PostgreSQL/Chromium account-creation, verification, handoff,
 cancellation and shared-key integration checks still pass. The live production
 endpoint could not be inspected through this environment's network proxy, so these
 checks do not establish the original production response status or timing.
+
+## Worker-owned browser startup
+
+Automatic setup now reserves only encrypted account details on the web request.
+The worker validates its keys, allocates the private browser, conditionally links
+it to the still-active grant, then starts sign-up. No browser key is required in
+Vercel for automatic profiles. The production Generate API file trace contains
+zero Playwright/browser-runtime files. This avoids browser startup and navigation
+inside Vercel's request deadline and keeps browser credentials in the working
+swarm environment.
+
+[Updated worker integration](worker-start.jsonl) covers reservation with no browser
+allocation, worker-led sign-up, fresh session replay, encrypted live-link handoff,
+resuming the original account, cancellation during allocation/model waiting,
+owner-scoped release of a paused browser, missing worker keys before allocation,
+and shared-key diagnostics. It uses real PostgreSQL WASM and Chromium with local
+transport/model adapters, without paid services or customer accounts.
+
+Web errors include a safe stage code such as `PROFILE_RESERVE/42P18`; known Trigger
+configuration errors retain their explicit recovery instructions. Unexpected
+errors log only stage, PostgreSQL code and error name, excluding credentials and
+raw provider/database messages. This helps diagnose a live failure without
+exposing secrets or replacing it with the former generic setup message.

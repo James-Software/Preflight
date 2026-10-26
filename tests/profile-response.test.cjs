@@ -146,3 +146,54 @@ test("initial profile status reads do not load queue configuration and auth fail
   const body = await failure.json();
   assert.ok(body.error && !body.error.includes("private auth"));
 });
+
+test("start reports missing queue configuration before reserving a setup, and database failures expose only a safe code", async (t) => {
+  const { NextRequest } = require("next/server");
+  const state = load("lib/auth-profile-state.ts", {});
+  t.mock.method(console, "error", () => {});
+  let reserved = 0,
+    configMissing = true;
+  const route = load("app/api/profiles/generate/route.ts", {
+    "@/auth": { auth: async () => ({ user: { githubId: "owner" } }) },
+    "@/lib/auth-profile-state": state,
+    "@/lib/auth-profiles": { profileProject: async () => {} },
+    "@/lib/trigger-client": {
+      getTriggerClientConfig: () => {
+        if (configMissing)
+          throw new Error(
+            "TRIGGER_SECRET_KEY is missing from the web app environment.",
+          );
+        return {};
+      },
+    },
+    "@trigger.dev/sdk": { tasks: {} },
+    "@/lib/profile-generation": {
+      startProfileGeneration: async () => {
+        reserved++;
+        throw Object.assign(new Error("private database connection details"), {
+          code: "42P18",
+        });
+      },
+    },
+    "next/cache": { revalidatePath() {} },
+  });
+  const request = () =>
+    new NextRequest(
+      "https://preflight.test/api/profiles/generate?projectId=7",
+      {
+        method: "POST",
+        headers: { origin: "https://preflight.test" },
+        body: "{}",
+      },
+    );
+  const config = await route.POST(request());
+  assert.equal(config.status, 400);
+  assert.match((await config.json()).error, /TRIGGER_SECRET_KEY/);
+  assert.equal(reserved, 0);
+  configMissing = false;
+  const database = await route.POST(request());
+  assert.equal(database.status, 500);
+  const body = await database.json();
+  assert.match(body.error, /PROFILE_RESERVE\/42P18/);
+  assert.ok(!JSON.stringify(body).includes("private database"));
+});

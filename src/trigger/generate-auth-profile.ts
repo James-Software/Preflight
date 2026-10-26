@@ -2,12 +2,18 @@ import { task } from "@trigger.dev/sdk";
 import { chromium } from "playwright-core";
 import { getSql } from "@/lib/db";
 import { profileProject } from "@/lib/auth-profiles";
-import { browserConnectUrl } from "@/lib/browserbase";
+import {
+  browserConnectUrl,
+  browserLiveUrl,
+  createBrowserSession,
+  closeBrowserSession,
+} from "@/lib/browserbase";
 import { finishProfileCapture } from "@/lib/profile-capture";
 import {
   generationToken,
   openTestAccount,
   generationMessages,
+  sealGenerationLiveUrl,
 } from "@/lib/profile-generation";
 import {
   setupView,
@@ -40,6 +46,7 @@ export const generateAuthProfile = task({
       | ReturnType<NonNullable<typeof browser>["contexts"]>[number]
       | undefined;
     let guard: Parameters<NonNullable<typeof context>["route"]>[1] | undefined;
+    let unlocked = false;
     async function active() {
       const result =
         await sql`SELECT id FROM profile_captures WHERE id=${payload.captureId}::uuid AND owner_github_id=${payload.owner} AND project_id=${payload.projectId} AND automation_token=${token}::uuid AND status='active' AND expires_at>NOW()`;
@@ -49,8 +56,26 @@ export const generateAuthProfile = task({
       reason: keyof typeof generationMessages,
       message = generationMessages[reason],
     ) {
-      await sql`UPDATE profile_captures SET automation_status='waiting',automation_message=${message},automation_token=NULL WHERE id=${payload.captureId}::uuid AND owner_github_id=${payload.owner} AND project_id=${payload.projectId} AND status='active' AND automation_token=${token}::uuid`;
+      let live: string | null = null;
+      if (unlocked && capture.session_id) {
+        try {
+          live = sealGenerationLiveUrl(
+            await browserLiveUrl(capture.session_id),
+            payload.owner,
+            capture.origin,
+            capture.id,
+          );
+        } catch {
+          message +=
+            " The browser link could not be restored. Cancel setup and try again.";
+        }
+      }
+      await sql`UPDATE profile_captures SET automation_status='waiting',automation_message=${message},automation_live_url=COALESCE(${live},automation_live_url),automation_token=NULL WHERE id=${payload.captureId}::uuid AND owner_github_id=${payload.owner} AND project_id=${payload.projectId} AND status='active' AND automation_token=${token}::uuid`;
       return { status: "waiting" };
+    }
+    async function fail(message: string) {
+      await sql`UPDATE profile_captures SET status='error',automation_message=${message},automation_credentials=NULL,automation_live_url=NULL WHERE id=${capture.id}::uuid AND owner_github_id=${payload.owner} AND project_id=${payload.projectId} AND status='active' AND automation_token=${token}::uuid`;
+      return { status: "error" };
     }
     try {
       let account: ReturnType<typeof openTestAccount>;
@@ -66,6 +91,34 @@ export const generateAuthProfile = task({
           "failed",
           "Could not unlock automatic setup. Cancel setup, check that PROFILE_ENCRYPTION_KEY matches in Vercel and Trigger.dev, then generate a new profile.",
         );
+      }
+      unlocked = true;
+      if (!process.env.BROWSERBASE_API_KEY?.trim())
+        return await fail(
+          "BROWSERBASE_API_KEY is missing in Trigger.dev. Add the same browser credentials used by swarm runs, redeploy the worker, then generate a new profile.",
+        );
+      if (!process.env.OPENROUTER_API_KEY?.trim())
+        return await fail(
+          "OPENROUTER_API_KEY is missing in Trigger.dev. Add the browser driver's key, redeploy the worker, then generate a new profile.",
+        );
+      const fresh = !capture.session_id;
+      if (fresh) {
+        const remaining =
+          Math.floor(
+            (new Date(capture.expires_at).getTime() - Date.now()) / 1000,
+          ) - 10;
+        if (remaining < 60)
+          return await fail(
+            "This setup expired before its browser could start. Generate a new profile to try again.",
+          );
+        const session = await createBrowserSession(true, true, remaining);
+        capture.session_id = session.id;
+        const linked =
+          await sql`UPDATE profile_captures SET session_id=${session.id} WHERE id=${capture.id}::uuid AND status='active' AND automation_token=${token}::uuid AND expires_at>NOW() RETURNING id`;
+        if (!(linked as any[]).length) {
+          await closeBrowserSession(session.id).catch(() => {});
+          return { status: "unavailable" };
+        }
       }
       browser = await chromium.connectOverCDP(
         browserConnectUrl(capture.session_id),
@@ -88,6 +141,11 @@ export const generateAuthProfile = task({
           .at(-1) ||
         pages.at(-1) ||
         (await context.newPage());
+      if (fresh)
+        await page.goto(capture.origin, {
+          waitUntil: "domcontentloaded",
+          timeout: 25_000,
+        });
       let external = false;
       // During automation, the agent never leaves the project's app. Remove
       // this guard before human handoff so the owner can complete OAuth.
@@ -200,11 +258,22 @@ export const generateAuthProfile = task({
       }
       return await handoff("unsupported");
     } catch {
+      if (!capture.session_id)
+        return await fail(
+          "Could not open the private browser in Trigger.dev. Check BROWSERBASE_API_KEY, the Browserbase project and interactive-session support, then try again.",
+        );
       return await handoff("failed");
     } finally {
       if (context && guard)
         await context.unroute("**/*", guard).catch(() => {});
       await browser?.close().catch(() => {}); // keepAlive preserves the private live browser.
+      if (capture.session_id) {
+        const current =
+          await sql`SELECT status FROM profile_captures WHERE id=${capture.id}::uuid AND owner_github_id=${payload.owner} AND project_id=${payload.projectId}`;
+        const row = (current as { status: string }[])[0];
+        if (row && !["active", "saving"].includes(row.status))
+          await closeBrowserSession(capture.session_id).catch(() => {});
+      }
     }
   },
 });

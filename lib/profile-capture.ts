@@ -200,7 +200,7 @@ export async function finishProfileCapture(
       const encrypted = encryptProfile(state, owner, capture.origin);
       // Save and consume the grant atomically; never return captured credentials.
       const profiles = await sql`WITH capture_grant AS (
-        UPDATE profile_captures SET status='completed',automation_credentials=NULL WHERE id=${id} AND owner_github_id=${owner} AND project_id=${projectId} AND status='saving' AND expires_at > NOW() RETURNING *
+        UPDATE profile_captures SET status='completed',automation_credentials=NULL,automation_live_url=NULL WHERE id=${id} AND owner_github_id=${owner} AND project_id=${projectId} AND status='saving' AND expires_at > NOW() RETURNING *
       ), profile AS (
         INSERT INTO auth_profiles(owner_github_id,name,origin,encrypted_state,verification_path,verification_text,project_id,source_capture_id)
         SELECT owner_github_id,name,origin,${encrypted},verification_path,verification_text,project_id,id FROM capture_grant

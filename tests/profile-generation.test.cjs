@@ -11,8 +11,6 @@ function generation(mocks = {}) {
     },
     "@/lib/auth-profiles": { profileProject: async () => {} },
     "@/lib/auth-profile-state": state,
-    "@/lib/profile-capture": {},
-    "@/lib/browserbase": {},
     ...mocks,
   });
 }
@@ -54,7 +52,7 @@ test("generated accounts use unique test identities and owner/origin/capture-bou
   ])
     assert.throws(() => api.openTestAccount(encrypted, ...args));
 });
-test("generation reserves a private capture with encrypted credentials and no configured protected path", async (t) => {
+test("web generation only reserves encrypted credentials; no browser libraries or keys are needed", async (t) => {
   const old = process.env.PROFILE_ENCRYPTION_KEY;
   process.env.PROFILE_ENCRYPTION_KEY = Buffer.alloc(32, 4).toString("base64");
   t.after(() =>
@@ -64,18 +62,95 @@ test("generation reserves a private capture with encrypted credentials and no co
   );
   let captured;
   const api = generation({
-    "@/lib/profile-capture": {
-      startProfileCapture: async (...args) => {
-        captured = args;
-        return { id: "capture" };
-      },
+    "@/lib/db": {
+      getSql:
+        () =>
+        async (parts, ...values) => {
+          if (!parts.join("").includes("INSERT INTO profile_captures"))
+            return [];
+          captured = { query: parts.join("?"), values };
+          return [
+            {
+              id: values[0],
+              expires_at: new Date(Date.now() + 600000).toISOString(),
+            },
+          ];
+        },
     },
   });
-  await api.startProfileGeneration("owner", 12, {});
-  assert.equal(captured[1].origin, "https://app.example.com");
-  assert.equal(captured[1].verificationPath, "/");
-  assert.equal(captured[2], 12);
-  assert.ok(captured[3].credentials("capture").startsWith("v1."));
+  const result = await api.startProfileGeneration("owner", 12, {});
+  assert.ok(captured.values.includes("https://app.example.com"));
+  assert.ok(captured.values.includes(12));
+  assert.ok(!captured.query.includes("session_id"));
+  assert.ok(!JSON.stringify(result).includes("liveUrl"));
+  const encrypted = captured.values.find(
+    (value) => typeof value === "string" && value.startsWith("v1."),
+  );
+  assert.match(
+    api.openTestAccount(
+      encrypted,
+      "owner",
+      "https://app.example.com",
+      result.id,
+    ).email,
+    /@example\.com$/,
+  );
+});
+test("live browser links are encrypted with a separate setup binding and validate their host", (t) => {
+  const old = process.env.PROFILE_ENCRYPTION_KEY;
+  process.env.PROFILE_ENCRYPTION_KEY = Buffer.alloc(32, 4).toString("base64");
+  t.after(() =>
+    old === undefined
+      ? delete process.env.PROFILE_ENCRYPTION_KEY
+      : (process.env.PROFILE_ENCRYPTION_KEY = old),
+  );
+  const api = generation(),
+    url = "https://www.browserbase.com/devtools/private-test";
+  const sealed = api.sealGenerationLiveUrl(
+    url,
+    "owner",
+    "https://app.example.com",
+    "capture",
+  );
+  assert.ok(!sealed.includes(url));
+  assert.equal(
+    api.openGenerationLiveUrl(
+      sealed,
+      "owner",
+      "https://app.example.com",
+      "capture",
+    ),
+    url,
+  );
+  assert.throws(() =>
+    api.openGenerationLiveUrl(
+      sealed,
+      "other",
+      "https://app.example.com",
+      "capture",
+    ),
+  );
+  assert.throws(() =>
+    api.openGenerationLiveUrl(
+      sealed,
+      "owner",
+      "https://app.example.com",
+      "other-capture",
+    ),
+  );
+  assert.throws(() =>
+    api.openGenerationLiveUrl(
+      api.sealGenerationLiveUrl(
+        "https://evil.example.com/",
+        "owner",
+        "https://app.example.com",
+        "capture",
+      ),
+      "owner",
+      "https://app.example.com",
+      "capture",
+    ),
+  );
 });
 test("status is owner/project scoped and never selects encrypted state or credentials", async () => {
   let query;

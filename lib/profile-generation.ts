@@ -6,8 +6,9 @@ import {
   encryptProfile,
   decryptProfile,
   ProfileError,
+  profileOrigin,
+  profileKey,
 } from "@/lib/auth-profile-state";
-import { browserLiveUrl } from "@/lib/browserbase";
 
 export const generationMessages = {
   queued: "Preparing a private browser…",
@@ -62,6 +63,48 @@ export type TestAccount = ReturnType<typeof testAccount>;
 function binding(owner: string, id: string) {
   return `${owner}:profile-generation:${id}`;
 }
+export function sealGenerationLiveUrl(
+  url: string,
+  owner: string,
+  origin: string,
+  id: string,
+) {
+  return encryptProfile(
+    {
+      cookies: [],
+      headers: {},
+      origins: [{ origin, localStorage: [{ name: "liveUrl", value: url }] }],
+    },
+    `${binding(owner, id)}:live`,
+    origin,
+  );
+}
+export function openGenerationLiveUrl(
+  encrypted: string,
+  owner: string,
+  origin: string,
+  id: string,
+) {
+  const value = decryptProfile(
+    encrypted,
+    `${binding(owner, id)}:live`,
+    origin,
+  ).origins[0]?.localStorage.find((item) => item.name === "liveUrl")?.value;
+  const url = new URL(value || "");
+  if (
+    url.protocol !== "https:" ||
+    !(
+      url.hostname === "browserbase.com" ||
+      url.hostname.endsWith(".browserbase.com")
+    ) ||
+    url.username ||
+    url.password
+  )
+    throw new ProfileError(
+      "Could not restore the private browser link. Cancel setup and try again.",
+    );
+  return url.href;
+}
 export function sealTestAccount(
   account: TestAccount,
   owner: string,
@@ -114,7 +157,6 @@ export async function startProfileGeneration(
   projectId: number,
   input: { origin?: unknown; email?: unknown },
 ) {
-  const { startProfileCapture } = await import("@/lib/profile-capture");
   await profileProject(owner, projectId);
   const project = await getProject(projectId, owner);
   const origin =
@@ -126,20 +168,30 @@ export async function startProfileGeneration(
       "Set this project's app URL before generating a profile.",
     );
   const account = testAccount(input.email);
-  return startProfileCapture(
-    owner,
-    {
-      name: account.name,
-      origin,
-      verificationPath: "/",
-      verificationText: "Automatic setup pending",
-    },
-    projectId,
-    {
-      credentials: (id) =>
-        sealTestAccount(account, owner, new URL(origin).origin, id),
-    },
-  );
+  const appOrigin = profileOrigin(origin);
+  const host = new URL(appOrigin).hostname;
+  if (
+    !appOrigin.startsWith("https://") ||
+    !host.includes(".") ||
+    host.endsWith(".localhost") ||
+    /^[\d.]+$/.test(host) ||
+    host.includes(":")
+  )
+    throw new ProfileError("Use a public HTTPS app URL.");
+  profileKey();
+  await ensureSchema();
+  const sql = getSql(),
+    id = randomUUID();
+  await sql`UPDATE profile_captures SET status='expired',automation_credentials=NULL,automation_live_url=NULL WHERE owner_github_id=${owner} AND expires_at<=NOW() AND status IN ('active','saving')`;
+  const rows =
+    await sql`INSERT INTO profile_captures(id,owner_github_id,name,origin,verification_path,verification_text,project_id,automation_status,automation_message,automation_credentials)
+    VALUES(${id},${owner},${account.name},${appOrigin},'/','Automatic setup pending',${projectId},'queued',${generationMessages.queued},${sealTestAccount(account, owner, appOrigin, id)}) ON CONFLICT DO NOTHING RETURNING id,expires_at`;
+  const row = (rows as { id: string; expires_at: string }[])[0];
+  if (!row)
+    throw new ProfileError(
+      "A profile setup is already open for this project. Finish or cancel it first.",
+    );
+  return { id: row.id, expiresAt: new Date(row.expires_at).getTime() };
 }
 export async function getProfileGeneration(
   owner: string,
@@ -151,7 +203,7 @@ export async function getProfileGeneration(
   if (id && !/^[0-9a-f-]{36}$/i.test(id))
     throw new ProfileError("Choose a valid profile setup.");
   const rows =
-    await getSql()`SELECT c.id,c.status,c.automation_status,c.automation_message,c.session_id,c.expires_at,
+    await getSql()`SELECT c.id,c.status,c.automation_status,c.automation_message,c.automation_live_url,c.origin AS setup_origin,c.expires_at,
     a.id AS profile_id,a.name,a.origin,a.verification_path,a.verification_text,a.created_at
     FROM profile_captures c LEFT JOIN auth_profiles a ON a.source_capture_id=c.id AND a.owner_github_id=c.owner_github_id AND a.project_id=c.project_id AND a.revoked_at IS NULL
     WHERE c.owner_github_id=${owner} AND c.project_id=${projectId} AND c.automation_status IS NOT NULL
@@ -185,8 +237,26 @@ export async function getProfileGeneration(
           ? "Test account verified. Your profile is ready."
           : row.automation_message || generationMessages.running,
   };
-  if (status === "waiting" && row.session_id)
-    result.liveUrl = await browserLiveUrl(row.session_id);
+  if (status === "waiting" && row.automation_live_url) {
+    try {
+      result.liveUrl = openGenerationLiveUrl(
+        row.automation_live_url,
+        owner,
+        row.setup_origin,
+        row.id,
+      );
+    } catch {
+      result.message =
+        "Could not unlock the private browser link. Cancel setup, check the shared encryption key, then generate a new profile.";
+    }
+  } else if (
+    status === "waiting" &&
+    !row.automation_live_url &&
+    !/PROFILE_ENCRYPTION_KEY/.test(result.message)
+  ) {
+    result.message +=
+      " No browser link is available. Cancel setup and try again after the web and Trigger deployments finish.";
+  }
   if (status === "completed" && row.profile_id)
     result.profile = {
       id: row.profile_id,
@@ -219,8 +289,16 @@ export async function cancelProfileGeneration(
   projectId: number,
   id: string,
 ) {
-  const { finishProfileCapture } = await import("@/lib/profile-capture");
-  await finishProfileCapture(owner, id, projectId, true);
+  await profileProject(owner, projectId);
+  if (!/^[0-9a-f-]{36}$/i.test(id))
+    throw new ProfileError("Choose a valid profile setup.");
+  const rows =
+    await getSql()`UPDATE profile_captures SET status='cancelled',automation_credentials=NULL,automation_live_url=NULL
+    WHERE id=${id}::uuid AND owner_github_id=${owner} AND project_id=${projectId} AND automation_status IS NOT NULL AND status IN ('active','saving') RETURNING id`;
+  if (!(rows as any[]).length)
+    throw new ProfileError(
+      "This setup is already finished or unavailable. Refresh its status.",
+    );
 }
 export async function failGenerationQueue(
   owner: string,
