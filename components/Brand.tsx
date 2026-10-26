@@ -29,8 +29,13 @@ export default function Brand({
           className={`absolute inset-0 m-auto hidden h-[26px] w-auto md:h-[30px] ${scrolled ? "dark:block" : ""}`}
         />
       </span>
-      <span className="brand-wordmark hidden font-display text-lg font-bold tracking-tight text-ink sm:inline dark:text-white">
-        PreFlight
+      <span className="brand-wordmark relative hidden font-display text-lg font-bold tracking-tight text-ink sm:inline-block dark:text-white">
+        <span aria-hidden="true" className="invisible">
+          PreFlight
+        </span>
+        <span className="brand-wordmark-reveal absolute inset-y-0 left-0 w-full overflow-hidden whitespace-nowrap">
+          PreFlight
+        </span>
       </span>
     </a>
   );
