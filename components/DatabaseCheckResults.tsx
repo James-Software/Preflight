@@ -16,6 +16,26 @@ export default function DatabaseCheckResults({
     ).values(),
   ];
   const assertions = checks.filter((check) => !isSetup(check));
+  const groups = new Map<
+    string,
+    { check: DatabaseCheckReport; count: number }
+  >();
+  for (const check of assertions) {
+    // Automatic observations have separate markers/IDs even when they exercise
+    // the same action. Collapse identical display results, retaining their count.
+    // Configured checks and different outcomes remain separate.
+    const key = /^auto-\d+-\d+-\d+-[a-f0-9]+$/i.test(check.check_id)
+      ? JSON.stringify([
+          check.title,
+          check.button_label,
+          check.status,
+          check.summary,
+        ])
+      : check.check_id;
+    const existing = groups.get(key);
+    if (existing) existing.count++;
+    else groups.set(key, { check, count: 1 });
+  }
   const labels: Record<string, string> = {
     passed: "Confirmed",
     failed: "Not confirmed",
@@ -72,13 +92,18 @@ export default function DatabaseCheckResults({
               </tr>
             </thead>
             <tbody className="divide-y divide-line">
-              {assertions.map((check) => (
+              {[...groups.values()].map(({ check, count }) => (
                 <tr key={check.check_id}>
                   <td className="min-w-0 px-4 py-5">
                     <p className="break-words font-medium">{check.title}</p>
                     <p className="mt-1 break-words text-xs text-muted">
                       Button: {check.button_label}
                     </p>
+                    {count > 1 && (
+                      <p className="mt-1 text-xs text-muted">
+                        {count} observations
+                      </p>
+                    )}
                     {check.summary && (
                       <p className="mt-3 break-words text-xs leading-relaxed text-muted">
                         {check.summary}

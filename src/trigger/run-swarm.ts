@@ -152,7 +152,15 @@ export const runSwarm = task({
       }
       if (await cancelled())
         return { runId: payload.runId, status: "cancelled" };
-      if (automaticReady) {
+      const confirmedAutomatic = automaticReady
+        ? await sql`SELECT check_id FROM run_database_checks WHERE run_id=${payload.runId} AND check_id LIKE 'auto-%' AND status='passed' LIMIT 1`
+        : [];
+      // Regular agents may already have verified a marked create action. Only
+      // allocate the fallback workflow when no automatic assertion succeeded.
+      if (
+        automaticReady &&
+        (!Array.isArray(confirmedAutomatic) || !confirmedAutomatic.length)
+      ) {
         const automatic = await tasks.triggerAndWait("browser-agent", {
           runId: payload.runId,
           agentIndex: assignments.length,

@@ -119,6 +119,64 @@ test("historical repeated database setup failures collapse once and are excluded
   assert.ok(!html.includes("0 of 12"));
   assert.ok(html.includes("No database assertions completed"));
 });
+test("identical automatic database results share one row while preserving observed-action totals", () => {
+  const React = require("react");
+  const { renderToStaticMarkup } = require("react-dom/server");
+  const Results = load("components/DatabaseCheckResults.tsx", {}).default;
+  const check = {
+    title: "Automatic: Create project",
+    button_label: "Create project",
+    status: "passed",
+    summary: "Confirmed a change to uniquely marked test records.",
+    completed_at: null,
+  };
+  const html = renderToStaticMarkup(
+    React.createElement(Results, {
+      checks: [
+        { ...check, check_id: "auto-1-0-0-abcdef01" },
+        { ...check, check_id: "auto-3-0-0-abcdef02" },
+      ],
+    }),
+  );
+  assert.equal((html.match(/Automatic: Create project/g) || []).length, 1);
+  assert.equal(
+    (html.match(/Confirmed a change to uniquely marked test records\./g) || [])
+      .length,
+    1,
+  );
+  assert.match(html, /2 observations/);
+  assert.match(html, /2 of 2 database checks/);
+});
+test("different outcomes and separate configured database checks are not hidden by grouping", () => {
+  const React = require("react");
+  const { renderToStaticMarkup } = require("react-dom/server");
+  const Results = load("components/DatabaseCheckResults.tsx", {}).default;
+  const check = {
+    title: "Automatic: Create project",
+    button_label: "Create project",
+    status: "passed",
+    summary: "Saved.",
+    completed_at: null,
+  };
+  const html = renderToStaticMarkup(
+    React.createElement(Results, {
+      checks: [
+        { ...check, check_id: "auto-1-0-0-abcdef01" },
+        {
+          ...check,
+          check_id: "auto-3-0-0-abcdef02",
+          status: "error",
+          summary: "No marked change observed.",
+        },
+        { ...check, check_id: "configured-a" },
+        { ...check, check_id: "configured-b" },
+      ],
+    }),
+  );
+  assert.equal((html.match(/Automatic: Create project/g) || []).length, 4);
+  assert.match(html, /No marked change observed/);
+  assert.match(html, /3 of 4 database checks/);
+});
 test("the fix generator reads bounded source files at an immutable SHA and rejects unexpected edits", async () => {
   let count = 0;
   const calls = [];

@@ -55,6 +55,13 @@ report describes a blocked workflow rather than implying the database connection
 failed. Cleanup only proposes a bounded deletion of newly observed marked rows;
 Accept/Deny remains required.
 
+The parent reuses successful automatic verification performed by regular agents;
+the dedicated create workflow runs only when none has confirmed persistence.
+Identical automatic result rows in existing reports are grouped with an observation
+count. Totals still count every recorded assertion, and differing outcomes or
+separate configured checks remain visible. Grouping does not remove evidence or
+cleanup proposals.
+
 GitHub repository endpoints distinguish an authenticated account with no provider
 connection (`409 GITHUB_NOT_CONNECTED`, explicit Connect GitHub) from an existing
 GitHub connection requiring renewal (`401`, existing automatic handoff). Neither

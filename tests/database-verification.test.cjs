@@ -320,8 +320,12 @@ test("run setup snapshots database checks without adding credentials or SQL to t
   assert.deepEqual(triggered[1], { runId: 12, targetUrl: "https://app.test" });
 });
 
-test("database setup fails before browser allocation, and configured workflows run sequentially", async () => {
-  for (const fail of [true, false]) {
+test("database setup fails before browser allocation, and confirmed automatic actions skip only the redundant fallback", async () => {
+  for (const [fail, alreadyVerified] of [
+    [true, false],
+    [false, false],
+    [false, true],
+  ]) {
     let batches = 0,
       inFlight = 0,
       maxInFlight = 0;
@@ -334,18 +338,31 @@ test("database setup fails before browser allocation, and configured workflows r
       "@/lib/auth-profiles": {},
       "@/lib/model-config": { assertSwarmModelConfig: () => {} },
       "@/lib/db": {
-        getSql: () => async (parts) =>
-          /COUNT/.test(parts.join(""))
-            ? [{ c: 0 }]
-            : [
-                {
-                  id: 1,
-                  status: "queued",
-                  plan: [{ id: "home", title: "Home", detail: "Check home" }],
-                  target_url: "https://app.test",
-                  database_snapshot: { id: 3 },
-                },
-              ],
+        getSql:
+          () =>
+          async (parts, ...values) => {
+            const query = parts.join("");
+            if (query.includes("FROM run_database_checks")) {
+              assert.equal(batches, 1);
+              assert.deepEqual(values, [1]);
+              assert.match(query, /status='passed'/);
+              assert.match(query, /check_id LIKE 'auto-%'/);
+              return alreadyVerified
+                ? [{ check_id: "auto-1-0-0-abcdef01" }]
+                : [];
+            }
+            return /COUNT/.test(query)
+              ? [{ c: 0 }]
+              : [
+                  {
+                    id: 1,
+                    status: "queued",
+                    plan: [{ id: "home", title: "Home", detail: "Check home" }],
+                    target_url: "https://app.test",
+                    database_snapshot: { id: 3 },
+                  },
+                ];
+          },
       },
       "@/lib/schema": {
         updateRunStatus: async (_id, status) => statuses.push(status),
@@ -387,16 +404,23 @@ test("database setup fails before browser allocation, and configured workflows r
     } else {
       await task.run({ runId: 1 });
       assert.equal(batches, 1);
-      assert.equal(payloads.length, 3);
-      assert.equal(payloads[0].verifyDatabase, true);
-      assert.equal(
-        payloads[0].assignment.steps[0].id,
-        "automatic-database-create",
-      );
+      assert.equal(payloads.length, alreadyVerified ? 2 : 3);
+      if (!alreadyVerified) {
+        assert.equal(payloads[0].verifyDatabase, true);
+        assert.equal(
+          payloads[0].assignment.steps[0].id,
+          "automatic-database-create",
+        );
+      } else
+        assert.ok(
+          payloads.every(
+            (p) => p.assignment.steps[0].id !== "automatic-database-create",
+          ),
+        );
       assert.equal(maxInFlight, 1);
       assert.ok(
         payloads
-          .slice(1)
+          .slice(alreadyVerified ? 0 : 1)
           .every((payload) => payload.assignment.steps[0].databaseCheckId),
       );
       assert.ok(!JSON.stringify(payloads).includes("postgresql://"));
