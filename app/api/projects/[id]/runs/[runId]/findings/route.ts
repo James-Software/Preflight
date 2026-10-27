@@ -1,3 +1,4 @@
+import { projectGithubContext, ProjectGithubError } from "@/lib/project-github";
 import { saveFixGithubGrant } from "@/lib/fix-github-grant";
 import { tasks } from "@trigger.dev/sdk";
 import { getTriggerClientConfig } from "@/lib/trigger-client";
@@ -6,7 +7,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { revalidatePath } from "next/cache";
 import { auth } from "@/auth";
 import { getProject, getRunReport } from "@/lib/schema";
-import { getGithubContext, GithubAuthError } from "@/lib/github";
+import { GithubAuthError } from "@/lib/github";
 import {
   acquireFixGroup,
   completeFixGroup,
@@ -42,7 +43,7 @@ export async function POST(
   if (![projectId, runNumber].every((n) => Number.isSafeInteger(n) && n > 0))
     return NextResponse.json({ error: "Report not found." }, { status: 404 });
   try {
-    const project = await getProject(projectId, owner);
+    const project = await getProject(projectId, owner, "member");
     const report = project && (await getRunReport(projectId, runNumber, owner));
     if (!project || !report)
       return NextResponse.json({ error: "Report not found." }, { status: 404 });
@@ -68,7 +69,7 @@ export async function POST(
       )
     )
       throw new FixActionError("Invalid PR group. Refresh and try again.", 400);
-    const ctx = await getGithubContext(req);
+    const ctx = await projectGithubContext(req, project, owner);
     if (!ctx)
       throw new FixActionError(
         "Your GitHub session expired. Sign in again to open a PR.",
@@ -171,6 +172,8 @@ export async function POST(
     revalidatePath(path);
     return NextResponse.json({ prUrl: pr.html_url, prNumber: pr.number });
   } catch (error) {
+    if (error instanceof ProjectGithubError)
+      return NextResponse.json({ error: error.message }, { status: 409 });
     if (error instanceof GithubRenewalUnavailable)
       return NextResponse.json({ error: error.message }, { status: 503 });
     if (error instanceof FixActionError)

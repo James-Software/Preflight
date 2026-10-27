@@ -4,6 +4,7 @@ import {
 } from "@/lib/github-credentials";
 import { getToken } from "next-auth/jwt";
 import type { NextRequest } from "next/server";
+import { assertProjectRepositoryAccess, ProjectRepositoryError, type ProjectRepositoryGrant } from "@/lib/project-repository-access";
 
 /* ------------------------------------------------------------------ */
 /* Server-side GitHub API helpers. Rotating credentials live encrypted */
@@ -18,6 +19,7 @@ export type GithubContext = {
   accessToken: string;
   login: string;
   ownerGithubId?: string;
+  projectGrant?: ProjectRepositoryGrant;
 };
 
 export async function getGithubContext(
@@ -109,6 +111,7 @@ export async function fetchGithub(
 ): Promise<Response> {
   if (new URL(url).origin !== API_BASE)
     throw new Error("Invalid GitHub API URL.");
+  if (ctx.projectGrant) await assertProjectRepositoryAccess(ctx.projectGrant, new URL(url));
   const request = (token: string) => {
     const headers = new Headers(init.headers);
     headers.set("Authorization", `Bearer ${token}`);
@@ -118,6 +121,7 @@ export async function fetchGithub(
       headers.set("X-GitHub-Api-Version", API_VERSION);
     return fetch(url, {
       ...init,
+      ...(ctx.projectGrant ? { redirect: "error" } : {}),
       headers,
       cache: init.cache ?? "no-store",
       signal: init.signal ?? AbortSignal.timeout(15_000),
@@ -137,6 +141,8 @@ export async function fetchGithub(
       response = await request(current.accessToken);
     }
   }
+  if (ctx.projectGrant && response.status === 401)
+    throw new ProjectRepositoryError("The project owner needs to reconnect GitHub for this repository.");
   return response;
 }
 

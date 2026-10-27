@@ -292,6 +292,7 @@ function authConfiguration({
   let config;
   const saved = [];
   load("auth.ts", {
+    "@/lib/project-collaboration": {hasProjectMembership: async()=>false, canJoinWithProjectInvite:async()=>false},
     "@/lib/test-user-issuer": {
       validateTestUserSession: async () => testUserValid,
     },
@@ -412,6 +413,7 @@ test("a stored connection wins over legacy cookie tokens and a revoked stored gr
   class Reconnect extends Error {}
   let revoked = false;
   const api = load("lib/github.ts", {
+    "@/lib/project-repository-access": load("lib/project-repository-access.ts", {"@/lib/db": {}}),
     "next-auth/jwt": {
       getToken: async () => ({
         sub: "legacy-owner",
@@ -438,6 +440,7 @@ test("a GitHub API request retries once with a token another request has just re
     return Response.json({}, { status: tokens.length === 1 ? 401 : 200 });
   });
   const { fetchGithub } = load("lib/github.ts", {
+    "@/lib/project-repository-access": load("lib/project-repository-access.ts", {"@/lib/db": {}}),
     "next-auth/jwt": {},
     "@/lib/github-credentials": {
       GithubReconnectRequired: class extends Error {},
@@ -574,6 +577,7 @@ test("run options distinguish permanent reconnect from a temporary refresh failu
     [new RenewalUnavailable("Temporary renewal failure"), 503],
   ]) {
     const route = load("app/api/projects/[id]/run-options/route.ts", {
+      "@/lib/project-github": { ProjectGithubError: class extends Error{}, projectGithubContext: async()=> { if (failure instanceof RenewalUnavailable) throw failure; return failure ? {login:"owner",accessToken:"token"} : null; } },
       "@/auth": { auth: async () => ({ user: { githubId: "100" } }) },
       "@/lib/schema": {
         getProject: async () => ({ id: 1, repo_full_name: "owner/app" }),

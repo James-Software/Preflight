@@ -8,16 +8,17 @@ import { getProject, cancelRun } from "@/lib/schema";
  * never spends Browserbase/LLM money even if its task fires afterwards.
  */
 export async function POST(
-  _req: NextRequest,
+  req: NextRequest,
   { params }: { params: Promise<{ id: string; runId: string }> }
 ) {
+  if (req.headers.get("origin") !== req.nextUrl.origin) return NextResponse.json({ error: "Invalid request origin." }, { status: 403 });
   const session = await auth();
   const githubId = session?.user?.githubId;
   if (!githubId) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
   }
   const { id, runId } = await params;
-  const project = await getProject(Number(id), githubId);
+  const project = await getProject(Number(id), githubId, "member");
   if (!project) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }

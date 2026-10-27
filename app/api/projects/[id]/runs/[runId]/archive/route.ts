@@ -30,7 +30,7 @@ export async function PATCH(
       { status: 400 },
     );
   try {
-    if (!(await getProject(projectId, owner)))
+    if (!(await getProject(projectId, owner, "member")))
       return NextResponse.json(
         { error: "Project not found." },
         { status: 404 },

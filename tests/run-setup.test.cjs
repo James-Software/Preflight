@@ -379,6 +379,7 @@ test("run start saves target/profile metadata and sends no credentials in the Tr
     snapshot: { encrypted_state: "encrypted-only" },
   };
   const route = load("app/api/projects/[id]/runs/route.ts", {
+    "@/lib/project-github": { projectGithubContext: async()=>ctx, ProjectGithubError: class extends Error{} },
     "@/auth": { auth: async () => ({ user: { githubId: "100" } }) },
     "@/lib/database-connections": {},
     "@/lib/database-check-config": {},
@@ -441,6 +442,7 @@ test("run start saves target/profile metadata and sends no credentials in the Tr
     1,
     "https://selected.preview.test",
     {
+      requestedBy: "100",
       repoFullName: "owner/app",
       targetRef: "feature/test",
       targetSha: "commit-sha",

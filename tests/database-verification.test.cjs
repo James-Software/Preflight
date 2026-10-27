@@ -277,6 +277,7 @@ test("run setup snapshots database checks without adding credentials or SQL to t
     checks: [{ id: "check-id", title: "Task is saved", buttonLabel: "Save" }],
   };
   const { POST } = load("app/api/projects/[id]/runs/route.ts", {
+    "@/lib/project-github": { projectGithubContext: async()=>null, ProjectGithubError: class extends Error{} },
     "@/auth": { auth: async () => ({ user: { githubId: "100" } }) },
     "@/lib/database-connections": { databaseForRun: async () => database },
     "@/lib/database-check-config": config,
@@ -486,6 +487,7 @@ test("database settings enforce request origin and ownership before touching a c
 test("locked database connections return a specific startup error before creating or triggering a run", async () => {
   let created = 0;
   const { POST } = load("app/api/projects/[id]/runs/route.ts", {
+    "@/lib/project-github": { projectGithubContext: async()=>null, ProjectGithubError: class extends Error{} },
     "@/auth": { auth: async () => ({ user: { githubId: "100" } }) },
     "@/lib/database-connections": {
       databaseForRun: async () => {

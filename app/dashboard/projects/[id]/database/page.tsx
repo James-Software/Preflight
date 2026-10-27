@@ -14,6 +14,7 @@ export default async function ProjectDatabasePage({
   searchParams: Promise<{ run?: string }>;
 }) {
   const { project, owner } = await projectPage((await params).id, "/database");
+  if (project.owner_github_id !== owner) return <main className="py-2"><h1 className="text-3xl font-semibold">Database</h1><p className="mt-3 text-sm text-muted">The owner manages database connections and Cleanup. You can use configured verification when starting a run.</p></main>;
   const [databases, runs] = await Promise.all([
     listProjectDatabases(project.id, owner),
     listProjectCleanupRuns(project.id, owner),

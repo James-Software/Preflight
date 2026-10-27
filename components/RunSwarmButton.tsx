@@ -31,6 +31,7 @@ export default function RunSwarmButton({ projectId }: { projectId: number }) {
   const [databaseLocked, setDatabaseLocked] = useState(false);
   const [reconnecting, setReconnecting] = useState(false);
   const [reauthFailed, setReauthFailed] = useState(false);
+  const [canManageProfiles, setCanManageProfiles] = useState(true);
   const redirecting = useRef(false);
   function renewConnection(force = false) {
     if (redirecting.current && !force) return true;
@@ -79,6 +80,7 @@ export default function RunSwarmButton({ projectId }: { projectId: number }) {
       githubReconnected();
       setOptions(data.options);
       setProfiles(data.profiles);
+      setCanManageProfiles(data.canManageProfiles !== false);
       setTruncated(data.truncated);
       let key = "";
       try {
@@ -447,7 +449,7 @@ export default function RunSwarmButton({ projectId }: { projectId: number }) {
                     >
                       Authentication profile
                     </label>
-                    <a
+                    {canManageProfiles && <a
                       href={createUrl}
                       aria-disabled={busy}
                       onClick={(e) => {
@@ -456,7 +458,7 @@ export default function RunSwarmButton({ projectId }: { projectId: number }) {
                       className="pressable inline-flex min-h-11 items-center text-sm font-medium text-primary"
                     >
                       Generate profile
-                    </a>
+                    </a>}
                   </div>
                   <select
                     id={`run-profile-${projectId}`}
@@ -475,7 +477,7 @@ export default function RunSwarmButton({ projectId }: { projectId: number }) {
                   <p className="mt-2 text-xs leading-relaxed text-muted">
                     {matchingProfiles.length
                       ? "Saved cookies and headers will be used only for this app origin."
-                      : "Test public pages without a profile, or generate a test account for signed-in pages."}
+                      : canManageProfiles ? "Test public pages without a profile, or generate a test account for signed-in pages." : "The owner can add a test account for signed-in pages."}
                   </p>
                 </fieldset>
                 {database && (

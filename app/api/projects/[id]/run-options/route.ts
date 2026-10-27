@@ -1,9 +1,10 @@
+import { projectGithubContext, ProjectGithubError } from "@/lib/project-github";
 import { databaseSummary } from "@/lib/database-connections";
 import { GithubRenewalUnavailable } from "@/lib/github-credentials";
 import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth";
 import { getProject } from "@/lib/schema";
-import { getGithubContext, GithubAuthError } from "@/lib/github";
+import { GithubAuthError } from "@/lib/github";
 import { listAuthProfiles } from "@/lib/auth-profiles";
 import {
   listRunTargets,
@@ -28,13 +29,13 @@ export async function GET(
   if (!Number.isSafeInteger(Number(id)) || Number(id) <= 0)
     return NextResponse.json({ error: "Project not found." }, { status: 404 });
   try {
-    const project = await getProject(Number(id), owner);
+    const project = await getProject(Number(id), owner, "member");
     if (!project)
       return NextResponse.json(
         { error: "Project not found." },
         { status: 404 },
       );
-    const ctx = await getGithubContext(req);
+    const ctx = await projectGithubContext(req, project, owner);
     if (!ctx)
       return NextResponse.json(
         {
@@ -58,14 +59,14 @@ export async function GET(
       );
       return NextResponse.json({
         target: resolved,
-        database: await databaseSummary(project.id, owner, resolved.url),
+        database: await databaseSummary(project.id, project.owner_github_id, resolved.url),
       });
     }
     const [targets, profiles] = await Promise.all([
       listRunTargets(ctx, project.repo_full_name),
-      listAuthProfiles(owner, project.id),
+      listAuthProfiles(project.owner_github_id, project.id),
     ]);
-    return NextResponse.json({ ...targets, profiles });
+    return NextResponse.json({ ...targets, profiles, canManageProfiles: project.owner_github_id === owner });
   } catch (error) {
     return NextResponse.json(
       {
@@ -77,7 +78,7 @@ export async function GET(
             ? error.message
             : error instanceof GithubAuthError
               ? "GitHub session expired. Sign in again."
-              : error instanceof RunTargetError
+              : error instanceof RunTargetError || error instanceof ProjectGithubError
                 ? error.message
                 : "Could not load run options. Try again.",
       },

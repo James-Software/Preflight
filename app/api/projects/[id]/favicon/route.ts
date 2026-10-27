@@ -15,7 +15,7 @@ export async function GET(
   const id = Number((await params).id);
   if (!Number.isSafeInteger(id) || id <= 0)
     return NextResponse.json({ error: "Project unavailable" }, { status: 404 });
-  const project = await getProject(id, owner);
+  const project = await getProject(id, owner, "member");
   if (!project)
     return NextResponse.json({ error: "Project unavailable" }, { status: 404 });
   const origin = appIconOrigin(

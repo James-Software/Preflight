@@ -9,6 +9,7 @@ import GitHub from "next-auth/providers/github";
 import { isLoginAllowed, addToWaitlist } from "@/lib/access";
 import { claimInvite, INVITE_COOKIE } from "@/lib/invites";
 import { validateTestUserSession } from "@/lib/test-user-issuer";
+import { canJoinWithProjectInvite, hasProjectMembership, PROJECT_INVITE_COOKIE } from "@/lib/project-collaboration";
 
 // token.sub is a stable app owner linked to GitHub's numeric account ID.
 // Existing signed-in owners are retained when linking legacy sessions.
@@ -44,6 +45,17 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       if (!login) return false;
       try {
         if (await isLoginAllowed(login)) return true;
+        if (p?.id && await hasProjectMembership(String(p.id))) return true;
+        try {
+          const { cookies } = await import("next/headers");
+          const jar = await cookies();
+          const projectInvite = jar.get(PROJECT_INVITE_COOKIE)?.value;
+          if (projectInvite && await canJoinWithProjectInvite(projectInvite)) {
+            // Only bootstrap GitHub sign-in; email proof is still required before membership.
+            try { jar.delete(PROJECT_INVITE_COOKIE); } catch { /* The short-lived cookie also expires on its own. */ }
+            return true;
+          }
+        } catch { /* Continue through the existing referral/waitlist flow. */ }
         // Invite claim: /invite/[code] drops a short-lived cookie with the
         // code before sending the user through GitHub OAuth. A valid claim
         // allowlists them immediately with referred = true.

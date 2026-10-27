@@ -1,3 +1,4 @@
+import { projectGithubContext, ProjectGithubError } from "@/lib/project-github";
 import { databaseForRun } from "@/lib/database-connections";
 import {
   DatabaseCheckError,
@@ -17,7 +18,6 @@ import { auth } from "@/auth";
 import { getTriggerClientConfig, swarmStartError } from "@/lib/trigger-client";
 import { getProject, listRuns, createRun, updateRunStatus } from "@/lib/schema";
 import {
-  getGithubContext,
   resolveDefaultBranchPreview,
   GithubAuthError,
 } from "@/lib/github";
@@ -38,7 +38,7 @@ export async function GET(
   const { id } = await params;
   if (!Number.isSafeInteger(Number(id)) || Number(id) <= 0)
     return NextResponse.json({ error: "Project not found." }, { status: 404 });
-  const project = await getProject(Number(id), githubId);
+  const project = await getProject(Number(id), githubId, "member");
   if (!project) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
@@ -72,7 +72,7 @@ export async function POST(
   const { id } = await params;
   if (!Number.isSafeInteger(Number(id)) || Number(id) <= 0)
     return NextResponse.json({ error: "Project not found." }, { status: 404 });
-  const project = await getProject(Number(id), githubId);
+  const project = await getProject(Number(id), githubId, "member");
   if (!project) {
     return NextResponse.json({ error: "Not found" }, { status: 404 });
   }
@@ -115,7 +115,7 @@ export async function POST(
   if (body.target !== undefined) {
     try {
       const selected = parseRunTarget(body.target);
-      const ctx = await getGithubContext(req);
+      const ctx = await projectGithubContext(req, project, githubId);
       if (!ctx)
         return NextResponse.json(
           {
@@ -142,7 +142,7 @@ export async function POST(
           error:
             error instanceof GithubRenewalUnavailable
               ? error.message
-              : error instanceof RunTargetError
+              : error instanceof RunTargetError || error instanceof ProjectGithubError
                 ? error.message
                 : error instanceof GithubAuthError
                   ? "GitHub session expired. Sign in again."
@@ -162,7 +162,7 @@ export async function POST(
   if (!targetUrl) {
     let ctx;
     try {
-      ctx = await getGithubContext(req);
+      ctx = await projectGithubContext(req, project, githubId);
     } catch {
       return NextResponse.json(
         {
@@ -220,7 +220,7 @@ export async function POST(
   let database;
   if (body.verifyDatabase) {
     try {
-      database = await databaseForRun(project.id, githubId, targetUrl!);
+      database = await databaseForRun(project.id, project.owner_github_id, targetUrl!);
     } catch (error) {
       return NextResponse.json(
         {
@@ -240,7 +240,7 @@ export async function POST(
   if (body.profileId != null) {
     try {
       profile = await profileForRun(
-        githubId,
+        project.owner_github_id,
         body.profileId,
         targetUrl!,
         project.id,
@@ -260,6 +260,7 @@ export async function POST(
   let run;
   try {
     run = await createRun(project.id, targetUrl, {
+      requestedBy: githubId,
       repoFullName: project.repo_full_name,
       targetRef,
       targetSha,

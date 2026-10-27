@@ -32,7 +32,7 @@ export const prepareFixPr = task({
     const workToken = randomUUID();
     let ownsWork = false;
     try {
-      const project = await getProject(payload.projectId, payload.owner),
+      const project = await getProject(payload.projectId, payload.owner, "member"),
         report =
           project &&
           (await getRunReport(payload.projectId, payload.runId, payload.owner));

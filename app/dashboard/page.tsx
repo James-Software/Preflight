@@ -77,6 +77,7 @@ export default async function Dashboard() {
                       <h2 className="break-words text-lg font-semibold tracking-tight text-ink group-hover:text-primary dark:text-white">
                         {project.display_name || project.repo_full_name}
                       </h2>
+                      {project.role === "member" && <p className="mt-1 text-xs text-muted">Shared with you</p>}
                       <p className="mt-2 break-all text-sm leading-relaxed text-muted">
                         {project.app_url ?? "Default branch preview deployment"}
                       </p>

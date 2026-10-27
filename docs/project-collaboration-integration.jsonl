@@ -1,0 +1,5 @@
+{"emailDeliveredThroughFixture":true,"tokenHashedAtRest":true,"emailProofBeforeMembership":true,"sharedProjectVisible":true,"foreignProjectDenied":true,"memberCannotInviteOrManageOwner":true}
+{"ownerRepositoryConnectionDelegated":true,"unrelatedRepositoriesDeniedBeforeNetwork":true,"encodedTraversalDenied":true,"workerGrantRetainsScope":true}
+{"sharedProfilesListedWithoutCredentials":true,"sharedRunQueued":true,"ownerEncryptedSessionReused":true,"memberReadsReport":true,"memberArchivesRun":true,"memberOpensFixPrViaWorker":true}
+{"removalRevokesReadAndRunAccess":true,"queuedWorkerGrantCannotOutliveMembership":true,"removedMemberCannotReuseInvite":true}
+{"githubVerifiedEmailSkipsExtraCode":true,"expiredInvitesDenied":true,"deliveryFailureReportedHonestly":true}

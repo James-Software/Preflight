@@ -9,7 +9,7 @@ export async function projectPage(id: string, section = "") {
     );
   const number = Number(id);
   if (!Number.isSafeInteger(number) || number <= 0) notFound();
-  const project = await getProject(number, owner);
+  const project = await getProject(number, owner, "member");
   if (!project) notFound();
   return { project, owner };
 }

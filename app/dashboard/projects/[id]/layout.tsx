@@ -10,10 +10,12 @@ export default async function ProjectLayout({
 }) {
   // Let each page preserve its own deep link when requesting sign-in.
   if (!(await auth())?.user?.githubId) return children;
-  const { project } = await projectPage((await params).id);
+  const { project, owner } = await projectPage((await params).id);
   return (
     <div className="mx-auto grid max-w-[1440px] gap-7 px-4 py-6 text-ink dark:text-white sm:px-6 lg:grid-cols-[224px_minmax(0,1fr)] lg:gap-10 lg:px-8 lg:py-10">
       <ProjectSidebar
+        canManage={project.owner_github_id === owner}
+        isTestUser={owner.startsWith("test:")}
         project={{
           id: project.id,
           name:

@@ -9,6 +9,7 @@ export default async function ProjectProfilesPage({
   searchParams: Promise<{ origin?: string; returnToRun?: string }>;
 }) {
   const { project, owner } = await projectPage((await params).id, "/profiles");
+  if (project.owner_github_id !== owner) return <main className="py-2"><h1 className="text-3xl font-semibold">Profiles</h1><p className="mt-3 text-sm text-muted">The owner manages saved profiles. You can select a shared profile when starting a run.</p></main>;
   const query = await searchParams;
   const [profiles, unassigned] = await Promise.all([
     listAuthProfiles(owner, project.id),

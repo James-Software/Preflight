@@ -48,13 +48,13 @@ export async function reserveFixGroup(
     INSERT INTO fix_pr_groups (id, run_id, finding_ids, branch)
     SELECT ${key}::uuid, r.id, ${JSON.stringify(ids)}::jsonb, ${branch}
     FROM runs r JOIN projects p ON p.id = r.project_id
-    WHERE r.id = ${runId} AND p.id = ${projectId} AND p.owner_github_id = ${owner}
+    WHERE r.id = ${runId} AND p.id = ${projectId} AND (p.owner_github_id = ${owner} OR EXISTS(SELECT 1 FROM project_members m WHERE m.project_id=p.id AND m.user_id=${owner}))
     ON CONFLICT (id) DO NOTHING
   `;
   const rows = await sql`
     SELECT g.* FROM fix_pr_groups g JOIN runs r ON r.id = g.run_id
     JOIN projects p ON p.id = r.project_id
-    WHERE g.id = ${key}::uuid AND r.id = ${runId} AND p.id = ${projectId} AND p.owner_github_id = ${owner}
+    WHERE g.id = ${key}::uuid AND r.id = ${runId} AND p.id = ${projectId} AND (p.owner_github_id = ${owner} OR EXISTS(SELECT 1 FROM project_members m WHERE m.project_id=p.id AND m.user_id=${owner}))
   `;
   const group = Array.isArray(rows)
     ? (rows[0] as FixGroup | undefined)
@@ -125,7 +125,7 @@ export async function deleteFindings(
       SELECT f.id FROM findings f JOIN runs r ON r.id = f.run_id
       JOIN projects p ON p.id = r.project_id
       LEFT JOIN fix_pr_groups g ON g.id = f.pr_group_id
-      WHERE r.id = ${runId} AND p.id = ${projectId} AND p.owner_github_id = ${owner}
+      WHERE r.id = ${runId} AND p.id = ${projectId} AND (p.owner_github_id = ${owner} OR EXISTS(SELECT 1 FROM project_members m WHERE m.project_id=p.id AND m.user_id=${owner}))
         AND f.id = ANY(${ids}::int[]) AND f.deleted_at IS NULL
         AND (f.pr_group_id IS NULL OR g.state = 'open')
       ORDER BY f.id FOR UPDATE OF f

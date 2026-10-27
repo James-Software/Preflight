@@ -8,7 +8,7 @@ export function safeReturnTo(value: unknown): string {
     const url = new URL(value, SITE_URL);
     if (
       url.origin !== new URL(SITE_URL).origin ||
-      !/^\/dashboard(?:\/|$)/.test(url.pathname)
+      !(/^\/dashboard(?:\/|$)/.test(url.pathname) || /^\/project-invite\/[A-Za-z0-9_-]{43}$/.test(url.pathname))
     )
       return "/dashboard";
     return url.pathname + url.search + url.hash;

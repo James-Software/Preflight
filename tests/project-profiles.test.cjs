@@ -201,7 +201,7 @@ test("Database contains cleanup and rejects a run outside the project", async ()
       },
     },
     "@/lib/project-page": {
-      projectPage: async () => ({ project: { id: 12 }, owner: "100" }),
+      projectPage: async () => ({ project: { id: 12, owner_github_id: "100" }, owner: "100" }),
     },
     "@/lib/database-cleanup": {
       listProjectCleanupRuns: async () => [

@@ -43,7 +43,7 @@ test("an inaccessible run never queries findings or diagnosis artifacts", async 
   assert.equal(reads.length, 1);
   assert.match(reads[0].query, /p\.owner_github_id = \?/);
   assert.match(reads[0].query, /r\.project_id = \?/);
-  assert.deepEqual(reads[0].values, [34, 12, "owner-100"]);
+  assert.deepEqual(reads[0].values, [34, 12, "owner-100", "owner-100"]);
 });
 test("run summaries fetch finding counts with the initial history query", async () => {
   let query;
@@ -238,6 +238,7 @@ test("branch environment errors explain how to recover", () => {
 });
 function swarmRoute(trigger, config, changes = {}) {
   return load("app/api/projects/[id]/runs/route.ts", {
+    "@/lib/project-github": { projectGithubContext: async()=>null, ProjectGithubError: class extends Error{} },
     "@trigger.dev/sdk": { tasks: { trigger } },
     "@/auth": { auth: async () => ({ user: { githubId: "owner-100" } }) },
     "@/lib/trigger-client": { getTriggerClientConfig: config, swarmStartError },

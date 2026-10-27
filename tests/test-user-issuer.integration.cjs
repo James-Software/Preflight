@@ -54,6 +54,7 @@ const { NextRequest } = require("next/server");
   });
   let callbacks, authConfig;
   load("auth.ts", {
+    "@/lib/project-collaboration": {hasProjectMembership: async()=>false, canJoinWithProjectInvite:async()=>false},
     "next-auth": {
       default: (c) => {
         callbacks = c.callbacks;
@@ -142,6 +143,7 @@ const { NextRequest } = require("next/server");
     assert.equal(await schema.getProject(project.id, decoded.sub), null);
     let githubReads = 0;
     const github = load("lib/github.ts", {
+    "@/lib/project-repository-access": load("lib/project-repository-access.ts", {"@/lib/db": {}}),
       "next-auth/jwt": { getToken: async () => decoded },
       "@/lib/github-credentials": {
         loadGithubCredentials: async () => {

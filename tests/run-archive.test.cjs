@@ -105,7 +105,7 @@ test("archive SQL changes only visibility, scopes owner/project/run, and require
     },
   });
   assert.equal(await setRunArchived(2, 1, "100", true), true);
-  assert.deepEqual(queries[0].values, [true, 2, 1, "100", true]);
+  assert.deepEqual(queries[0].values, [true, 2, 1, "100", "100", true]);
   assert.match(queries[0].query, /p\.owner_github_id = \?/);
   assert.match(queries[0].query, /r\.project_id = \?/);
   assert.match(

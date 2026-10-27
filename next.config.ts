@@ -11,6 +11,7 @@ const nextConfig: NextConfig = {
         ],
       })),
       { source: "/auth.md", headers: [{ key: "Content-Type", value: "text/markdown; charset=utf-8" }] },
+      { source: "/project-invite/:path*", headers: [{ key: "Referrer-Policy", value: "no-referrer" }, { key: "Cache-Control", value: "private, no-store" }, { key: "X-Robots-Tag", value: "noindex, nofollow" }] },
       ...["/dashboard/:path*", "/api/:path*", "/login", "/invite/:path*", "/access-denied"].map(source => ({
         source, headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
       })),

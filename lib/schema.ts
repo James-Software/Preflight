@@ -9,6 +9,7 @@ import { getSql } from "@/lib/db";
 export interface Project {
   id: number;
   owner_github_id: string;
+  role?: "owner" | "member";
   app_url: string | null;
   latest_target_url?: string | null;
   repo_full_name: string;
@@ -80,6 +81,26 @@ async function initializeSchema(): Promise<void> {
   await sql`ALTER TABLE projects ALTER COLUMN app_url DROP NOT NULL`;
   await sql`ALTER TABLE projects ADD COLUMN IF NOT EXISTS display_name TEXT`;
   await sql`ALTER TABLE projects ADD COLUMN IF NOT EXISTS image_url TEXT`;
+  await sql`CREATE TABLE IF NOT EXISTS project_members (
+    project_id INT NOT NULL REFERENCES projects(id), user_id TEXT NOT NULL,
+    github_login TEXT NOT NULL, email TEXT NOT NULL, joined_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY(project_id,user_id)
+  )`;
+  await sql`CREATE INDEX IF NOT EXISTS project_members_user ON project_members(user_id,project_id)`;
+  await sql`CREATE TABLE IF NOT EXISTS project_invitations (
+    id UUID PRIMARY KEY, project_id INT NOT NULL REFERENCES projects(id), email TEXT NOT NULL,
+    token_hash TEXT UNIQUE NOT NULL, status TEXT NOT NULL DEFAULT 'pending',
+    delivery TEXT NOT NULL DEFAULT 'sending', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    verification_sends INT NOT NULL DEFAULT 0, verification_attempts INT NOT NULL DEFAULT 0,
+    expires_at TIMESTAMPTZ NOT NULL DEFAULT NOW()+INTERVAL '7 days', accepted_by TEXT,
+    UNIQUE(project_id,email)
+  )`;
+  await sql`CREATE TABLE IF NOT EXISTS project_invite_verifications (
+    invite_id UUID NOT NULL REFERENCES project_invitations(id), user_id TEXT NOT NULL,
+    code_hash TEXT, attempts INT NOT NULL DEFAULT 0, delivery TEXT NOT NULL DEFAULT 'sending',
+    sent_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), expires_at TIMESTAMPTZ NOT NULL DEFAULT NOW()+INTERVAL '10 minutes',
+    PRIMARY KEY(invite_id,user_id)
+  )`;
   await sql`ALTER TABLE runs ADD COLUMN IF NOT EXISTS repo_full_name TEXT`;
   await sql`UPDATE runs SET repo_full_name=p.repo_full_name FROM projects p WHERE runs.project_id=p.id AND runs.repo_full_name IS NULL`;
   await sql`ALTER TABLE runs ADD COLUMN IF NOT EXISTS target_url TEXT`;
@@ -279,10 +300,11 @@ export async function listProjects(ownerGithubId: string): Promise<Project[]> {
   const sql = getSql();
   const rows = await sql`
     SELECT id, owner_github_id, app_url, repo_full_name,
+      CASE WHEN owner_github_id=${ownerGithubId} THEN 'owner' ELSE 'member' END AS role,
            github_installation_id, screenshot_retention_days, display_name, image_url, created_at,
       (SELECT target_url FROM runs WHERE project_id = projects.id AND target_url IS NOT NULL AND (runs.repo_full_name = projects.repo_full_name OR runs.repo_full_name IS NULL) ORDER BY id DESC LIMIT 1) AS latest_target_url
     FROM projects
-    WHERE owner_github_id = ${ownerGithubId}
+    WHERE owner_github_id = ${ownerGithubId} OR EXISTS(SELECT 1 FROM project_members m WHERE m.project_id=projects.id AND m.user_id=${ownerGithubId})
     ORDER BY created_at DESC
   `;
   if (!Array.isArray(rows)) return [];
@@ -292,6 +314,7 @@ export async function listProjects(ownerGithubId: string): Promise<Project[]> {
 export async function getProject(
   id: number,
   ownerGithubId: string,
+  access: "owner" | "member" = "owner",
 ): Promise<Project | null> {
   await ensureSchema();
   const sql = getSql();
@@ -300,11 +323,12 @@ export async function getProject(
            github_installation_id, screenshot_retention_days, display_name, image_url, created_at,
       (SELECT target_url FROM runs WHERE project_id = projects.id AND target_url IS NOT NULL AND (runs.repo_full_name = projects.repo_full_name OR runs.repo_full_name IS NULL) ORDER BY id DESC LIMIT 1) AS latest_target_url
     FROM projects
-    WHERE id = ${id} AND owner_github_id = ${ownerGithubId}
+    WHERE id = ${id} AND (owner_github_id = ${ownerGithubId} OR (${access}='member' AND EXISTS(SELECT 1 FROM project_members m WHERE m.project_id=projects.id AND m.user_id=${ownerGithubId})))
     LIMIT 1
   `;
   if (!Array.isArray(rows) || rows.length === 0) return null;
-  return rows[0] as Project;
+  const project = rows[0] as Project;
+  return { ...project, role: project.owner_github_id === ownerGithubId ? "owner" : "member" };
 }
 
 export interface RunSummary extends Run {
@@ -342,6 +366,7 @@ export async function createRun(
   projectId: number,
   targetUrl?: string | null,
   options?: {
+    requestedBy?: string;
     targetRef?: string;
     repoFullName?: string;
     targetSha?: string;
@@ -357,9 +382,11 @@ export async function createRun(
   const rows = await sql`
     WITH new_run AS (
       INSERT INTO runs (project_id, repo_full_name, status, target_url, target_ref, target_sha, auth_profile_id, auth_profile_name, auth_profile_snapshot, database_snapshot, database_check_count)
-      VALUES (${projectId}, COALESCE(${options?.repoFullName ?? null}, (SELECT repo_full_name FROM projects WHERE id=${projectId})), 'queued', ${targetUrl ?? null}, ${options?.targetRef ?? null}, ${options?.targetSha ?? null},
+      SELECT ${projectId}, COALESCE(${options?.repoFullName ?? null}, p.repo_full_name), 'queued', ${targetUrl ?? null}, ${options?.targetRef ?? null}, ${options?.targetSha ?? null},
         ${options?.profile?.id ?? null}, ${options?.profile?.name ?? null}, ${JSON.stringify(options?.profile?.snapshot ?? null)}::jsonb,
-        ${JSON.stringify(options?.database?.snapshot ?? null)}::jsonb, ${options?.database?.checks.length ?? 0})
+        ${JSON.stringify(options?.database?.snapshot ?? null)}::jsonb, ${options?.database?.checks.length ?? 0}
+      FROM projects p WHERE p.id=${projectId} AND (${options?.requestedBy ?? null}::text IS NULL OR p.owner_github_id=${options?.requestedBy ?? null}
+        OR EXISTS(SELECT 1 FROM project_members m WHERE m.project_id=p.id AND m.user_id=${options?.requestedBy ?? null}))
       RETURNING id, project_id, repo_full_name, status, plan, target_url, created_at, started_at, finished_at, archived_at, target_ref, target_sha, auth_profile_name, database_check_count
     ), seeded_checks AS (
       INSERT INTO run_database_checks (run_id, check_id, title, button_label)
@@ -405,7 +432,7 @@ export async function setRunArchived(
     UPDATE runs r SET archived_at = CASE WHEN ${archived} THEN COALESCE(r.archived_at, NOW()) ELSE NULL END
     FROM projects p
     WHERE r.id = ${runId} AND r.project_id = ${projectId} AND p.id = r.project_id
-      AND p.owner_github_id = ${owner}
+      AND (p.owner_github_id = ${owner} OR EXISTS(SELECT 1 FROM project_members m WHERE m.project_id=p.id AND m.user_id=${owner}))
       AND (${archived} = FALSE OR r.status IN ('done', 'completed', 'partial', 'failed', 'cancelled'))
     RETURNING r.id
   `;
@@ -544,7 +571,7 @@ export async function getRunReport(
     SELECT r.* FROM runs r
     JOIN projects p ON p.id = r.project_id
     WHERE r.id = ${runId} AND r.project_id = ${projectId}
-      AND p.owner_github_id = ${ownerGithubId}
+      AND (p.owner_github_id = ${ownerGithubId} OR EXISTS(SELECT 1 FROM project_members m WHERE m.project_id=p.id AND m.user_id=${ownerGithubId}))
     LIMIT 1
   `;
   if (!Array.isArray(runs) || !runs.length) return null;

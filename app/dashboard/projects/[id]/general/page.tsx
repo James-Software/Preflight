@@ -5,7 +5,8 @@ export default async function ProjectGeneralPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { project } = await projectPage((await params).id, "/general");
+  const { project, owner } = await projectPage((await params).id, "/general");
+  if (project.owner_github_id !== owner) return <main className="py-2"><h1 className="text-3xl font-semibold">General info</h1><p className="mt-3 text-sm text-muted">The project owner manages these settings.</p></main>;
   return (
     <main className="py-2">
       <h1 className="text-3xl font-semibold tracking-tight">General info</h1>

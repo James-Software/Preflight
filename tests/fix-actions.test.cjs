@@ -308,6 +308,7 @@ function actionRoute(options = {}) {
     "@/lib/schema": {},
   });
   const POST = load("app/api/projects/[id]/runs/[runId]/findings/route.ts", {
+    "@/lib/project-github": { projectGithubContext: async()=>ctx, ProjectGithubError: class extends Error{} },
     "@/lib/fix-github-grant": { saveFixGithubGrant: async () => {} },
     "@trigger.dev/sdk": {
       tasks: {

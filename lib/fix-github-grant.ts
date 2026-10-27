@@ -15,6 +15,7 @@ export function sealFixGithubGrant(
       JSON.stringify({
         login: ctx.login,
         accessToken: ctx.accessToken,
+        ...(ctx.projectGrant ? { projectGrant: ctx.projectGrant } : {}),
         expiresAt: Date.now() + 15 * 60_000,
       }),
       "utf8",
@@ -56,7 +57,8 @@ export function openFixGithubGrant(
       value.expiresAt <= Date.now()
     )
       throw new Error();
-    return { login: value.login, accessToken: value.accessToken };
+    return { login: value.login, accessToken: value.accessToken,
+      ...(value.projectGrant ? { projectGrant: value.projectGrant } : {}) };
   } catch {
     throw new Error(
       "The GitHub authorization for this PR expired or could not be unlocked. Confirm PROFILE_ENCRYPTION_KEY matches in Vercel and Trigger.dev, then reconnect GitHub and retry.",

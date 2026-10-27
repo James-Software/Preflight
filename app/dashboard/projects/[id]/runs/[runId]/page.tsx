@@ -32,7 +32,7 @@ export default async function RunReportPage({
     runNumber <= 0
   )
     notFound();
-  const project = await getProject(projectId, owner);
+  const project = await getProject(projectId, owner, "member");
   if (!project) notFound();
   const report = await getRunReport(projectId, runNumber, owner);
   if (!report) notFound();
@@ -152,7 +152,7 @@ export default async function RunReportPage({
             runId={runNumber}
           />
         )}
-        {!!run.database_snapshot && (
+        {!!run.database_snapshot && project.owner_github_id === owner && (
           <a
             href={`/dashboard/projects/${projectId}/database?run=${runNumber}#cleanup`}
             className="pressable mt-8 inline-flex min-h-11 items-center gap-2 rounded-lg border border-line px-4 text-sm font-medium hover:bg-panel"
