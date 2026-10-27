@@ -24,7 +24,7 @@ export type CleanupItem = {
   status: string;
   summary: string | null;
 };
-const finalStatuses = ["done", "failed", "cancelled"];
+const finalStatuses = ["done", "completed", "partial", "failed", "cancelled"];
 
 export async function cleanupContext(
   projectId: number,

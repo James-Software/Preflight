@@ -344,6 +344,7 @@ test("database setup fails before browser allocation, and confirmed automatic ac
           () =>
           async (parts, ...values) => {
             const query = parts.join("");
+            if (query.includes("SELECT id FROM run_test_results")) return [];
             if (
               query.includes("FROM run_database_checks") &&
               !query.includes("COUNT")

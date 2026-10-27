@@ -176,6 +176,8 @@ function agent({
     };
   }
   const task = load("src/trigger/browser-agent.ts", {
+    "@/lib/db": {},
+    "@/lib/check-investigation": load("lib/check-investigation.ts", {"@/lib/finding-evidence": load("lib/finding-evidence.ts", {})}),
     "@/lib/finding-evidence": load("lib/finding-evidence.ts", {}),
     "@/lib/automatic-database": {
       automaticDatabase: async () => automatic,

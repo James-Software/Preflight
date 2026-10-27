@@ -1,0 +1,6 @@
+{"boundedToThree":true,"successfulChecksKept":true,"unsafeSubmissionNotRetried":true,"sourceHypothesisNotPromoted":true,"reproducedFinding":true,"originalEvidencePreserved":true,"repeatTaskSpentNothing":true}
+{"deceptiveButtonWriteBlockedInRealChromium":true,"modelOutageKeptCoverage":true,"noFalseFindingFromBlockedRequest":true}
+{"concurrentTaskDeliveryWithinBudget":true,"lateResultCannotOverwritePassedCheck":true}
+{"parentAutomaticallyInvestigates":true,"recoveredCoverageFinalizesAsCompleted":true}
+{"unsignedDenied":true,"wrongNonceDenied":true,"completedGrantDenied":true,"cancellationDenied":true,"relinkedRepoDenied":true,"credentialsNeverReturned":true}
+{"partialRunCleanupCanBeReviewed":true}

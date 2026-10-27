@@ -1,9 +1,10 @@
-import type { Browser } from "playwright-core";
+import type { Browser, BrowserContext } from "playwright-core";
 import type { getRunAuthentication } from "@/lib/auth-profiles";
 
 export async function authenticatedPage(
   browser: Browser,
   authentication: Awaited<ReturnType<typeof getRunAuthentication>>,
+  prepareContext?: (context: BrowserContext) => Promise<void>,
 ) {
   const { state, origin } = authentication;
   const context = await browser.newContext({
@@ -23,6 +24,7 @@ export async function authenticatedPage(
         await route.fulfill({ response });
       } else await route.continue();
     });
+  if (prepareContext) await prepareContext(context);
   const page = await context.newPage();
   let reason = "The signed-in page did not finish loading.";
   try {

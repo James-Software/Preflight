@@ -190,6 +190,18 @@ async function initializeSchema(): Promise<void> {
     step_id TEXT NOT NULL, title TEXT NOT NULL, status TEXT NOT NULL, summary TEXT NOT NULL,
     evidence TEXT, completed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), UNIQUE(run_id,agent_index,step_id)
   )`;
+  await sql`ALTER TABLE run_test_results ADD COLUMN IF NOT EXISTS retry_context JSONB`;
+  await sql`CREATE TABLE IF NOT EXISTS run_check_investigations (
+    run_id INT NOT NULL REFERENCES runs(id), agent_index INT NOT NULL, step_id TEXT NOT NULL,
+    budget_slot INT NOT NULL CHECK(budget_slot>=0 AND budget_slot<3),
+    state TEXT NOT NULL DEFAULT 'investigating', worker_token UUID NOT NULL,
+    lease_until TIMESTAMPTZ NOT NULL DEFAULT NOW()+INTERVAL '12 minutes',
+    original_summary TEXT NOT NULL, original_evidence TEXT,
+    conclusion TEXT, summary TEXT, source_sha TEXT, deployment_verified BOOLEAN NOT NULL DEFAULT FALSE,
+    citations JSONB NOT NULL DEFAULT '[]'::jsonb, retest_status TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), completed_at TIMESTAMPTZ,
+    PRIMARY KEY(run_id,agent_index,step_id), UNIQUE(run_id,budget_slot)
+  )`;
   await sql`
     CREATE TABLE IF NOT EXISTS diagnoses (
       id SERIAL PRIMARY KEY,
@@ -468,17 +480,21 @@ export type TestStepResult = {
   status: string;
   summary: string;
   evidence?: string | null;
+  retry_context?: { safe: boolean; startPath?: string } | null;
+  investigation?: import("@/lib/check-investigation").CheckInvestigation | null;
 };
 export async function recordTestResult(
   runId: number,
   agentIndex: number,
   result: TestStepResult,
   replace = true,
+  onlyUnresolved = false,
 ) {
   await ensureSchema();
-  await getSql()`INSERT INTO run_test_results(run_id,agent_index,step_id,title,status,summary,evidence)
-    VALUES(${runId},${agentIndex},${result.step_id},${result.title.slice(0, 200)},${result.status},${result.summary.slice(0, 1000)},${result.evidence?.slice(0, 8000) || null})
-    ON CONFLICT(run_id,agent_index,step_id) DO UPDATE SET status=EXCLUDED.status,summary=EXCLUDED.summary,evidence=EXCLUDED.evidence,completed_at=NOW() WHERE ${replace}`;
+  await getSql()`INSERT INTO run_test_results(run_id,agent_index,step_id,title,status,summary,evidence,retry_context)
+    VALUES(${runId},${agentIndex},${result.step_id},${result.title.slice(0, 200)},${result.status},${result.summary.slice(0, 1000)},${result.evidence?.slice(0, 8000) || null},${JSON.stringify(result.retry_context ?? null)}::jsonb)
+    ON CONFLICT(run_id,agent_index,step_id) DO UPDATE SET status=EXCLUDED.status,summary=EXCLUDED.summary,evidence=EXCLUDED.evidence,retry_context=EXCLUDED.retry_context,completed_at=NOW()
+    WHERE ${replace} AND (NOT ${onlyUnresolved} OR run_test_results.status IN ('inconclusive','needs_review','not_tested'))`;
 }
 
 export interface DatabaseCheckReport {
@@ -555,7 +571,14 @@ export async function getRunReport(
     await sql`SELECT check_id, title, button_label, status, summary, completed_at
     FROM run_database_checks WHERE run_id = ${runId} ORDER BY id`;
   const testResults =
-    await sql`SELECT step_id,title,status,summary,evidence FROM run_test_results WHERE run_id=${runId} ORDER BY id`;
+    await sql`SELECT t.step_id,t.title,t.status,t.summary,t.evidence,
+      CASE WHEN i.run_id IS NULL THEN NULL ELSE jsonb_build_object(
+        'state',CASE WHEN i.state IN ('investigating','retesting') AND (i.lease_until<NOW() OR r.status NOT IN ('running','planning','planned','queued')) THEN 'unavailable' ELSE i.state END,
+        'conclusion',i.conclusion,'summary',i.summary,'source_sha',i.source_sha,
+        'deployment_verified',i.deployment_verified,'citations',i.citations,'retest_status',i.retest_status) END AS investigation
+      FROM run_test_results t JOIN runs r ON r.id=t.run_id
+      LEFT JOIN run_check_investigations i ON i.run_id=t.run_id AND i.agent_index=t.agent_index AND i.step_id=t.step_id
+      WHERE t.run_id=${runId} ORDER BY t.id`;
   return {
     run: runs[0] as Run,
     findings: findings as FindingReport[],

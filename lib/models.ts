@@ -602,6 +602,7 @@ export async function fixModelJson(
   input: unknown,
   schema: Record<string, unknown>,
   maxTokens = 5000,
+  options: { timeoutMs?: number; attempts?: number } = {},
 ) {
   return JSON.parse(
     await postChat({
@@ -610,6 +611,7 @@ export async function fixModelJson(
       user: [{ type: "text", text: JSON.stringify(input) }],
       schema,
       maxTokens,
+      ...options,
     }),
   );
 }

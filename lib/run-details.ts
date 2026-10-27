@@ -65,6 +65,15 @@ export function runDetails(report: {
       title: r.title,
       status: r.status === "needs_review" ? "inconclusive" : r.status,
       summary: r.summary,
+      ...(r.investigation ? { investigation: {
+        state: r.investigation.state,
+        conclusion: r.investigation.conclusion,
+        summary: r.investigation.summary,
+        sourceSha: r.investigation.source_sha,
+        deploymentVerified: r.investigation.deployment_verified,
+        citations: r.investigation.citations,
+        retestStatus: r.investigation.retest_status,
+      } } : {}),
     })),
     database: checks.map((c) => ({
       title: c.title,

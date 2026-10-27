@@ -30,7 +30,8 @@ function chunk<T>(arr: T[], n: number): T[][] {
  */
 export const runSwarm = task({
   id: "run-swarm",
-  maxDuration: 1800,
+  maxDuration: 3600,
+  retry: { maxAttempts: 1 },
   run: async (payload: { runId: number; targetUrl?: string }) => {
     const sql = getSql();
     const rows = await sql`
@@ -329,6 +330,17 @@ export const runSwarm = task({
     }
 
     if (await cancelled()) return { runId: payload.runId, status: "cancelled" };
+    // Investigate only unresolved goals, preserving successful checks and writes.
+    const unresolved = await sql`SELECT id FROM run_test_results WHERE run_id=${payload.runId}
+      AND status IN ('inconclusive','needs_review','not_tested') AND agent_index>=0 LIMIT 1`;
+    if (Array.isArray(unresolved) && unresolved.length) {
+      try {
+        await tasks.triggerAndWait("investigate-checks", { runId: payload.runId }, {
+          idempotencyKey: `investigate-checks:${payload.runId}`,
+        });
+      } catch { /* The original evidence remains usable if follow-up infrastructure is unavailable. */ }
+    }
+    if (await cancelled()) return { runId: payload.runId, status: "cancelled" };
     const [frows, coverage, database] = await Promise.all([
       sql`SELECT COUNT(*)::int AS c FROM findings WHERE run_id=${payload.runId} AND deleted_at IS NULL`,
       sql`SELECT COUNT(*) FILTER(WHERE status<>'not_tested')::int AS observed,
@@ -347,7 +359,7 @@ export const runSwarm = task({
     const status =
       problems.length && !completedAgents && !findings && !observed
         ? "failed"
-        : problems.length || incomplete
+        : incomplete || (problems.length && !observed)
           ? "partial"
           : "done";
     const reason =
