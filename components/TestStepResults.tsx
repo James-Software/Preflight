@@ -81,11 +81,11 @@ export default function TestStepResults({
       {unresolved.length > 0 && (
         <details className="mt-4 rounded-lg border border-line bg-panel px-4">
           <summary className="min-h-11 cursor-pointer py-3 text-sm text-muted">
-            {unresolved.length} checks could not be completed or confirmed
+            {unresolved.length} {unresolved.length === 1 ? "check needs" : "checks need"} follow-up
           </summary>
           <p className="pb-3 text-xs text-muted">
-            These observations are not counted as bugs. Findings below are
-            available for prompts and PRs.
+            Each check keeps its investigation result and remaining blocker.
+            Only independently reproduced failures count as bugs.
           </p>
           <ul className="divide-y divide-line">
             {unresolved.map((r, i) => (

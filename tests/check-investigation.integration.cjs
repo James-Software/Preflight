@@ -75,7 +75,7 @@ const { load } = require("./load-module.cjs");
     },
   }).browserAgent;
   let failCodeModel = false;
-  const task = load("src/trigger/investigate-checks.ts", {
+  const investigationTasks = load("src/trigger/investigate-checks.ts", {
     ...deps, "@/lib/schema": schema, "@/lib/check-investigation": policy,
     "@/lib/investigation-source": broker, "@/lib/auth-profiles": {}, "@/lib/browser-auth": {},
     "@/lib/site": { SITE_URL: "https://www.trypreflight.dev" },
@@ -88,11 +88,18 @@ const { load } = require("./load-module.cjs");
       return { conclusion: "bug_hypothesis", summary: "There may be a route or authorization mismatch; runtime confirmation is required.",
         citations: [{ path: "auth.ts", start: 1, end: 3, quote: fakeSource.trimEnd() }], retestGuidance: "Inspect the requested page and its controls." };
     } },
-    "@trigger.dev/sdk": { task: (x) => x, tasks: { triggerAndWait: async (id, payload) => {
+    "@trigger.dev/sdk": { task: (x) => x, tasks: {
+      batchTriggerAndWait: async (id, items) => {
+        assert.equal(id, "investigate-check");
+        assert.ok(items.length <= 3);
+        return { runs: await Promise.all(items.map(async item => ({ ok: true, output: await investigationTasks.investigateCheck.run(item.payload) }))) };
+      },
+      triggerAndWait: async (id, payload) => {
       assert.equal(id, "browser-agent");
       try { return { ok: true, output: await browser.run(payload) }; } catch (error) { console.error(error); return { ok: false }; }
     } } },
-  }).investigateChecks;
+  });
+  const task = investigationTasks.investigateChecks;
 
   try {
     await schema.ensureSchema();
@@ -102,17 +109,18 @@ const { load } = require("./load-module.cjs");
       { id: "navigation", title: "Navigation", detail: "Inspect terms" },
       { id: "broken", title: "Broken route", detail: "Inspect broken page" },
       { id: "unsafe", title: "Create project", detail: "Do not repeat submission" },
-      { id: "capped", title: "Extra check", detail: "Bounded by run budget" },
+      { id: "capped", title: "Extra check", detail: "All eligible checks receive investigation" },
+      { id: "blocked", title: "Missing provider access", detail: "Review prerequisites without repeating authentication" },
     ];
     const run = await schema.createRun(project.id, origin, { repoFullName: "owner/app", targetSha: sha });
     await sql`UPDATE runs SET status='running',plan=${JSON.stringify(plan)}::jsonb WHERE id=${run.id}`;
     for (const step of plan) await schema.recordTestResult(run.id, 0, {
-      step_id: step.id, title: step.title, status: step.id === "passed" ? "passed" : "inconclusive", summary: "Original result", evidence: "Original browser evidence",
+      step_id: step.id, title: step.title, status: step.id === "passed" ? "passed" : step.id === "blocked" ? "blocked" : "inconclusive", summary: "Original result", evidence: "Original browser evidence",
       retry_context: { safe: step.id !== "unsafe", startPath: "/" },
     });
     const result = await task.run({ runId: run.id });
-    assert.equal(result.investigated, 3);
-    assert.equal(launches, 2);
+    assert.equal(result.investigated, 5);
+    assert.equal(launches, 3);
     assert.equal(writes, 0);
     const rows = await sql`SELECT step_id,status FROM run_test_results WHERE run_id=${run.id}`;
     assert.equal(rows.find((r) => r.step_id === "passed").status, "passed");
@@ -124,16 +132,18 @@ const { load } = require("./load-module.cjs");
     const findings = await sql`SELECT * FROM findings WHERE run_id=${run.id}`;
     assert.equal(findings.length, 1);
     const investigations = await sql`SELECT * FROM run_check_investigations WHERE run_id=${run.id} ORDER BY created_at`;
-    assert.equal(investigations.length, 3);
+    assert.equal(investigations.length, 5);
     assert.ok(investigations.every((i) => i.original_evidence === "Original browser evidence" && i.source_sha === sha));
     assert.equal(investigations.find((i) => i.step_id === "unsafe").retest_status, "not_retried");
+    assert.equal(investigations.find((i) => i.step_id === "blocked").retest_status, "not_retried");
+    assert.equal(rows.find(r => r.step_id === "blocked").status, "blocked");
     assert.equal(investigations.find((i) => i.step_id === "navigation").conclusion, "bug_hypothesis");
     assert.equal((await task.run({ runId: run.id })).investigated, 0);
-    assert.equal(launches, 2);
+    assert.equal(launches, 3);
     const report = await schema.getRunReport(project.id, run.id, "owner-id");
     assert.equal(report.testResults.find((r) => r.step_id === "navigation").investigation.retest_status, "passed");
     assert.equal(await schema.getRunReport(project.id, run.id, "other-owner"), null);
-    console.log(JSON.stringify({ boundedToThree: true, successfulChecksKept: true, unsafeSubmissionNotRetried: true, sourceHypothesisNotPromoted: true, reproducedFinding: true, originalEvidencePreserved: true, repeatTaskSpentNothing: true }));
+    console.log(JSON.stringify({ allEligibleChecksInvestigated: true, successfulChecksKept: true, unsafeSubmissionNotRetried: true, sourceHypothesisNotPromoted: true, reproducedFinding: true, originalEvidencePreserved: true, repeatTaskSpentNothing: true }));
 
     // A misleading read-only-looking control attempts a real POST. Chromium's route guard stops it.
     const run2 = await schema.createRun(project.id, origin, { repoFullName: "owner/app", targetSha: sha });
@@ -149,16 +159,16 @@ const { load } = require("./load-module.cjs");
     assert.equal((await sql`SELECT * FROM findings WHERE run_id=${run2.id}`).length, 0);
     console.log(JSON.stringify({ deceptiveButtonWriteBlockedInRealChromium: true, modelOutageKeptCoverage: true, noFalseFindingFromBlockedRequest: true }));
 
-    // Duplicate task delivery cannot exceed the run's DB-enforced budget.
+    // Duplicate task delivery cannot duplicate per-check claims.
     const run3 = await schema.createRun(project.id, origin, { repoFullName: "owner/app", targetSha: sha });
     const concurrentPlan = [0, 1, 2, 3].map((n) => ({ id: `read-${n}`, title: `Check ${n}`, detail: "Code inspection only" }));
     await sql`UPDATE runs SET status='running',plan=${JSON.stringify(concurrentPlan)}::jsonb WHERE id=${run3.id}`;
     for (const s of concurrentPlan) await schema.recordTestResult(run3.id, 0, { step_id: s.id, title: s.title, status: "inconclusive", summary: "Original", retry_context: { safe: false } });
     const beforeConcurrent = launches;
     await Promise.all([task.run({ runId: run3.id }), task.run({ runId: run3.id })]);
-    assert.equal((await sql`SELECT COUNT(*)::int AS c FROM run_check_investigations WHERE run_id=${run3.id}`)[0].c, 3);
+    assert.equal((await sql`SELECT COUNT(*)::int AS c FROM run_check_investigations WHERE run_id=${run3.id}`)[0].c, 4);
     assert.equal(launches, beforeConcurrent);
-    console.log(JSON.stringify({ concurrentTaskDeliveryWithinBudget: true, lateResultCannotOverwritePassedCheck: true }));
+    console.log(JSON.stringify({ concurrentTaskDeliveryWithoutDuplicateClaims: true, lateResultCannotOverwritePassedCheck: true }));
 
     // The real parent invokes the follow-up before finalizing coverage/status.
     const run4 = await schema.createRun(project.id, origin, { repoFullName: "owner/app", targetSha: sha });

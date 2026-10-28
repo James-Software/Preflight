@@ -1,7 +1,6 @@
 import type { AgentAction } from "@/lib/models";
 import { safeReplayAction } from "@/lib/finding-evidence";
 
-export const MAX_INVESTIGATIONS = 3;
 export type SourceCitation = { path: string; start: number; end: number };
 export type CheckInvestigation = {
   state: string;

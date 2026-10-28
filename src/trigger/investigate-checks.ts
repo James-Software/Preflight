@@ -3,7 +3,7 @@ import { task, tasks } from "@trigger.dev/sdk";
 import { getSql } from "@/lib/db";
 import { ensureSchema } from "@/lib/schema";
 import { fixModelJson } from "@/lib/models";
-import { MAX_INVESTIGATIONS, validateCodeReview } from "@/lib/check-investigation";
+import { validateCodeReview } from "@/lib/check-investigation";
 import { signInvestigationRequest } from "@/lib/investigation-source";
 import { getRunAuthentication } from "@/lib/auth-profiles";
 import { profileRedactor } from "@/lib/browser-auth";
@@ -28,9 +28,9 @@ const reviewSchema = {
 };
 
 /** One bounded follow-up per unresolved check. No shell, arbitrary SQL or source execution. */
-export const investigateChecks = task({
-  id: "investigate-checks", maxDuration: 1200, retry: { maxAttempts: 1 },
-  run: async ({ runId }: { runId: number }) => {
+export const investigateCheck = task({
+  id: "investigate-check", maxDuration: 1200, retry: { maxAttempts: 1 },
+  run: async ({ runId, agentIndex, stepId }: { runId: number; agentIndex: number; stepId: string }) => {
     await ensureSchema();
     const sql = getSql();
     const runs = await sql`SELECT r.plan,r.target_url,r.auth_profile_id,p.app_url FROM runs r
@@ -42,10 +42,11 @@ export const investigateChecks = task({
     if (!eligibleSteps.length) return { investigated: 0 };
     const database = await sql`SELECT title,status,summary FROM run_database_checks WHERE run_id=${runId} ORDER BY id LIMIT 12`;
     const rows = await sql`SELECT t.* FROM run_test_results t WHERE t.run_id=${runId}
-      AND t.agent_index>=0 AND t.status IN ('inconclusive','needs_review','not_tested')
+      AND t.agent_index>=0 AND t.agent_index=${agentIndex} AND t.step_id=${stepId}
+      AND t.status IN ('inconclusive','needs_review','not_tested','blocked')
       AND t.step_id=ANY(${eligibleSteps}::text[])
       AND NOT EXISTS(SELECT 1 FROM run_check_investigations i WHERE i.run_id=t.run_id AND i.agent_index=t.agent_index AND i.step_id=t.step_id)
-      ORDER BY CASE WHEN t.status='not_tested' THEN 1 ELSE 0 END,t.id LIMIT ${MAX_INVESTIGATIONS}`;
+      ORDER BY t.id`;
     let investigated = 0;
     for (const row of rows as any[]) {
       const step = plan.find((s) => s.id === row.step_id);
@@ -53,9 +54,8 @@ export const investigateChecks = task({
       const token = randomUUID();
       const claimed = await sql`INSERT INTO run_check_investigations(run_id,agent_index,step_id,worker_token,original_summary,original_evidence,budget_slot)
         SELECT ${runId},${row.agent_index},${row.step_id},${token}::uuid,${row.summary},${row.evidence},
-          (SELECT COUNT(*) FROM run_check_investigations WHERE run_id=${runId})
+          ${row.id + 3}
         FROM runs WHERE id=${runId} AND status='running'
-          AND (SELECT COUNT(*) FROM run_check_investigations WHERE run_id=${runId})<${MAX_INVESTIGATIONS}
         ON CONFLICT DO NOTHING RETURNING run_id`;
       if (!(claimed as any[]).length) continue;
       investigated++;
@@ -105,7 +105,7 @@ export const investigateChecks = task({
       let retestStatus = "not_retried";
       try {
         // Safety is recorded from executed actions, never decided by the code model.
-        if (row.retry_context?.safe === true) {
+        if (row.status !== "blocked" && row.retry_context?.safe === true) {
           await sql`UPDATE run_check_investigations SET state='retesting' WHERE run_id=${runId} AND agent_index=${row.agent_index} AND step_id=${row.step_id} AND worker_token=${token}::uuid`;
           const retest = await tasks.triggerAndWait("browser-agent", {
             runId, agentIndex: row.agent_index, appUrl: run.target_url || run.app_url,
@@ -121,6 +121,41 @@ export const investigateChecks = task({
       } catch { retestStatus = "unavailable"; }
       await sql`UPDATE run_check_investigations SET state='completed',retest_status=${retestStatus},completed_at=NOW()
         WHERE run_id=${runId} AND agent_index=${row.agent_index} AND step_id=${row.step_id} AND worker_token=${token}::uuid`;
+    }
+    return { investigated };
+  },
+});
+
+/** Every eligible check gets an isolated task; only three run at a time. */
+export const investigateChecks = task({
+  id: "investigate-checks", maxDuration: 3600, retry: { maxAttempts: 1 },
+  run: async ({ runId }: { runId: number }) => {
+    await ensureSchema();
+    const sql = getSql();
+    const runs = await sql`SELECT plan FROM runs WHERE id=${runId} AND status='running'`;
+    const plan: PlanStep[] = Array.isArray((runs as any[])[0]?.plan) ? (runs as any[])[0].plan : [];
+    const eligible = plan.filter(step => !step.databaseCheckId && !/^automatic-database|^database-/.test(step.id)).map(step => step.id);
+    if (!eligible.length) return { investigated: 0 };
+    const rows = await sql`SELECT t.agent_index,t.step_id FROM run_test_results t WHERE t.run_id=${runId}
+      AND t.agent_index>=0 AND t.status IN ('inconclusive','needs_review','not_tested','blocked')
+      AND t.step_id=ANY(${eligible}::text[])
+      AND NOT EXISTS(SELECT 1 FROM run_check_investigations i WHERE i.run_id=t.run_id AND i.agent_index=t.agent_index AND i.step_id=t.step_id)
+      ORDER BY t.id`;
+    let investigated = 0;
+    for (let offset = 0; offset < (rows as any[]).length; offset += 3) {
+      const active = await sql`SELECT id FROM runs WHERE id=${runId} AND status='running'`;
+      if (!(active as any[]).length) break;
+      try {
+        const result = await tasks.batchTriggerAndWait<typeof investigateCheck>("investigate-check",
+          (rows as any[]).slice(offset, offset + 3).map(row => ({
+            payload: { runId, agentIndex: row.agent_index, stepId: row.step_id },
+            options: { idempotencyKey: `check-investigation:${runId}:${row.agent_index}:${row.step_id}` },
+          })),
+        );
+        for (const check of result.runs) {
+          if (check.ok) investigated += check.output.investigated;
+        }
+      } catch { /* Keep remaining batches eligible even if dispatch is unavailable. */ }
     }
     return { investigated };
   },

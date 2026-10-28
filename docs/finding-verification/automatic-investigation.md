@@ -1,6 +1,6 @@
 # Automatic investigation of inconclusive checks
 
-New swarm runs investigate up to three unresolved plan steps after the main browser and database checks finish. Successful checks and confirmed findings are kept. Blocked prerequisites and dedicated database submissions are not retried. The cap is enforced with unique database budget slots, a per-check claim, task idempotency and disabled automatic task retries.
+New swarm runs queue every unresolved browser plan step after the main browser and database checks finish. Each check has its own isolated investigation task; at most three are dispatched at a time. Successful checks and confirmed findings are kept. Blocked checks receive source review but are not replayed. Dedicated database submissions are excluded from browser investigation. Per-check claims, unique slots derived from test-result IDs, task idempotency and disabled automatic task retries prevent duplicate work. Each investigation is bounded to 20 minutes and the coordinator to one hour; infrastructure failures or timeouts can still leave checks unresolved. Existing completed runs are not automatically reprocessed.
 
 The `investigate-checks` task selects at most six relevant source files (120 KB total, 40 KB per file) at the run's immutable `target_sha`. It receives browser observations, the test goal and recorded database assertion summaries. It never executes repository code, arbitrary SQL or shell commands. Secret files, dependencies, symlinks and binary files are excluded. Missing pinned source never falls back to today's main branch.
 

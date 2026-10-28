@@ -109,3 +109,48 @@ test("reports show source hypotheses separately from confirmed browser findings"
   assert.match(html, /Not confirmed/);
   assert.doesNotMatch(html, /Approve|Needs review/);
 });
+
+function investigationQueue({ count = 8, cancel = false, failFirst = false } = {}) {
+  let running = true;
+  const batches = [];
+  const plan = Array.from({ length: count }, (_, n) => ({ id: `check-${n}`, title: `Check ${n}` }));
+  const worker = load("src/trigger/investigate-checks.ts", {
+    "@/lib/db": { getSql: () => async (parts) => {
+      const query = parts.join("?");
+      if (query.includes("SELECT plan")) return [{ plan }];
+      if (query.includes("SELECT t.agent_index")) return plan.map(s => ({ agent_index: 0, step_id: s.id }));
+      if (query.includes("SELECT id FROM runs")) return running ? [{ id: 1 }] : [];
+      throw new Error(`Unexpected query: ${query}`);
+    } },
+    "@/lib/schema": { ensureSchema: async () => {} },
+    "@/lib/models": {}, "@/lib/check-investigation": policy,
+    "@/lib/investigation-source": {}, "@/lib/auth-profiles": {},
+    "@/lib/browser-auth": {}, "@/lib/site": { SITE_URL: origin },
+    "@trigger.dev/sdk": { task: x => x, tasks: {
+      batchTriggerAndWait: async (id, items) => {
+        assert.equal(id, "investigate-check");
+        batches.push(items);
+        if (cancel) running = false;
+        if (failFirst && batches.length === 1) throw new Error("Dispatch unavailable");
+        return { runs: items.map(() => ({ ok: true, output: { investigated: 1 } })) };
+      },
+    } },
+  }).investigateChecks;
+  return { run: () => worker.run({ runId: 1 }), batches };
+}
+test("investigation queue covers every check in bounded batches with per-check idempotency", async () => {
+  const queue = investigationQueue();
+  assert.equal((await queue.run()).investigated, 8);
+  assert.deepEqual(queue.batches.map(b => b.length), [3, 3, 2]);
+  assert.equal(new Set(queue.batches.flat().map(item => item.options.idempotencyKey)).size, 8);
+});
+test("cancellation stops further investigation batches", async () => {
+  const queue = investigationQueue({ cancel: true });
+  assert.equal((await queue.run()).investigated, 3);
+  assert.equal(queue.batches.length, 1);
+});
+test("an unavailable batch does not prevent remaining checks from being investigated", async () => {
+  const queue = investigationQueue({ failFirst: true });
+  assert.equal((await queue.run()).investigated, 5);
+  assert.equal(queue.batches.length, 3);
+});

@@ -140,7 +140,7 @@ export default async function RunReportPage({
                         "not_tested",
                       ].includes(r.status),
                     )
-                    ? "No confirmed bugs were recorded. Some checks could not be completed or confirmed; their observations are available above."
+                    ? "No confirmed bugs were recorded. See the check investigations above for remaining blockers and follow-up results."
                     : "This run finished without any recorded findings."
                   : "This run ended without recorded findings. You can start another run from the project."}
             </p>

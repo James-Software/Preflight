@@ -332,7 +332,7 @@ export const runSwarm = task({
     if (await cancelled()) return { runId: payload.runId, status: "cancelled" };
     // Investigate only unresolved goals, preserving successful checks and writes.
     const unresolved = await sql`SELECT id FROM run_test_results WHERE run_id=${payload.runId}
-      AND status IN ('inconclusive','needs_review','not_tested') AND agent_index>=0 LIMIT 1`;
+      AND status IN ('inconclusive','needs_review','not_tested','blocked') AND agent_index>=0 LIMIT 1`;
     if (Array.isArray(unresolved) && unresolved.length) {
       try {
         await tasks.triggerAndWait("investigate-checks", { runId: payload.runId }, {

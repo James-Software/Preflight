@@ -223,6 +223,9 @@ async function initializeSchema(): Promise<void> {
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), completed_at TIMESTAMPTZ,
     PRIMARY KEY(run_id,agent_index,step_id), UNIQUE(run_id,budget_slot)
   )`;
+  // Legacy rows use slots 0–2; new claims use the test-result ID + 3.
+  // Keep unique claims without imposing the old three-check run limit.
+  await sql`ALTER TABLE run_check_investigations DROP CONSTRAINT IF EXISTS run_check_investigations_budget_slot_check`;
   await sql`
     CREATE TABLE IF NOT EXISTS diagnoses (
       id SERIAL PRIMARY KEY,
