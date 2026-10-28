@@ -1,70 +1,74 @@
-# PreFlight (full reference)
+# PreFlight — full product reference
 
-> PreFlight sends a swarm of AI agents to test your web app like real users. Every bug they find comes back with evidence and a fix pull request.
+> Run AI agents through your app in real browsers. Review findings with screenshots, console logs and network traces.
 
-## What PreFlight is
+Canonical website: https://www.trypreflight.dev/
 
-PreFlight is automated quality assurance performed by a swarm of AI agents. Instead of executing hand-written test scripts, the agents open your application in real browsers and use it the way a first-time visitor would: clicking, typing, navigating, and reacting to what they see. When something breaks, you get the bug report plus the evidence and, when the system is confident, a proposed fix as a GitHub pull request.
+## Product and audience
 
-## Why it works
+PreFlight is a web application for developers and teams testing deployed web apps. Multiple AI agents use real browsers to navigate, click, type and check workflows. Reports combine browser observations with evidence and can be investigated against repository source to propose fixes.
 
-- **Real browsers, not simulations.** Each agent drives its own real browser session. No mocked clicks, no scripted paths.
-- **Exploration, not scripts.** Scripts only check what you told them to check. Agents explore like someone seeing your app for the first time, which is how real users find the bugs your tests miss.
-- **Evidence with every bug.** Screenshots, console logs, and network traces are attached to each finding, so a report is reproducible on sight.
-- **Diagnosis from code, not just symptoms.** The system pairs runtime evidence with your repository source to explain why something broke, not just that it broke.
-- **Fixes, not just reports.** Confident repairs arrive as pull requests with diffs. You review and merge.
-- **Humans stay in charge.** A merge gate always applies. PreFlight never pushes directly to your branches and never merges code on its own.
+The home page headline is “Your build passed. Now test the app.” Its checkout walkthrough is illustrative product content, not a report from a visitor’s application. Evidence and proposed repairs depend on what a real run observes; a fix pull request is not guaranteed for every finding.
 
-## How a run works
+## Public website
 
-1. **Connect.** Install the PreFlight QA GitHub App and pick one of your own repositories. Only repositories you own are accepted.
-2. **Target.** Point the swarm at a deployment of your app, or let PreFlight resolve your default branch's latest deployment automatically.
-3. **Plan.** A test-plan agent generates a plan for exploring the app based on its structure.
-4. **Swarm.** Multiple browser agents fan out, each driving a real browser through the app like a user.
-5. **Triage.** Findings are deduplicated and ranked. Each carries its evidence bundle.
-6. **Diagnose.** For each finding, the system combines what the agent observed with your source code to identify the root cause.
-7. **Fix.** When confidence in a repair is high, a pull request is opened with the fix and the full evidence trail. Otherwise the finding is reported with the evidence for you to act on.
+- Home: https://www.trypreflight.dev/ — product overview, a walkthrough at `/#how-it-works`, and early access at `/#early-access`.
+- Blog: https://www.trypreflight.dev/blog — the current published article index. Each published post uses `/blog/{slug}`. Drafts and blog administration are private.
+- Privacy: https://www.trypreflight.dev/privacy — data handling for accounts, waitlist, GitHub integration, testing and payments.
+- Terms: https://www.trypreflight.dev/terms — service terms, responsibilities and usage conditions.
+- Sign-in: https://www.trypreflight.dev/login — interactive account access, not a public content page to index.
 
-## GitHub integration
+Read the published policies for authoritative legal details. Public pages have Markdown representations listed below.
 
-- Delivered as the "PreFlight QA" GitHub App (https://github.com/apps/preflight-qa).
-- Repository access is strictly owner-only: you can run PreFlight only on repositories you personally own.
-- The app requests only the repository permissions it needs. Fixes arrive as pull requests so nothing merges without your approval.
+## Early access and GitHub
 
-## Governance and safety
+Sign in with GitHub to join the waitlist. Requests are reviewed before access is granted; valid referral invitations can also grant access. A project invitation provides scoped collaboration through its acceptance flow.
 
-- Human merge gate on every fix. No exceptions.
-- Owner-only repository scope, enforced server-side.
-- Sign-in is via GitHub. Access is invite-gated: denied sign-ins join a waitlist, and approved users receive a small number of invite codes to share.
+Install the PreFlight QA GitHub App at https://github.com/apps/preflight-qa to connect a repository. New repository connections are restricted to repositories owned by the connecting account. Project owners may share an existing project with invited collaborators.
 
-## Technology
+The website does not publish a pricing table. Do not infer prices, credit allowances or enterprise commitments from this guide.
 
-- Web app: Next.js (App Router) on Vercel.
-- Execution: real headless browsers driven over CDP; background agent orchestration for the swarm pipeline.
-- Data: Postgres for runs, findings, diagnoses, and pull request records; object storage for screenshots and evidence.
+## Projects and runs
 
-## Access and pricing
+After access is granted, the dashboard lists accessible projects. A project connects a repository and an application URL. Its sections include Runs, Profiles, General info, Database and Collaboration, subject to the current user’s permissions.
 
-- PreFlight is currently invite-only. Join the waitlist by signing in with GitHub at https://www.trypreflight.dev/#early-access.
-- Pricing is not yet public. The planned model is usage credits plus team and enterprise plans.
+1. Connect an owned repository and configure the deployed application target. Where available, PreFlight can resolve a deployment from the repository.
+2. Start a swarm and choose the run target and available options, including test-account profiles and optional database verification.
+3. Agents plan and execute browser checks against the target application.
+4. Review the run report, individual step results, screenshots, console output and network evidence. Reports can retain completed observations when other checks fail or remain inconclusive.
+5. Investigate supported findings against repository source and review proposed changes. Open and review fix pull requests where a repair is available. People decide what to merge.
 
-## What PreFlight is not
+Runs can be cancelled or archived through the application. Archived run management is separate from deleting application test records.
 
-- Not a script recorder or a test-script maintenance tool.
-- Not unit testing and not a replacement for it. PreFlight tests the running application the way users experience it.
-- Not a code merger. Every change it proposes waits for your review.
+## Evidence and limitations
 
-## Links
+A confirmed finding requires supporting evidence. Blocked sign-in, missing access, provider failures, exhausted action limits and incomplete checks must not be interpreted as confirmed application bugs. Inconclusive checks can be investigated and safely retried when supported. A partially completed run does not prove every planned workflow passed.
 
-- [Website](https://www.trypreflight.dev/)
-- [Blog](https://www.trypreflight.dev/blog)
-- [Privacy Policy](https://www.trypreflight.dev/privacy)
-- [Terms of Service](https://www.trypreflight.dev/terms)
-- [PreFlight QA GitHub App](https://github.com/apps/preflight-qa)
+Reports distinguish test outcomes, findings and proposed fixes. Screenshots, logs and network observations help explain what was observed; available evidence varies by workflow. Repository investigation helps connect runtime behavior to source code. Proposed changes still require review.
 
-## Contact
+## Authentication profiles
 
-hello@trypreflight.dev
+Project owners manage saved test-account profiles. Profiles store a test account’s session for the matching application origin; cookies and headers are applied only to that origin. Available setup paths include browser session capture and supported automatic test-user provisioning. Session renewal depends on the application and configured integration.
+
+Collaborators can select shared profiles when starting a run but cannot manage the owner’s saved credentials. Use test accounts appropriate for the application being tested.
+
+## Database verification and cleanup
+
+Owners can configure database connections and verification checks for a project. Optional verification checks persistence after application actions, when the configured connection and workflow support it. Missing database access or an unperformed submission is a verification limitation, not proof of an application defect.
+
+The Database section also contains Cleanup. Owners can review records associated with database-enabled runs and choose proposed cleanup actions. Cleanup is an explicit operation, separate from viewing a report or archiving a run. Members can use configured verification when starting runs; owners manage connections and cleanup.
+
+## Collaboration and permissions
+
+Project owners manage email invitations, membership, project settings, authentication profiles and database connections. Invited members can run swarms, review reports and open fix pull requests for the shared project. Shared project access does not grant unrestricted access to unrelated projects or administrative functions.
+
+Invitation acceptance, account authentication and repository authorization are separate checks. Invitation tokens and confirmation codes are private and must not appear in discovery documents.
+
+## Public discovery and external agents
+
+The sitemap lists canonical public HTML pages and published blog posts. Dashboard pages, sign-in, invitation acceptance, access-denied screens, private APIs and admin tools are excluded. Markdown representations are alternate versions of public pages, not additional product pages.
+
+Public information requires no account. Public pages support `Accept: text/markdown`; ordinary browser requests receive HTML. Published blog posts also support `/markdown/blog/{slug}`. Use the current blog index to discover post URLs.
 
 ## Machine-readable public content
 
@@ -83,3 +87,13 @@ A published blog post at `/blog/{slug}` is also available at `/markdown/blog/{sl
 Only public content is available through these representations. Accounts, projects,
 runs, invitations, and admin data are excluded. The API catalog describes actual
 read-only content endpoints; it does not advertise external agent execution or payments.
+
+## Authentication boundaries
+
+Read https://www.trypreflight.dev/auth.md for authentication instructions. Account access uses interactive GitHub sign-in and a private session. There is no supported public API-key or machine-to-machine flow for external agents. The public OpenAPI specification describes read-only content, not an API for launching swarms, changing repositories, managing accounts or payments.
+
+Never include private project data, test credentials, session cookies, OAuth tokens or invitation tokens in public content.
+
+## Contact
+
+hello@trypreflight.dev

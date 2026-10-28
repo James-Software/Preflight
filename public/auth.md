@@ -29,7 +29,7 @@ authorization server for third-party agents. No MCP, A2A, or agent checkout
 endpoint is advertised by this website.
 
 The public OpenAPI document describes read-only content only. Dashboard APIs
-remain session-protected and enforce ownership and administrative checks.
+remain session-protected and enforce project membership, ownership and administrative checks.
 Access to public content does not grant permission to trigger test runs,
 change a repository, approve users, or make payments.
 

@@ -7,16 +7,13 @@ export const dynamic = "force-dynamic";
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const base = SITE_URL;
 
-  let posts: { slug: string; updated_at: string }[] = [];
-  try {
-    posts = await listPublishedPosts();
-  } catch {
-    posts = [];
-  }
+  // Surface database failures so crawlers retry instead of accepting a sitemap
+  // that silently drops every published article.
+  const posts = await listPublishedPosts();
 
   return [
     {
-      url: base,
+      url: `${base}/`,
       changeFrequency: "weekly",
       priority: 1,
     },

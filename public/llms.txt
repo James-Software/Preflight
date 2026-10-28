@@ -1,43 +1,30 @@
 # PreFlight
 
-> PreFlight sends a swarm of AI agents to test your web app like real users. Every bug they find comes back with evidence and a fix pull request.
+> Run AI agents through your app in real browsers. Review findings with screenshots, console logs and network traces.
 
-## What it does
+PreFlight helps developers and teams test deployed web applications, investigate problems against repository source, and review proposed fixes. Fix pull requests depend on the available evidence and a viable repair; they are not guaranteed for every finding. People review and merge changes.
 
-- A swarm of AI agents explores your web application in real browsers, acting like first-time users instead of following scripts.
-- Every finding ships with evidence: screenshots, console logs, and network traces.
-- Root-cause diagnosis pairs what the agents observed in the browser with your repository source code.
-- When the swarm is confident in a repair, it opens a GitHub pull request with the fix. A human merge gate always applies. Nothing is ever pushed directly to your branches.
+## Product workflow
 
-## How it works
+1. Sign in with GitHub and request early access. Install the PreFlight QA GitHub App and connect a repository you own.
+2. Choose an application deployment and configure a swarm run. Saved test-account profiles and optional database verification support authenticated workflows.
+3. Review run reports, step results, evidence, confirmed findings and inconclusive checks. A blocked or incomplete check does not establish an application bug.
+4. Investigate findings against repository source and review proposed fixes and pull requests.
+5. Project owners can invite collaborators. Members can run swarms, review reports and open fix PRs; owners manage invitations, settings, profiles and connections.
 
-1. Install the PreFlight QA GitHub App and connect a repository you own.
-2. Run a swarm against a deployment of your app.
-3. Review findings, each with attached evidence.
-4. Merge the fix pull requests you want.
+## Public pages
 
-## Who it is for
+- [Website](https://www.trypreflight.dev/): product overview, illustrative checkout walkthrough and early-access request.
+- [Blog](https://www.trypreflight.dev/blog): published articles; unpublished drafts are private.
+- [Privacy Policy](https://www.trypreflight.dev/privacy): data collection and use across the product.
+- [Terms of Service](https://www.trypreflight.dev/terms): conditions for using PreFlight.
 
-Developers and teams shipping web applications who want real-user testing without writing and maintaining end-to-end test scripts.
+## Access and reference
 
-## Access
-
-PreFlight is currently invite-only. Join the waitlist by signing in with GitHub at https://www.trypreflight.dev/#early-access.
-
-## Links
-
-- [Website](https://www.trypreflight.dev/)
-- [Blog](https://www.trypreflight.dev/blog)
-- [Privacy Policy](https://www.trypreflight.dev/privacy)
-- [Terms of Service](https://www.trypreflight.dev/terms)
-- [PreFlight QA GitHub App](https://github.com/apps/preflight-qa)
-
-## Contact
-
-hello@trypreflight.dev
-
----
-Full detail: https://www.trypreflight.dev/llms-full.txt
+- [Sign in or join the waitlist](https://www.trypreflight.dev/login): interactive GitHub authentication; access is reviewed.
+- [PreFlight QA GitHub App](https://github.com/apps/preflight-qa): repository connection.
+- [Full product reference](https://www.trypreflight.dev/llms-full.txt): workflows, collaboration, evidence and access boundaries.
+- Contact: hello@trypreflight.dev
 
 ## Machine-readable public content
 
