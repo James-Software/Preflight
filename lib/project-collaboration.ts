@@ -54,7 +54,8 @@ export async function removeProjectAccess(projectId: number, actor: string, inpu
   } else if (typeof input.userId === "string" && input.userId.length <= 250 && input.userId !== actor) {
     // Revoke accepted invitation too, so its link cannot restore removed access.
     await getSql()`WITH removed AS (DELETE FROM project_members m USING projects p
-      WHERE m.project_id=${projectId} AND p.id=m.project_id AND p.owner_github_id=${actor} AND m.user_id=${input.userId} RETURNING m.user_id)
+      WHERE m.project_id=${projectId} AND p.id=m.project_id AND p.owner_github_id=${actor} AND m.user_id=${input.userId} RETURNING m.user_id),
+      revoked_agents AS (UPDATE run_agent_grants SET revoked_at=NOW() WHERE project_id=${projectId} AND actor_id IN(SELECT user_id FROM removed) RETURNING id)
       UPDATE project_invitations SET status='revoked' WHERE project_id=${projectId} AND accepted_by IN(SELECT user_id FROM removed)`;
   } else throw new ProjectInviteError("Choose a collaborator or pending invitation.");
 }

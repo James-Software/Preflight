@@ -9,6 +9,9 @@ import { redirect, notFound } from "next/navigation";
 import { getProject, getRunReport } from "@/lib/schema";
 import RunReportRefresh from "@/components/RunReportRefresh";
 import CopyRunDetails from "@/components/CopyRunDetails";
+import CopyAgentPrompt from "@/components/CopyAgentPrompt";
+import RunAgentReviews from "@/components/RunAgentReviews";
+import { listAgentRunReviews } from "@/lib/run-agent-tools";
 import { runDetails, runStatusLabel } from "@/lib/run-details";
 
 export default async function RunReportPage({
@@ -37,6 +40,8 @@ export default async function RunReportPage({
   const report = await getRunReport(projectId, runNumber, owner);
   if (!report) notFound();
   const { run, findings } = report;
+  const canConnectAgent = !session?.user?.isTestUser && !owner.startsWith("test:");
+  const agentReviews = canConnectAgent ? await listAgentRunReviews(projectId, runNumber, owner) : [];
   const details = runDetails(report);
   const active = ["queued", "planning", "planned", "running"].includes(
     run.status,
@@ -51,9 +56,10 @@ export default async function RunReportPage({
           ← All runs
         </a>
         <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
-          <h1 className="text-3xl font-semibold tracking-tight">
+          <div className="flex min-w-0 flex-wrap items-center gap-3"><h1 className="text-3xl font-semibold tracking-tight">
             Run #{run.id}
           </h1>
+          {canConnectAgent && <CopyAgentPrompt projectId={projectId} runId={runNumber} />}</div>
           <div className="flex flex-wrap items-center gap-3">
             <CopyRunDetails details={JSON.stringify(details, null, 2)} />
             <RunArchiveButton
@@ -121,6 +127,7 @@ export default async function RunReportPage({
         <RunReportRefresh active={active} />
         <DatabaseCheckResults checks={report.databaseChecks || []} />
         <TestStepResults results={report.testResults || []} />
+        <RunAgentReviews reviews={agentReviews} />
         {!findings.length ? (
           <div className="mt-10 rounded-2xl bg-panel p-8">
             <h2 className="text-xl font-semibold">

@@ -177,6 +177,11 @@ export default function DatabaseCleanup({
               {item.summary && (
                 <p className="mt-3 text-sm text-muted">{item.summary}</p>
               )}
+              {item.agent_review && <div className="mt-3 border-l-2 border-line pl-3 text-sm text-muted">
+                <p className="font-medium">Agent assessment · {item.agent_review.outcome === "safe_to_cleanup" ? "Eligible when inspected" : item.agent_review.outcome === "unsafe_to_cleanup" ? "Not supported for cleanup" : "Needs more evidence"}</p>
+                <p className="mt-1 leading-relaxed">{item.agent_review.summary}</p>
+                <p className="mt-1 text-xs">This assessment does not approve deletion. Accept rechecks the record.</p>
+              </div>}
               {item.status === "pending" && (
                 <div className="mt-4 flex flex-wrap justify-end gap-3">
                   <button

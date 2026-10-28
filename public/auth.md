@@ -23,9 +23,15 @@ public documents, and do not ask users to paste session cookies into an agent.
 
 ## External agent access
 
-There is currently no supported API-key or machine-to-machine authentication
-flow for external agents. PreFlight is an OAuth client of GitHub, not an OAuth
-authorization server for third-party agents. No MCP, A2A, or agent checkout
+External agents can use an explicit, run-scoped review grant.
+PreFlight is an OAuth client of GitHub, not an OAuth
+authorization server for third-party agents. Run review is available through
+the authenticated run page's **Copy agent prompt** action. It issues a revocable,
+24-hour run-scoped bearer grant for the Streamable HTTP MCP endpoint at
+`https://www.trypreflight.dev/api/mcp`. Agents can review recorded evidence and
+pinned source, perform owner-authorized read-only database inspection, and save
+assessments. Cleanup still requires the owner's Accept/Deny decision. This is
+not a general OAuth service. No A2A or agent checkout
 endpoint is advertised by this website.
 
 The public OpenAPI document describes read-only content only. Dashboard APIs

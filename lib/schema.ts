@@ -177,6 +177,23 @@ async function initializeSchema(): Promise<void> {
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), decided_at TIMESTAMPTZ,
     UNIQUE(run_id, record_key)
   )`;
+  await sql`CREATE TABLE IF NOT EXISTS run_agent_grants (
+    id UUID PRIMARY KEY, project_id INT NOT NULL REFERENCES projects(id), run_id INT NOT NULL REFERENCES runs(id),
+    actor_id TEXT NOT NULL, actor_login TEXT NOT NULL, token_hash TEXT UNIQUE NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), expires_at TIMESTAMPTZ NOT NULL DEFAULT NOW()+INTERVAL '24 hours',
+    revoked_at TIMESTAMPTZ, last_used_at TIMESTAMPTZ
+  )`;
+  await sql`CREATE INDEX IF NOT EXISTS run_agent_grants_actor ON run_agent_grants(run_id,actor_id)`;
+  await sql`CREATE TABLE IF NOT EXISTS run_agent_reviews (
+    id UUID PRIMARY KEY, run_id INT NOT NULL REFERENCES runs(id), grant_id UUID NOT NULL REFERENCES run_agent_grants(id),
+    target_key TEXT NOT NULL, target_title TEXT NOT NULL, outcome TEXT NOT NULL, basis TEXT NOT NULL,
+    summary TEXT NOT NULL, evidence_hash TEXT NOT NULL, citations JSONB NOT NULL DEFAULT '[]'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), UNIQUE(grant_id,target_key)
+  )`;
+  await sql`CREATE TABLE IF NOT EXISTS run_agent_source_reads (
+    grant_id UUID NOT NULL REFERENCES run_agent_grants(id), path TEXT NOT NULL, sha TEXT NOT NULL,
+    line_count INT NOT NULL, PRIMARY KEY(grant_id,path)
+  )`;
   await sql`ALTER TABLE runs ADD COLUMN IF NOT EXISTS target_ref TEXT`;
   await sql`ALTER TABLE runs ADD COLUMN IF NOT EXISTS target_sha TEXT`;
   await sql`ALTER TABLE projects ADD COLUMN IF NOT EXISTS screenshot_retention_days INT`;
@@ -505,6 +522,8 @@ export async function createFinding(input: {
 }
 
 export type TestStepResult = {
+  id?: number;
+  agent_index?: number;
   step_id: string;
   title: string;
   status: string;
@@ -601,7 +620,7 @@ export async function getRunReport(
     await sql`SELECT check_id, title, button_label, status, summary, completed_at
     FROM run_database_checks WHERE run_id = ${runId} ORDER BY id`;
   const testResults =
-    await sql`SELECT t.step_id,t.title,t.status,t.summary,t.evidence,
+    await sql`SELECT t.id,t.agent_index,t.step_id,t.title,t.status,t.summary,t.evidence,
       CASE WHEN i.run_id IS NULL THEN NULL ELSE jsonb_build_object(
         'state',CASE WHEN i.state IN ('investigating','retesting') AND (i.lease_until<NOW() OR r.status NOT IN ('running','planning','planned','queued')) THEN 'unavailable' ELSE i.state END,
         'conclusion',i.conclusion,'summary',i.summary,'source_sha',i.source_sha,

@@ -23,6 +23,7 @@ export type CleanupItem = {
   bindings: string[];
   status: string;
   summary: string | null;
+  agent_review?: { outcome: string; summary: string; created_at: string };
 };
 const finalStatuses = ["done", "completed", "partial", "failed", "cancelled"];
 
@@ -42,7 +43,10 @@ export async function cleanupContext(
 
 export async function listCleanup(runId: number): Promise<CleanupItem[]> {
   const rows =
-    await getSql()`SELECT id,proposal,status,summary FROM run_database_cleanup WHERE run_id=${runId} ORDER BY created_at,id`;
+    await getSql()`SELECT c.id,c.proposal,c.status,c.summary,
+      (SELECT jsonb_build_object('outcome',v.outcome,'summary',v.summary,'created_at',v.created_at) FROM run_agent_reviews v
+        WHERE v.run_id=c.run_id AND v.target_key='cleanup:'||c.id::text ORDER BY v.created_at DESC LIMIT 1) AS agent_review
+      FROM run_database_cleanup c WHERE c.run_id=${runId} ORDER BY c.created_at,c.id`;
   return (rows as StoredProposal[]).map((row) => ({
     id: row.id,
     table: `public.${row.proposal.record.table}`,
@@ -54,6 +58,8 @@ export async function listCleanup(runId: number): Promise<CleanupItem[]> {
     ],
     status: row.status,
     summary: row.summary,
+    ...((row as StoredProposal & { agent_review?: CleanupItem["agent_review"] }).agent_review
+      ? { agent_review: (row as StoredProposal & { agent_review: NonNullable<CleanupItem["agent_review"]> }).agent_review } : {}),
   }));
 }
 
