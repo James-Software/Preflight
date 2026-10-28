@@ -39,7 +39,7 @@ function models() {
   return load("lib/models.ts", {
     "@/lib/model-config": {
       MODEL_CONFIG: {
-        driver: { model: "openai/gpt-5.6-luna" },
+        driver: { model: "openai/gpt-6-luna" },
         judge: { provider: "openai-decisions", model: "gpt-6-luna" },
       },
     },

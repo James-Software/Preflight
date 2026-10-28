@@ -14,7 +14,7 @@ const judgeProvider = (process.env.JUDGE_PROVIDER ||
 export const MODEL_CONFIG = {
   driver: {
     provider: "openrouter-chat" as const,
-    model: process.env.DRIVER_MODEL || "openai/gpt-5.6-luna",
+    model: process.env.DRIVER_MODEL || "openai/gpt-6-luna",
   },
   judge: {
     provider: judgeProvider,

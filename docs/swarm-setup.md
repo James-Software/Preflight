@@ -44,7 +44,7 @@ JUDGE_PROVIDER=openai-decisions
 JUDGE_MODEL=gpt-6-luna
 ```
 
-Retain `OPENROUTER_API_KEY` for the browser driver. Its default is still `openai/gpt-5.6-luna`; `DRIVER_MODEL` can override it. The judge's direct OpenAI model ID has no `openai/` prefix. Deploy the workers with the code change after adding the environment variables. Do not paste keys into chat or commit them. A key being present does not prove account/model access; an authorized live run is required to verify that.
+Retain `OPENROUTER_API_KEY` for the browser driver. Its default is `openai/gpt-6-luna`; `DRIVER_MODEL` can override it. The judge's direct OpenAI model ID has no `openai/` prefix. Deploy the workers with the code change after adding the environment variables. Do not paste keys into chat or commit them. A key being present does not prove account/model access; an authorized live run is required to verify that.
 
 Each step sends one named `predicate` question and reads its probability: `p >= 0.5` is pass, otherwise fail. Confidence is the probability of the selected verdict (`max(p, 1-p)`). Bug triage sends one named `choice` question with low, medium, high and critical options, preserving OpenAI's returned confidence. API requests use `{model, input, questions: [...]}`; responses contain an ordered `answers` array. This is a separate contract from the old OpenRouter alpha adapter's `state`/question-map format.
 
