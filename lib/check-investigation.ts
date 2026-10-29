@@ -10,6 +10,8 @@ export type CheckInvestigation = {
   deployment_verified?: boolean;
   citations?: SourceCitation[];
   retest_status?: string | null;
+  failure_stage?: string | null;
+  regression?: { outcome: string; summary: string; output: string; test: string; loadedPaths: string[]; exitCode: number } | null;
 };
 
 /** Extra browser time is for observation, never repeating a submission. */

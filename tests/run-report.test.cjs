@@ -69,7 +69,7 @@ test("unconfirmed and legacy review observations have no mandatory review queue"
     }),
   );
   assert.doesNotMatch(html, /needs review|need review|approve/i);
-  assert.match(html, /2.*not confirmed/);
+  assert.match(html, /2.*awaiting verification/);
   assert.match(html, /<details/);
   assert.doesNotMatch(html, /<details open/);
 });

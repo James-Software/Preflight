@@ -25,6 +25,7 @@ export interface Run {
   project_id: number;
   status: string;
   failure_reason?: string | null;
+  verification_version?: number;
   plan: unknown;
   target_url: string | null;
   created_at: string;
@@ -233,13 +234,17 @@ async function initializeSchema(): Promise<void> {
     run_id INT NOT NULL REFERENCES runs(id), agent_index INT NOT NULL, step_id TEXT NOT NULL,
     budget_slot INT NOT NULL CHECK(budget_slot>=0 AND budget_slot<3),
     state TEXT NOT NULL DEFAULT 'investigating', worker_token UUID NOT NULL,
-    lease_until TIMESTAMPTZ NOT NULL DEFAULT NOW()+INTERVAL '12 minutes',
+    lease_until TIMESTAMPTZ NOT NULL DEFAULT NOW()+INTERVAL '20 minutes',
     original_summary TEXT NOT NULL, original_evidence TEXT,
     conclusion TEXT, summary TEXT, source_sha TEXT, deployment_verified BOOLEAN NOT NULL DEFAULT FALSE,
     citations JSONB NOT NULL DEFAULT '[]'::jsonb, retest_status TEXT,
     created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), completed_at TIMESTAMPTZ,
     PRIMARY KEY(run_id,agent_index,step_id), UNIQUE(run_id,budget_slot)
   )`;
+  await sql`ALTER TABLE run_check_investigations ADD COLUMN IF NOT EXISTS failure_stage TEXT`;
+  await sql`ALTER TABLE run_check_investigations ADD COLUMN IF NOT EXISTS regression JSONB`;
+  await sql`ALTER TABLE run_check_investigations ADD COLUMN IF NOT EXISTS sandbox_executions INT NOT NULL DEFAULT 0`;
+  await sql`ALTER TABLE runs ADD COLUMN IF NOT EXISTS verification_version INT NOT NULL DEFAULT 0`;
   // Legacy rows use slots 0–2; new claims use the test-result ID + 3.
   // Keep unique claims without imposing the old three-check run limit.
   await sql`ALTER TABLE run_check_investigations DROP CONSTRAINT IF EXISTS run_check_investigations_budget_slot_check`;
@@ -543,7 +548,7 @@ export async function recordTestResult(
   await getSql()`INSERT INTO run_test_results(run_id,agent_index,step_id,title,status,summary,evidence,retry_context)
     VALUES(${runId},${agentIndex},${result.step_id},${result.title.slice(0, 200)},${result.status},${result.summary.slice(0, 1000)},${result.evidence?.slice(0, 8000) || null},${JSON.stringify(result.retry_context ?? null)}::jsonb)
     ON CONFLICT(run_id,agent_index,step_id) DO UPDATE SET status=EXCLUDED.status,summary=EXCLUDED.summary,evidence=EXCLUDED.evidence,retry_context=EXCLUDED.retry_context,completed_at=NOW()
-    WHERE ${replace} AND (NOT ${onlyUnresolved} OR run_test_results.status IN ('inconclusive','needs_review','not_tested'))`;
+    WHERE ${replace} AND (NOT ${onlyUnresolved} OR run_test_results.status IN ('inconclusive','needs_review','not_tested','blocked'))`;
 }
 
 export interface DatabaseCheckReport {
@@ -624,7 +629,7 @@ export async function getRunReport(
       CASE WHEN i.run_id IS NULL THEN NULL ELSE jsonb_build_object(
         'state',CASE WHEN i.state IN ('investigating','retesting') AND (i.lease_until<NOW() OR r.status NOT IN ('running','planning','planned','queued')) THEN 'unavailable' ELSE i.state END,
         'conclusion',i.conclusion,'summary',i.summary,'source_sha',i.source_sha,
-        'deployment_verified',i.deployment_verified,'citations',i.citations,'retest_status',i.retest_status) END AS investigation
+        'deployment_verified',i.deployment_verified,'citations',i.citations,'retest_status',i.retest_status,'failure_stage',i.failure_stage,'regression',i.regression) END AS investigation
       FROM run_test_results t JOIN runs r ON r.id=t.run_id
       LEFT JOIN run_check_investigations i ON i.run_id=t.run_id AND i.agent_index=t.agent_index AND i.step_id=t.step_id
       WHERE t.run_id=${runId} ORDER BY t.id`;

@@ -91,7 +91,7 @@ export default async function Dashboard() {
             ))}
           </ul>
         )}
-        <InviteCard />
+        {!session.user.isTestUser && !githubId.startsWith("test:") && <InviteCard />}
       </div>
     </main>
   );

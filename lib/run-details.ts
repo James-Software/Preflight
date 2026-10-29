@@ -73,6 +73,8 @@ export function runDetails(report: {
         deploymentVerified: r.investigation.deployment_verified,
         citations: r.investigation.citations,
         retestStatus: r.investigation.retest_status,
+        failureStage: r.investigation.failure_stage,
+        regression: r.investigation.regression,
       } } : {}),
     })),
     database: checks.map((c) => ({

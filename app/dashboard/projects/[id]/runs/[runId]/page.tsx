@@ -1,3 +1,4 @@
+import { recoverLegacyVerification } from "@/lib/verification-recovery";
 import DatabaseCheckResults from "@/components/DatabaseCheckResults";
 import TestStepResults from "@/components/TestStepResults";
 import { BranchIcon } from "@/components/GitIcons";
@@ -42,8 +43,9 @@ export default async function RunReportPage({
   const { run, findings } = report;
   const canConnectAgent = !session?.user?.isTestUser && !owner.startsWith("test:");
   const agentReviews = canConnectAgent ? await listAgentRunReviews(projectId, runNumber, owner) : [];
+  const recoveryQueued = canConnectAgent && await recoverLegacyVerification(run, report.testResults || []);
   const details = runDetails(report);
-  const active = ["queued", "planning", "planned", "running"].includes(
+  const active = recoveryQueued || ["queued", "planning", "planned", "running"].includes(
     run.status,
   );
   return (

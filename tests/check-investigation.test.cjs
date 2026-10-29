@@ -106,7 +106,7 @@ test("reports show source hypotheses separately from confirmed browser findings"
   assert.match(html, /Possible cause in source/);
   assert.match(html, /deployed version could not be verified/);
   assert.match(html, /app\/projects.ts:2–4/);
-  assert.match(html, /Not confirmed/);
+  assert.match(html, /Verification incomplete/);
   assert.doesNotMatch(html, /Approve|Needs review/);
 });
 
@@ -115,8 +115,10 @@ function investigationQueue({ count = 8, cancel = false, failFirst = false } = {
   const batches = [];
   const plan = Array.from({ length: count }, (_, n) => ({ id: `check-${n}`, title: `Check ${n}` }));
   const worker = load("src/trigger/investigate-checks.ts", {
+    "@/lib/autonomous-regression": { verifySourceRegression: async () => null },
     "@/lib/db": { getSql: () => async (parts) => {
       const query = parts.join("?");
+      if (query.includes("UPDATE runs SET verification_version")) return [];
       if (query.includes("SELECT plan")) return [{ plan }];
       if (query.includes("SELECT t.agent_index")) return plan.map(s => ({ agent_index: 0, step_id: s.id }));
       if (query.includes("SELECT id FROM runs")) return running ? [{ id: 1 }] : [];

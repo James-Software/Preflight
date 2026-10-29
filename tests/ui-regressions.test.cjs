@@ -67,6 +67,7 @@ test("run summaries fetch finding counts with the initial history query", async 
 });
 function reportPage(user, getProject, getRunReport) {
   return load("app/dashboard/projects/[id]/runs/[runId]/page.tsx", {
+    "@/lib/verification-recovery": { recoverLegacyVerification: async () => false },
     "@/auth": { auth: async () => (user ? { user } : null) },
     "next/navigation": {
       redirect: (url) => {

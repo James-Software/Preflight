@@ -76,6 +76,7 @@ const { load } = require("./load-module.cjs");
   }).browserAgent;
   let failCodeModel = false;
   const investigationTasks = load("src/trigger/investigate-checks.ts", {
+    "@/lib/autonomous-regression": { verifySourceRegression: async () => null },
     ...deps, "@/lib/schema": schema, "@/lib/check-investigation": policy,
     "@/lib/investigation-source": broker, "@/lib/auth-profiles": {}, "@/lib/browser-auth": {},
     "@/lib/site": { SITE_URL: "https://www.trypreflight.dev" },
@@ -120,13 +121,13 @@ const { load } = require("./load-module.cjs");
     });
     const result = await task.run({ runId: run.id });
     assert.equal(result.investigated, 5);
-    assert.equal(launches, 3);
+    assert.equal(launches, 5);
     assert.equal(writes, 0);
     const rows = await sql`SELECT step_id,status FROM run_test_results WHERE run_id=${run.id}`;
     assert.equal(rows.find((r) => r.step_id === "passed").status, "passed");
     assert.equal(rows.find((r) => r.step_id === "navigation").status, "passed");
     assert.equal(rows.find((r) => r.step_id === "broken").status, "confirmed");
-    assert.equal(rows.find((r) => r.step_id === "unsafe").status, "inconclusive");
+    assert.equal(rows.find((r) => r.step_id === "unsafe").status, "passed");
     await schema.recordTestResult(run.id, 0, { step_id: "passed", title: "Already passed", status: "inconclusive", summary: "Late follow-up must not overwrite success" }, true, true);
     assert.equal((await sql`SELECT status FROM run_test_results WHERE run_id=${run.id} AND step_id='passed'`)[0].status, "passed");
     const findings = await sql`SELECT * FROM findings WHERE run_id=${run.id}`;
@@ -134,12 +135,12 @@ const { load } = require("./load-module.cjs");
     const investigations = await sql`SELECT * FROM run_check_investigations WHERE run_id=${run.id} ORDER BY created_at`;
     assert.equal(investigations.length, 5);
     assert.ok(investigations.every((i) => i.original_evidence === "Original browser evidence" && i.source_sha === sha));
-    assert.equal(investigations.find((i) => i.step_id === "unsafe").retest_status, "not_retried");
-    assert.equal(investigations.find((i) => i.step_id === "blocked").retest_status, "not_retried");
-    assert.equal(rows.find(r => r.step_id === "blocked").status, "blocked");
+    assert.equal(investigations.find((i) => i.step_id === "unsafe").retest_status, "passed");
+    assert.equal(investigations.find((i) => i.step_id === "blocked").retest_status, "passed");
+    assert.equal(rows.find(r => r.step_id === "blocked").status, "passed");
     assert.equal(investigations.find((i) => i.step_id === "navigation").conclusion, "bug_hypothesis");
     assert.equal((await task.run({ runId: run.id })).investigated, 0);
-    assert.equal(launches, 3);
+    assert.equal(launches, 5);
     const report = await schema.getRunReport(project.id, run.id, "owner-id");
     assert.equal(report.testResults.find((r) => r.step_id === "navigation").investigation.retest_status, "passed");
     assert.equal(await schema.getRunReport(project.id, run.id, "other-owner"), null);
@@ -167,7 +168,7 @@ const { load } = require("./load-module.cjs");
     const beforeConcurrent = launches;
     await Promise.all([task.run({ runId: run3.id }), task.run({ runId: run3.id })]);
     assert.equal((await sql`SELECT COUNT(*)::int AS c FROM run_check_investigations WHERE run_id=${run3.id}`)[0].c, 4);
-    assert.equal(launches, beforeConcurrent);
+    assert.equal(launches, beforeConcurrent + 4);
     console.log(JSON.stringify({ concurrentTaskDeliveryWithoutDuplicateClaims: true, lateResultCannotOverwritePassedCheck: true }));
 
     // The real parent invokes the follow-up before finalizing coverage/status.
@@ -193,6 +194,25 @@ const { load } = require("./load-module.cjs");
     assert.equal((await sql`SELECT status FROM runs WHERE id=${run4.id}`)[0].status, "done");
     assert.equal((await sql`SELECT status FROM run_test_results WHERE run_id=${run4.id}`)[0].status, "passed");
     console.log(JSON.stringify({ parentAutomaticallyInvestigates: true, recoveredCoverageFinalizesAsCompleted: true }));
+
+    // An old partial report with completed failed investigations recovers in place.
+    const legacy = await schema.createRun(project.id, origin, { repoFullName: "owner/app", targetSha: sha });
+    await sql`UPDATE runs SET status='partial',plan=${JSON.stringify([plan[1]])}::jsonb WHERE id=${legacy.id}`;
+    await schema.recordTestResult(legacy.id, 0, { step_id: "navigation", title: "Navigation", status: "inconclusive", summary: "Action limit", evidence: "Original legacy observations", retry_context: { safe: false, startPath: "/" } });
+    await sql`INSERT INTO run_check_investigations(run_id,agent_index,step_id,worker_token,original_summary,original_evidence,budget_slot,state)
+      VALUES(${legacy.id},0,'navigation',${randomUUID()}::uuid,'Old source failure','Original legacy observations',0,'completed')`;
+    drivers.clear();
+    const recovery = load("src/trigger/recover-run-verification.ts", {
+      ...deps, "@/lib/schema": schema,
+      "@/lib/run-authentication": { renewRunAuthentication: async () => false },
+      "@trigger.dev/sdk": { task: x => x, tasks: { triggerAndWait: async (_id, payload) => ({ ok: true, output: await task.run(payload) }) } },
+    }).recoverRunVerification;
+    assert.equal((await recovery.run({ runId: legacy.id, projectId: project.id })).recovered, true);
+    assert.equal((await sql`SELECT status FROM runs WHERE id=${legacy.id}`)[0].status, "done");
+    assert.equal((await sql`SELECT status FROM run_test_results WHERE run_id=${legacy.id}`)[0].status, "passed");
+    assert.equal((await sql`SELECT original_evidence FROM run_check_investigations WHERE run_id=${legacy.id}`)[0].original_evidence, "Original legacy observations");
+    assert.equal((await recovery.run({ runId: legacy.id, projectId: project.id })).recovered, false);
+    console.log(JSON.stringify({ oldPartialReportRecovered: true, originalWriteNotReplayed: true, repeatRecoverySpentNothing: true }));
 
     // Signed requests still need the live owner/run/step grant, not just a shared secret.
     const grant = investigations[0];

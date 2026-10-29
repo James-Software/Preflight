@@ -22,12 +22,13 @@ export default function TestStepResults({
         {results.filter((r) => r.status === "confirmed").length} reproduced
         failures · {results.filter((r) => r.status === "blocked").length}{" "}
         blocked ·{" "}
+        {results.filter(r => ["code_confirmed", "code_passed"].includes(r.status)).length} verified in source ·{" "}
         {
           results.filter((r) =>
             ["needs_review", "inconclusive", "not_tested"].includes(r.status),
           ).length
         }{" "}
-        not confirmed
+        awaiting verification
       </p>
       {investigated.length > 0 && (
         <details className="mt-4 rounded-lg border border-line bg-panel px-4">
@@ -35,7 +36,7 @@ export default function TestStepResults({
             Automatic investigation · {investigated.length} {investigated.length === 1 ? "check" : "checks"}
           </summary>
           <p className="pb-3 text-xs leading-relaxed text-muted">
-            Source review helps explain observations. Findings still require independent browser reproduction.
+            Verification combines source review, browser checks and isolated regression tests. Source tests and deployed browser results are reported separately.
           </p>
           <ul className="divide-y divide-line">
             {investigated.map((r, index) => {
@@ -49,7 +50,9 @@ export default function TestStepResults({
                       {working ? review.state === "retesting" ? "Checking in browser…" : "Reading source…"
                         : review.retest_status === "passed" ? "Passed on follow-up"
                           : review.retest_status === "confirmed" ? "Independently reproduced"
-                            : "Not confirmed"}
+                            : review.retest_status === "code_confirmed" ? "Bug reproduced in source test"
+                              : review.retest_status === "code_passed" ? "Source regression passed"
+                                : "Verification incomplete"}
                     </span>
                   </div>
                   {review.conclusion && <p className="mt-2 text-xs font-medium text-muted">{({ bug_hypothesis: "Possible cause in source", expected_behavior: "Expected behavior in source", blocked: "Missing prerequisite in source", unresolved: "Source review inconclusive" } as Record<string, string>)[review.conclusion] || "Source review inconclusive"}</p>}
@@ -58,6 +61,15 @@ export default function TestStepResults({
                     <p className="mt-2 text-xs text-muted">{review.retest_status === "not_retried"
                       ? "A browser follow-up could not safely repeat this workflow."
                       : "The browser follow-up was unavailable. Original observations were kept."}</p>
+                  )}
+                  {review.regression && (
+                    <details className="mt-3 text-xs text-muted">
+                      <summary className="min-h-11 cursor-pointer py-3">Executed source regression</summary>
+                      <p>{review.regression.summary}</p>
+                      <p className="mt-2">Scope: repository code; deployed browser behavior is separate.</p>
+                      <pre className="mt-2 max-h-60 overflow-auto whitespace-pre-wrap break-words">{review.regression.output}</pre>
+                      <pre className="mt-2 max-h-60 overflow-auto whitespace-pre-wrap break-words">{review.regression.test}</pre>
+                    </details>
                   )}
                   {review.source_sha && (
                     <p className="mt-2 text-xs text-muted">
@@ -97,7 +109,7 @@ export default function TestStepResults({
                       ? "Blocked"
                       : r.status === "not_tested"
                         ? "Not completed"
-                        : "Not confirmed"}
+: "Verification incomplete"}
                   </span>
                 </div>
                 <p className="mt-2 text-sm leading-relaxed text-muted">
