@@ -156,3 +156,23 @@ test("an unavailable batch does not prevent remaining checks from being investig
   assert.equal((await queue.run()).investigated, 5);
   assert.equal(queue.batches.length, 3);
 });
+test("source citation IDs resolve to server-owned exact source without model line counting", async () => {
+  const files = { "auth.ts": "export function allowed() {\n  return false;\n}\n" };
+  const result = await policy.reviewWithSourceCitations(files, async catalog => {
+    assert.equal(catalog["auth.ts:1"].quote, files["auth.ts"]);
+    return { conclusion: "blocked", summary: "Access is denied in source.", retestGuidance: "Inspect current access.", citations: [{ id: "auth.ts:1" }] };
+  }, async () => true);
+  assert.deepEqual(result.citations, [{ path: "auth.ts", start: 1, end: 4 }]);
+});
+test("a rejected citation receives one repair attempt and fabricated IDs cannot pass", async () => {
+  const files = { "auth.ts": "return false;" };
+  let attempts = 0;
+  const generate = async (_catalog, correction) => {
+    attempts++;
+    if (attempts > 1) assert.match(correction.error, /citation IDs/);
+    return { conclusion: "blocked", summary: "Missing access.", retestGuidance: "Inspect access.", citations: [{ id: attempts === 1 ? "invented:1" : "auth.ts:1" }] };
+  };
+  assert.equal((await policy.reviewWithSourceCitations(files, generate, async () => true)).conclusion, "blocked");
+  assert.equal(attempts, 2);
+  await assert.rejects(policy.reviewWithSourceCitations(files, async () => ({ citations: [{ id: "invented:1" }] }), async () => true), /citation IDs/);
+});

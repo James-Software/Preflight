@@ -63,3 +63,41 @@ export function validateCodeReview(raw: any, files: Record<string, string>) {
     retestGuidance: raw.retestGuidance.trim(),
   };
 }
+
+/** The model selects source blocks; the server supplies exact lines and quotes. */
+export function sourceCitationCatalog(files: Record<string, string>) {
+  const blocks: Record<string, { path: string; start: number; end: number; quote: string }> = {};
+  for (const [path, source] of Object.entries(files)) {
+    const lines = source.split("\n");
+    for (let index = 0; index < lines.length; index += 20) {
+      const end = Math.min(index + 20, lines.length);
+      blocks[`${path}:${index + 1}`] = { path, start: index + 1, end, quote: lines.slice(index, end).join("\n") };
+    }
+  }
+  return blocks;
+}
+
+export async function reviewWithSourceCitations(
+  files: Record<string, string>,
+  generate: (catalog: ReturnType<typeof sourceCitationCatalog>, correction: unknown) => Promise<any>,
+  active: () => Promise<boolean>,
+) {
+  const catalog = sourceCitationCatalog(files);
+  let correction: unknown = null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    if (!(await active())) throw new Error("Source review is no longer active.");
+    const raw = await generate(catalog, correction);
+    try {
+      const citations = raw?.citations?.map((citation: any) => {
+        if (typeof citation?.id !== "string") return citation;
+        if (!Object.hasOwn(catalog, citation.id)) throw new Error("Select only citation IDs provided in the source catalog.");
+        return catalog[citation.id];
+      });
+      return validateCodeReview({ ...raw, citations }, files);
+    } catch (error) {
+      if (attempt === 1) throw error;
+      correction = { response: raw, error: error instanceof Error ? error.message : "Invalid source review" };
+    }
+  }
+  throw new Error("Source review could not be validated.");
+}
