@@ -47,6 +47,7 @@ test('sandbox setup never receives production secrets or network access and alwa
       assert.ok(options.timeout <= 90000);
       return { writeFiles: async files => {
         assert.equal(files.length, 3);
+        assert.ok(files.every(file => file.path.startsWith("/vercel/sandbox/")));
         assert.match(files[0].content.toString(), /feature.ts/);
       }, runCommand: async () => { throw new Error('VM timed out'); }, stop: async () => { stopped = true; } };
     } } },
@@ -63,7 +64,7 @@ test('the uploaded harness executes actual transpiled source and retains its ass
   const api = load('lib/investigation-regression.ts', {
     '@/lib/check-investigation': { investigationSourcePath: () => true },
     '@vercel/sandbox': { Sandbox: { create: async () => ({
-      writeFiles: async files => { for (const file of files) await fs.writeFile(path.join(dir, file.path), file.content); },
+      writeFiles: async files => { for (const file of files) await fs.writeFile(path.join(dir, path.basename(file.path)), file.content); },
       runCommand: async command => {
         let result;
         const testEnv = { ...process.env }; delete testEnv.NODE_TEST_CONTEXT;
@@ -71,7 +72,7 @@ test('the uploaded harness executes actual transpiled source and retains its ass
         catch (error) { result = error; }
         return { exitCode: result.code, stdout: async () => result.stdout, stderr: async () => result.stderr };
       },
-      readFileToBuffer: async ({ path: file }) => fs.readFile(path.join(dir, file)).catch(() => null), stop: async () => {},
+      readFileToBuffer: async ({ path: file }) => fs.readFile(path.join(dir, path.basename(file))).catch(() => null), stop: async () => {},
     }) } },
   });
   const result = await api.executeRegression({ 'lib/feature.ts': 'export function double(value: number) { return value * 3; }' }, `

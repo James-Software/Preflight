@@ -48,13 +48,13 @@ export async function executeRegression(files: Record<string, string>, test: str
   });
   try {
     await sandbox.writeFiles([
-      { path: "modules.json", content: Buffer.from(JSON.stringify(modules)) },
-      { path: "harness.cjs", content: Buffer.from(REGRESSION_HARNESS) },
-      { path: "regression.test.cjs", content: Buffer.from(test) },
+      { path: "/vercel/sandbox/modules.json", content: Buffer.from(JSON.stringify(modules)) },
+      { path: "/vercel/sandbox/harness.cjs", content: Buffer.from(REGRESSION_HARNESS) },
+      { path: "/vercel/sandbox/regression.test.cjs", content: Buffer.from(test) },
     ]);
     const result = await sandbox.runCommand({ cmd: "node", args: ["--test", "--test-reporter=tap", "regression.test.cjs"], cwd: "/vercel/sandbox" });
     const output = ((await result.stdout()) + "\n" + (await result.stderr())).slice(0, 24000);
-    const loaded = await sandbox.readFileToBuffer({ path: "loaded.json" });
+    const loaded = await sandbox.readFileToBuffer({ path: "/vercel/sandbox/loaded.json" });
     const paths = loaded ? JSON.parse(loaded.toString("utf8")) : [];
     return { exitCode: result.exitCode, output, loadedPaths: Array.isArray(paths) ? paths.filter(p => typeof p === "string" && Object.hasOwn(modules, p)) : [] };
   } finally { await sandbox.stop(); }

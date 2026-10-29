@@ -1,11 +1,11 @@
-import { task, tasks } from "@trigger.dev/sdk";
+import { schedules, task, tasks } from "@trigger.dev/sdk";
 import { ensureSchema } from "@/lib/schema";
 import { getSql } from "@/lib/db";
 import { renewRunAuthentication } from "@/lib/run-authentication";
 
 /** Upgrade older partial reports in place without replaying the swarm's writes. */
 export const recoverRunVerification = task({
-  id: "recover-run-verification", maxDuration: 3600, retry: { maxAttempts: 1 },
+  id: "recover-run-verification", queue: { name: "verification-recovery", concurrencyLimit: 1 }, maxDuration: 3600, retry: { maxAttempts: 1 },
   run: async ({ runId, projectId }: { runId: number; projectId: number }) => {
     await ensureSchema();
     const sql = getSql();
@@ -34,5 +34,28 @@ export const recoverRunVerification = task({
         WHERE id=${runId} AND status='running'`;
     }
     return { recovered: true };
+  },
+});
+
+/** Recover legacy reports without depending on a person opening the page. */
+export const recoverPendingVerifications = schedules.task({
+  id: "recover-pending-verifications",
+  cron: { pattern: "*/5 * * * *", environments: ["PRODUCTION"] },
+  maxDuration: 60,
+  run: async () => {
+    await ensureSchema();
+    const rows = await getSql()`SELECT r.id,r.project_id FROM runs r
+      WHERE r.status='partial' AND r.archived_at IS NULL AND r.verification_version<2
+        AND EXISTS(SELECT 1 FROM run_test_results t WHERE t.run_id=r.id AND t.agent_index>=0
+          AND t.status IN ('inconclusive','needs_review','not_tested','blocked')
+          AND t.step_id NOT LIKE 'database-%' AND t.step_id NOT LIKE 'automatic-database%')
+      ORDER BY r.id LIMIT 5`;
+    let queued = 0;
+    for (const row of rows as any[]) {
+      await tasks.trigger("recover-run-verification", { runId: row.id, projectId: row.project_id },
+        { idempotencyKey: `recover-verification-v2:${row.id}` });
+      queued++;
+    }
+    return { queued };
   },
 });

@@ -205,7 +205,7 @@ const { load } = require("./load-module.cjs");
     const recovery = load("src/trigger/recover-run-verification.ts", {
       ...deps, "@/lib/schema": schema,
       "@/lib/run-authentication": { renewRunAuthentication: async () => false },
-      "@trigger.dev/sdk": { task: x => x, tasks: { triggerAndWait: async (_id, payload) => ({ ok: true, output: await task.run(payload) }) } },
+      "@trigger.dev/sdk": { task: x => x, schedules: { task: x => x }, tasks: { triggerAndWait: async (_id, payload) => ({ ok: true, output: await task.run(payload) }) } },
     }).recoverRunVerification;
     assert.equal((await recovery.run({ runId: legacy.id, projectId: project.id })).recovered, true);
     assert.equal((await sql`SELECT status FROM runs WHERE id=${legacy.id}`)[0].status, "done");

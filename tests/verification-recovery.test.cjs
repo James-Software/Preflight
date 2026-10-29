@@ -16,3 +16,22 @@ test('legacy recovery queues only unarchived partial reports with unresolved che
   assert.equal(await api.recoverLegacyVerification(run, [{ status: 'passed' }]), false);
   assert.equal(calls.length, 1);
 });
+test('production sweep queues legacy reports without page views using the same idempotency', async () => {
+  const calls = [];
+  const scheduled = load('src/trigger/recover-run-verification.ts', {
+    '@/lib/db': { getSql: () => async query => {
+      const sql = query.join('?');
+      assert.match(sql, /archived_at IS NULL/);
+      assert.match(sql, /verification_version<2/);
+      assert.match(sql, /LIMIT 5/);
+      return [{ id: 24, project_id: 7 }];
+    } },
+    '@/lib/schema': { ensureSchema: async () => {} }, '@/lib/run-authentication': {},
+    '@trigger.dev/sdk': { task: x => x, schedules: { task: x => x }, tasks: { trigger: async (...args) => calls.push(args) } },
+  }).recoverPendingVerifications;
+  assert.deepEqual(scheduled.cron.environments, ['PRODUCTION']);
+  assert.equal((await scheduled.run()).queued, 1);
+  assert.equal(calls[0][0], 'recover-run-verification');
+  assert.deepEqual(calls[0][1], { runId: 24, projectId: 7 });
+  assert.equal(calls[0][2].idempotencyKey, 'recover-verification-v2:24');
+});
