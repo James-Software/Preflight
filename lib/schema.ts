@@ -353,7 +353,10 @@ export async function listProjects(ownerGithubId: string): Promise<Project[]> {
            github_installation_id, screenshot_retention_days, display_name, image_url, created_at,
       (SELECT target_url FROM runs WHERE project_id = projects.id AND target_url IS NOT NULL AND (runs.repo_full_name = projects.repo_full_name OR runs.repo_full_name IS NULL) ORDER BY id DESC LIMIT 1) AS latest_target_url
     FROM projects
-    WHERE owner_github_id = ${ownerGithubId} OR EXISTS(SELECT 1 FROM project_members m WHERE m.project_id=projects.id AND m.user_id=${ownerGithubId})
+    WHERE (owner_github_id = ${ownerGithubId} OR EXISTS(SELECT 1 FROM project_members m WHERE m.project_id=projects.id AND m.user_id=${ownerGithubId}))
+      -- Demo copies use the sponsor's delegated connections, but belong only
+      -- in their guest's workspace, including after sign-out or grant expiry.
+      AND NOT EXISTS(SELECT 1 FROM guest_demo_sessions s WHERE s.project_id=projects.id AND s.actor_id<>${ownerGithubId})
     ORDER BY created_at DESC
   `;
   if (!Array.isArray(rows)) return [];

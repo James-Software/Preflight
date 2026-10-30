@@ -27,20 +27,25 @@ const { load } = require("./load-module.cjs");
   const code = randomBytes(32).toString("base64url"), hash = demo.demoLinkHash(code);
   const countProjects = async () => (await sql`SELECT count(*)::int AS n FROM projects`)[0].n;
   let cookie = null;
-  const normal = { user: { githubId: "normal-owner", name: "Existing user" }, expires: new Date(Date.now()+86400000).toISOString() };
+  const normal = { user: { githubId: "demo-owner", name: "Existing user" }, expires: new Date(Date.now()+86400000).toISOString() };
   const authentication = load("auth.ts", { ...deps, "next/headers": { cookies: async () => ({ get: () => cookie ? { value: cookie } : undefined }) },
     "next-auth": { default: () => ({ auth: async () => normal, handlers: {}, signIn() {}, signOut() {} }) }, "next-auth/providers/github": {},
   });
   try {
     await schema.ensureSchema();
-    const template = await schema.createProject("demo-owner", demo.DEMO_ORIGIN + "/", demo.DEMO_REPO, "Example template");
+    const template = await schema.createProject("demo-owner", demo.DEMO_ORIGIN + "/", demo.DEMO_REPO, "Margin");
+    const personal = await schema.createProject("demo-owner", "https://www.trypreflight.dev", "James-Software/Preflight", "Preflight");
     const databaseUrl = "postgresql://fixture:password@database.example/demo?sslmode=require";
     await connection.saveProjectDatabase(template.id, "demo-owner", { origin: demo.DEMO_ORIGIN, connectionString: databaseUrl, checks: [] });
     await sql`INSERT INTO guest_demo_links(token_hash,template_project_id) VALUES(${hash},${template.id})`;
     const one = await demo.enterGuestDemo(code), two = await demo.enterGuestDemo(code);
     assert.notEqual(one.actor_id, two.actor_id); assert.notEqual(one.project_id, two.project_id);
     assert.equal((await demo.enterGuestDemo(code, { actor: one.actor_id, projectId: one.project_id })).project_id, one.project_id);
-    assert.equal(await countProjects(), 3);
+    assert.equal(await countProjects(), 4);
+    const personalProjects = async () => (await schema.listProjects("demo-owner")).map(p => p.id).sort((a,b) => a-b);
+    assert.deepEqual(await personalProjects(), [template.id,personal.id]);
+    assert.deepEqual((await schema.listProjects(one.actor_id)).map(p => p.id), [one.project_id]);
+    assert.deepEqual((await schema.listProjects(two.actor_id)).map(p => p.id), [two.project_id]);
     assert.equal((await schema.getProject(one.project_id, one.actor_id, "member")).repo_full_name, demo.DEMO_REPO);
     assert.equal(await schema.getProject(one.project_id, one.actor_id), null);
     assert.equal(await schema.getProject(template.id, one.actor_id, "member"), null);
@@ -58,7 +63,8 @@ const { load } = require("./load-module.cjs");
     assert.equal(decoded.preflightGuestIdentity, true); assert.equal(decoded.githubLogin, undefined);
     assert.equal(await sessions.readGuestSession("forged-guest"), null);
     cookie = "forged-guest"; assert.equal(await authentication.auth(), null);
-    cookie = null; assert.equal((await authentication.auth()).user.githubId, "normal-owner");
+    cookie = null; assert.equal((await authentication.auth()).user.githubId, "demo-owner");
+    assert.deepEqual(await personalProjects(), [template.id,personal.id]);
     const request = (extra = {}) => new NextRequest("https://www.trypreflight.dev/demo/" + code, { headers: extra });
     let response = await route.GET(request({ cookie: `${demo.guestCookieName()}=${token.value}` }), { params: Promise.resolve({ code }) });
     assert.equal(response.status, 303); assert.equal(new URL(response.headers.get("location")).pathname, `/dashboard/projects/${one.project_id}`);
@@ -67,7 +73,7 @@ const { load } = require("./load-module.cjs");
     assert.ok(!setCookie.includes("authjs.session-token"));
     assert.equal(response.headers.get("referrer-policy"), "no-referrer"); assert.match(response.headers.get("cache-control"), /no-store/);
     response = await route.GET(request({ purpose: "prefetch" }), { params: Promise.resolve({ code }) });
-    assert.equal(response.status, 204); assert.equal(await countProjects(), 3);
+    assert.equal(response.status, 204); assert.equal(await countProjects(), 4);
     response = await route.GET(request(), { params: Promise.resolve({ code: "invalid" }) }); assert.equal(response.status, 404);
     const grant = { projectId: one.project_id, actor: one.actor_id, owner: "demo-owner", repo: demo.DEMO_REPO };
     await access.assertProjectRepositoryAccess(grant, new URL(`https://api.github.com/repos/${demo.DEMO_REPO}/branches`));
@@ -118,11 +124,27 @@ const { load } = require("./load-module.cjs");
     await assert.rejects(demo.enterGuestDemo(code), /expired/);
     await assert.rejects(access.assertProjectRepositoryAccess(grant, new URL(`https://api.github.com/repos/${demo.DEMO_REPO}`)), /ended/);
     await assert.rejects(agent.authenticateRunAgent(`Bearer ${bearer}`), /expired/);
+    assert.deepEqual(await personalProjects(), [template.id,personal.id]);
     const exit = load("app/demo/exit/route.ts", deps);
     assert.equal((await exit.POST(new NextRequest("https://www.trypreflight.dev/demo/exit", { method: "POST", headers: { origin: "https://evil.example" } }))).status, 403);
     response = await exit.POST(new NextRequest("https://www.trypreflight.dev/demo/exit?next=login", { method: "POST", headers: { origin: "https://www.trypreflight.dev" } }));
     assert.equal(response.status, 303); assert.match(response.headers.get("location"), /\/login$/); assert.match(response.headers.get("set-cookie"), /Max-Age=0/);
-    assert.equal(await countProjects(), 3);
-    console.log(JSON.stringify({ realPostgres: true, realEncryptedCookies: true, guestIsolation: true, databaseConnectionResealed: true, returningGuestReused: true, existingGitHubPreserved: true, tamperRejected: true, prefetchSkipped: true, repoWritesDenied: true, revocationImmediate: true, guestAgentGrantScoped: true, runConfigurationAndQueue: true, databaseVerificationSelected: true, exitOriginChecked: true }));
+    assert.equal(await countProjects(), 4);
+    // A successful OAuth callback clears only the guest cookie, preserving all
+    // Auth.js cookies. Failed OAuth attempts keep the usable demo session.
+    let oauthCookie = "__Secure-authjs.session-token=real-encrypted-session; Path=/; Secure; HttpOnly";
+    const authRoute = load("app/api/auth/[...nextauth]/route.ts", { ...deps, "@/auth": { auth: authentication.auth,
+      handlers: { GET: async () => new Response(null, { status: 302, headers: { location: "/dashboard", "set-cookie": oauthCookie } }) } } });
+    response = await authRoute.GET(new NextRequest("https://www.trypreflight.dev/api/auth/callback/github?code=fixture"));
+    assert.equal(response.status, 302); assert.equal(response.headers.get("location"), "/dashboard");
+    assert.match(response.headers.get("set-cookie"), /authjs.session-token=real-encrypted-session/);
+    assert.match(response.headers.get("set-cookie"), /__Host-preflight-guest=;.*Max-Age=0/);
+    oauthCookie = "__Secure-authjs.session-token=; Path=/; Max-Age=0";
+    response = await authRoute.GET(new NextRequest("https://www.trypreflight.dev/api/auth/callback/github?error=denied"));
+    assert.ok(!response.headers.get("set-cookie").includes("preflight-guest"));
+    oauthCookie = "__Secure-authjs.session-token.0=chunked-session; Path=/; Secure; HttpOnly";
+    response = await authRoute.GET(new NextRequest("https://www.trypreflight.dev/api/auth/callback/github?code=fixture"));
+    assert.match(response.headers.get("set-cookie"), /__Host-preflight-guest=/);
+    console.log(JSON.stringify({ realPostgres: true, realEncryptedCookies: true, guestIsolation: true, databaseConnectionResealed: true, returningGuestReused: true, existingGitHubPreserved: true, personalProjectsExcludeGuestCopies: true, loggedOutAndExpiredDemosStayHidden: true, successfulOAuthExitsGuest: true, failedOAuthPreservesGuest: true, tamperRejected: true, prefetchSkipped: true, repoWritesDenied: true, revocationImmediate: true, guestAgentGrantScoped: true, runConfigurationAndQueue: true, databaseVerificationSelected: true, exitOriginChecked: true }));
   } finally { await db.close(); }
 })().catch(error => { console.error(error); process.exitCode = 1; });

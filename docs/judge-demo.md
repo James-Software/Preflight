@@ -23,6 +23,10 @@ owner and scoped to that repository with membership and expiry rechecked on ever
 request. Guest GitHub writes and PR creation are blocked. Run-specific agent
 prompts work; their bearer grants also check the live guest invitation and session.
 Guest projects do not expose the original project's runs, profiles or screenshots.
+The sponsor's personal dashboard excludes all guest copies, even after a guest
+leaves or their grant expires. The guest still sees their own copy. Completing a
+GitHub OAuth callback clears the guest cookie while preserving the real account's
+session, so signing back in cannot keep the browser in guest mode.
 
 Invitation codes are random 32-byte base64url values. Only their SHA-256 hash is
 stored in `guest_demo_links`, with the template project ID and expiry. The link is
