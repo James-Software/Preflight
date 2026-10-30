@@ -75,7 +75,7 @@ export const PRIVACY_SECTIONS: { heading: string; body: string[] }[] = [
   {
     heading: "12. Contact",
     body: [
-      "Questions about this policy or your data? Email us at hello@trypreflight.dev and we will get back to you.",
+      "Questions about this policy or your data? Email us at james@trypreflight.dev and we will get back to you.",
     ],
   },
 ];
@@ -174,7 +174,7 @@ export const TERMS_SECTIONS: { heading: string; body: string[] }[] = [
   {
     heading: "16. Contact",
     body: [
-      "Questions about these terms? Email us at hello@trypreflight.dev.",
+      "Questions about these terms? Email us at james@trypreflight.dev.",
     ],
   },
 ];
