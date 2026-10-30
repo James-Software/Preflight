@@ -10,7 +10,7 @@ export const metadata: Metadata = { alternates: publicAlternates("/") };
 const structuredData = {
   "@context": "https://schema.org",
   "@graph": [
-    { "@type": "Organization", "@id": `${SITE_URL}/#organization`, name: "PreFlight", url: SITE_URL, email: "hello@trypreflight.dev" },
+    { "@type": "Organization", "@id": `${SITE_URL}/#organization`, name: "PreFlight", url: SITE_URL, email: "james@trypreflight.dev" },
     { "@type": "WebSite", "@id": `${SITE_URL}/#website`, name: "PreFlight", url: SITE_URL, publisher: { "@id": `${SITE_URL}/#organization` } },
     { "@type": "SoftwareApplication", name: "PreFlight", url: SITE_URL, applicationCategory: "DeveloperApplication", operatingSystem: "Web", description: SITE_DESCRIPTION, publisher: { "@id": `${SITE_URL}/#organization` } },
   ],
