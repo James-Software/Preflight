@@ -39,4 +39,4 @@ remain session-protected and enforce project membership, ownership and administr
 Access to public content does not grant permission to trigger test runs,
 change a repository, approve users, or make payments.
 
-Contact hello@trypreflight.dev for integration questions.
+Contact james@trypreflight.dev for integration questions.
