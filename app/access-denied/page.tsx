@@ -18,10 +18,10 @@ export default async function AccessDenied({
         <p className="mt-4 text-sm leading-relaxed text-muted">
           Expecting access? Email{" "}
           <a
-            href="mailto:hello@trypreflight.dev"
+            href="mailto:james@trypreflight.dev"
             className="font-medium text-primary underline underline-offset-4"
           >
-            hello@trypreflight.dev
+            james@trypreflight.dev
           </a>
           .
         </p>
