@@ -19,8 +19,8 @@ export const PRIVACY_SECTIONS: { heading: string; body: string[] }[] = [
   {
     heading: "3. Information from test runs",
     body: [
-      "When the agent swarm tests your application, it acts like a real user in a real browser. We collect what the test produces: the pages visited, screenshots, console output, network request metadata, and the findings it reports. The swarm only touches the URLs and environments you configure. Nothing else.",
-      "To diagnose failures, relevant portions of your repository code and test output are transmitted to our AI service providers. They process this data only to perform the diagnosis; we do not permit them to use it for any other purpose.",
+      "When the agent swarm tests your application, it acts like a real user in a real browser. We collect pages visited, screenshots, console output, network request metadata, and findings. Automated navigation is restricted to the configured app origin. The app may load public third-party resources. Use test accounts and preview deployments; authorized marked create workflows can create real test records.",
+      "To drive the browser and investigate failures, screenshots, page content, relevant repository code and test output are transmitted to our AI service providers. Processing and retention are governed by the applicable provider terms and settings configured for PreFlight. Saved screenshot evidence requires current project access or an authorized, expiring run-scoped agent credential.",
     ],
   },
   {
@@ -38,7 +38,7 @@ export const PRIVACY_SECTIONS: { heading: string; body: string[] }[] = [
   {
     heading: "6. How we share information",
     body: [
-      "Service providers. We share data with the providers that run PreFlight: hosting (Vercel), database (Neon), payments (Stripe), authentication, AI diagnosis (our model providers), and GitHub (to open pull requests). Each processes data only as needed to provide its service to us.",
+      "Service providers. We share data with providers that operate PreFlight, including Vercel (hosting and isolated execution), Neon (database and private evidence), Browserbase (browsers), Trigger.dev (background jobs), OpenRouter and OpenAI (AI requests), authentication providers, and GitHub (repository access and pull requests). Each receives the information needed for its role in the service.",
       "We do not sell your personal information or your code. We will disclose information if required by law or to protect the rights, safety, and security of PreFlight, our users, or others.",
     ],
   },

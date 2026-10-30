@@ -1,5 +1,6 @@
 import { task } from "@trigger.dev/sdk";
 import { getSql } from "@/lib/db";
+import { publicHtml, TargetAccessError } from "@/lib/public-http";
 
 type PlanStep = {
   id: string;
@@ -90,8 +91,8 @@ async function buildSmokePlan(appUrl: string): Promise<PlanStep[]> {
   ];
 
   try {
-    const res = await fetch(appUrl, { signal: AbortSignal.timeout(15000) });
-    if (!res.ok) {
+    const res = await publicHtml(appUrl);
+    if (res.status < 200 || res.status >= 300) {
       steps.push({
         id: "homepage-status",
         title: `Homepage returned HTTP ${res.status}`,
@@ -99,7 +100,7 @@ async function buildSmokePlan(appUrl: string): Promise<PlanStep[]> {
       });
       return steps;
     }
-    const html = await res.text();
+    const html = res.html;
 
     // Distinct internal links (cap at 10).
     const base = new URL(appUrl);
@@ -133,7 +134,8 @@ async function buildSmokePlan(appUrl: string): Promise<PlanStep[]> {
           "Fill required fields with realistic input, submit, and verify the outcome (success message, redirect, or validation).",
       });
     });
-  } catch {
+  } catch (error) {
+    if (error instanceof TargetAccessError) throw error;
     // Unreachable URL: keep the basic plan; the swarm will report the outage.
     steps.push({
       id: "url-unreachable",

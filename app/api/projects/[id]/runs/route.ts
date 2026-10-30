@@ -6,6 +6,7 @@ import {
 } from "@/lib/database-check-config";
 import { GithubRenewalUnavailable } from "@/lib/github-credentials";
 import { profileForRun } from "@/lib/auth-profiles";
+import { publicHttpUrl, TargetAccessError } from "@/lib/public-http";
 import { ProfileError } from "@/lib/auth-profile-state";
 import {
   parseRunTarget,
@@ -207,6 +208,11 @@ export async function POST(
       );
     }
     targetUrl = preview.url;
+  }
+
+  try { publicHttpUrl(targetUrl!); }
+  catch (error) {
+    return NextResponse.json({ error: error instanceof TargetAccessError ? error.message : "Choose a public deployment URL." }, { status: 400 });
   }
 
   if (

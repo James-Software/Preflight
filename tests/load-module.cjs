@@ -15,8 +15,16 @@ function load(relative, mocks) {
     },
   }).outputText;
   const module = { exports: {} };
-  const localRequire = (name) =>
-    Object.hasOwn(mocks, name) ? mocks[name] : require(name);
+  const localRequire = (name) => {
+    if (Object.hasOwn(mocks, name)) return mocks[name];
+    if (name.startsWith("@/")) {
+      const relative = name.slice(2);
+      for (const extension of [".ts", ".tsx"]) {
+        if (fs.existsSync(path.join(__dirname, "..", relative + extension))) return load(relative + extension, mocks);
+      }
+    }
+    return require(name);
+  };
   vm.runInThisContext(`(function(exports,require,module){${code}\n})`, {
     filename,
   })(module.exports, localRequire, module);

@@ -503,6 +503,11 @@ export default function RunSwarmButton({ projectId }: { projectId: number }) {
                 )}
               </>
             ) : null}
+            <p className="mt-4 text-xs leading-relaxed text-muted">
+              Use a preview deployment and a test account. Database verification
+              can create marked test records. Screenshots and page content are
+              processed by AI providers; saved evidence is private to your project.
+            </p>
             {error && (
               <div
                 role="alert"

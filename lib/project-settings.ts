@@ -1,4 +1,5 @@
 import sharp from "sharp";
+import { publicHttpUrl } from "@/lib/public-http";
 export class ProjectSettingsError extends Error {}
 export function parseProjectSettings(input: {
   displayName: unknown;
@@ -18,7 +19,7 @@ export function parseProjectSettings(input: {
   let appUrl: string | null = null;
   if (input.appUrl.trim()) {
     try {
-      const url = new URL(input.appUrl.trim());
+      const url = publicHttpUrl(input.appUrl.trim());
       if (
         !["http:", "https:"].includes(url.protocol) ||
         url.username ||

@@ -27,6 +27,8 @@ import {
 } from "@/lib/models";
 import { uploadScreenshot } from "@/lib/evidence";
 import { MODEL_CONFIG } from "@/lib/model-config";
+import { assertRunActive, RunStopped } from "@/lib/run-lifecycle";
+import { browserPolicy, BrowserPolicyError } from "@/lib/browser-policy";
 import {
   createAgent,
   updateAgentStatus,
@@ -146,6 +148,7 @@ export const browserAgent = task({
     readOnlyRetry?: { token: string; startPath?: string; guidance: string };
   }) => {
     const assertRetryActive = async () => {
+      await assertRunActive(payload.runId);
       if (!payload.readOnlyRetry) return;
       if (payload.assignment.steps.length !== 1 || payload.verifyDatabase || payload.assignment.steps[0].databaseCheckId)
         throw new Error("Invalid focused retry.");
@@ -163,6 +166,9 @@ export const browserAgent = task({
       [];
     const actionLog: string[] = [];
     let sessionId: string | null = null;
+    let runWatch: ReturnType<typeof setInterval> | undefined;
+    let watching = false;
+    let policy: ReturnType<typeof browserPolicy> | null = null;
     let databaseVerifier: Awaited<
       ReturnType<typeof runDatabaseVerifier>
     > | null = null;
@@ -268,12 +274,26 @@ export const browserAgent = task({
       sessionId = session.id;
       const browser = await chromium.connectOverCDP(session.connectUrl);
       const newAssignmentPage = async (auth: typeof authentication) => {
-        if (auth) return authenticatedPage(browser, auth, protectRetry);
-        if (!payload.readOnlyRetry) return browser.newPage({ viewport: { width: 1280, height: 800 } });
+        const prepare = async (context: BrowserContext) => {
+          await policy!.prepare(context);
+          await protectRetry(context);
+        };
+        if (auth) return authenticatedPage(browser, auth, prepare);
         const context = await browser.newContext({ viewport: { width: 1280, height: 800 }, serviceWorkers: "block" });
-        await protectRetry(context);
+        await prepare(context);
         return context.newPage();
       };
+      policy = browserPolicy({ origin: new URL(payload.appUrl).origin, assertActive: assertRetryActive,
+        headers: authentication?.state?.headers, readOnly: !!payload.readOnlyRetry });
+      runWatch = setInterval(() => {
+        if (watching) return;
+        watching = true;
+        void assertRetryActive().catch(async () => {
+          await policy?.close();
+          if (sessionId) await closeBrowserSession(sessionId).catch(() => {});
+        }).finally(() => { watching = false; });
+      }, 2000);
+      runWatch.unref();
       const page = await newAssignmentPage(authentication);
 
       page.on("console", (msg) => {
@@ -320,6 +340,8 @@ export const browserAgent = task({
       actionsUsed++;
 
       for (const [stepIndex, step] of payload.assignment.steps.entries()) {
+        await assertRetryActive();
+        if (stepIndex > 0) policy.reset();
         if (actionsUsed >= MAX_ACTIONS) {
           for (const [index, remaining] of payload.assignment.steps.entries()) {
             if (index < stepIndex) continue;
@@ -379,6 +401,7 @@ export const browserAgent = task({
           }, true, !!payload.readOnlyRetry);
         };
         let markerUsed = false;
+        let actionDenied = "";
         if (payload.verifyDatabase && !step.databaseCheckId) {
           try {
             automatic = await automaticDatabase(
@@ -413,6 +436,7 @@ export const browserAgent = task({
           attempt++
         ) {
           await assertRetryActive();
+          if (policy.blocked) { finished = true; break; }
           if (payload.readOnlyRetry && Date.now() >= retryDeadline) break;
           await automatic?.assertActive();
           const screenshot = await page.screenshot({
@@ -423,6 +447,8 @@ export const browserAgent = task({
             0,
             20000,
           );
+          await assertRetryActive();
+          if (policy.blocked) { finished = true; break; }
 
           let action: AgentAction;
           try {
@@ -443,6 +469,16 @@ export const browserAgent = task({
           }
           actionLog.push(redact(describeAction(action)));
           actionsUsed++;
+          await assertRetryActive();
+          try {
+            await policy.checkAction(page, action, markerUsed || !!databaseVerifier);
+          } catch (error) {
+            if (!(error instanceof BrowserPolicyError)) throw error;
+            actionLog.push(error.message);
+            actionDenied = error.message;
+            finished = true;
+            break;
+          }
           if (payload.readOnlyRetry) {
             await assertRetryActive();
             if (Date.now() >= retryDeadline) break;
@@ -470,6 +506,9 @@ export const browserAgent = task({
             action.name.trim().toLowerCase() ===
               databaseVerifier.check.buttonLabel.toLowerCase()
           ) {
+            // An advanced check authorizes only a marked creation request;
+            // it cannot grant arbitrary account/payment/destructive writes.
+            policy.permitCreate(databaseVerifier.marker, action);
             const before = await databaseVerifier.before();
             try {
               await page
@@ -527,9 +566,12 @@ export const browserAgent = task({
               );
             }
           }
+          if (automatic && markerUsed) policy.permitCreate(automatic.marker, action);
+          await assertRetryActive();
           const result = await executeAction(page, action);
           attempted.push({ action, result });
           actionLog.push(redact(`  → ${result}`));
+          if (policy.blocked) { finished = true; break; }
           if (
             automatic &&
             action.action === "fill" &&
@@ -565,6 +607,17 @@ export const browserAgent = task({
         }
 
         const network = networkErrors.slice(stepNetworkStart);
+        await assertRetryActive();
+        if (actionDenied || policy.blocked) {
+          const reason = accessBlocker(new URL(payload.appUrl).origin, page.url(), []) || actionDenied || policy.blocked;
+          await outcome("blocked", reason, actionLog.slice(stepLogStart).join("\n"));
+          if (payload.verifyDatabase && !databaseObserved && step.id === "automatic-database-create")
+            await automaticDatabaseBlocked(payload.runId, payload.agentIndex, stepIndex, reason);
+          await automatic?.close(); automatic = null;
+          await databaseVerifier?.inconclusive();
+          await databaseVerifier?.close(); databaseVerifier = null; databaseCheckId = null;
+          continue;
+        }
         const blocked = accessBlocker(
           new URL(payload.appUrl).origin,
           page.url(),
@@ -739,6 +792,7 @@ export const browserAgent = task({
         }
         let replay: Page | null = null;
         try {
+          policy.reset();
           // Load a fresh snapshot so revoked/expired profiles cannot be reused.
           const freshAuth = payload.authProfileId
             ? await getRunAuthentication(payload.runId)
@@ -768,6 +822,7 @@ export const browserAgent = task({
           }
           for (const attempt of attempted) {
             await assertRetryActive();
+            await policy.checkAction(replay, attempt.action);
             if (
               attempt.action.action === "click" &&
               attempt.action.role === "link"
@@ -796,6 +851,11 @@ export const browserAgent = task({
               throw new Error("Replay action could not be performed.");
           }
           await replay.waitForTimeout(1000);
+          await assertRetryActive();
+          if (policy.blocked) {
+            await outcome("blocked", policy.blocked, observation);
+            continue;
+          }
           const replayTree = redact(
             (await replay.locator("body").ariaSnapshot()).slice(0, 6000),
           );
@@ -919,6 +979,10 @@ export const browserAgent = task({
         status: "done",
       };
     } catch (e) {
+      if (e instanceof RunStopped) {
+        await updateAgentStatus(agent.id, "cancelled").catch(() => {});
+        return { agentIndex: payload.agentIndex, findings: findingsCount, status: "cancelled" };
+      }
       if (databaseCheckId)
         await databaseVerificationError(
           payload.runId,
@@ -930,6 +994,8 @@ export const browserAgent = task({
       await updateAgentStatus(agent.id, "failed").catch(() => {});
       throw e;
     } finally {
+      if (runWatch) clearInterval(runWatch);
+      await policy?.close();
       await automatic?.close().catch(() => {});
       await databaseVerifier?.close().catch(() => {});
       if (sessionId) await closeBrowserSession(sessionId).catch(() => {});

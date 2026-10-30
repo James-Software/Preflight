@@ -15,6 +15,7 @@ import { postgresClient } from "@/lib/postgres-verification";
 import { DatabaseCheckError } from "@/lib/database-check-config";
 import { signTestUserRequest } from "@/lib/test-user-issuer";
 import { SITE_URL } from "@/lib/site";
+import { publicHttpRequest, decodedPublicBody } from "@/lib/public-http";
 import {
   ProvisioningError,
   inspectAuthSource,
@@ -172,7 +173,7 @@ export const generateAuthProfile = task({
       }
       await active();
       if (plan.kind === "authjs" || plan.kind === "preflight") {
-        const response = await fetch(
+        const response = await publicHttpRequest(
           new URL("/api/auth/session", capture.origin),
           {
             headers: {
@@ -180,13 +181,13 @@ export const generateAuthProfile = task({
                 .map((c) => `${c.name}=${c.value}`)
                 .join("; "),
             },
-            redirect: "error",
             signal: AbortSignal.timeout(15000),
-            cache: "no-store",
+            maxBytes: 65536,
           },
         );
-        const result = await response.json().catch(() => null);
-        if (!response.ok || result?.user?.email !== account.email)
+        let result;
+        try { result = JSON.parse(decodedPublicBody(response, 65536).toString("utf8")); } catch { result = null; }
+        if (response.status !== 200 || result?.user?.email !== account.email)
           throw new ProvisioningError(
             "The app did not accept the database-issued session. The marked test user remains available; check session callbacks and the selected database.",
           );

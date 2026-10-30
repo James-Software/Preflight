@@ -176,7 +176,7 @@ function agent({
     };
   }
   const task = load("src/trigger/browser-agent.ts", {
-    "@/lib/db": {},
+    "@/lib/db": { getSql: () => async () => [{ id: 34 }] },
     "@/lib/check-investigation": load("lib/check-investigation.ts", {"@/lib/finding-evidence": load("lib/finding-evidence.ts", {})}),
     "@/lib/finding-evidence": load("lib/finding-evidence.ts", {}),
     "@/lib/automatic-database": {
@@ -206,6 +206,7 @@ function agent({
       chromium: {
         connectOverCDP: async () => ({
           newPage: async () => makePage(),
+          newContext: async () => ({ route: async () => {}, routeWebSocket: async () => {}, newPage: async () => makePage(), close: async () => {} }),
           close: async () => {},
         }),
       },
@@ -475,6 +476,11 @@ test("email-only waitlist and subscription submissions get independent database 
       ],
     });
     await a.run();
+    if (button === "Sign up") {
+      assert.deepEqual(order, ["close"]);
+      assert.equal(a.results[0].status, "blocked", "generic account creation is outside automatic waitlist creation scope");
+      continue;
+    }
     assert.deepEqual(order, ["before", button, "close"]);
     assert.equal(a.blockedDatabase.length, 0);
     assert.equal(a.results[0].status, "inconclusive");

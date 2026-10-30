@@ -28,7 +28,8 @@ const { load } = require("./load-module.cjs");
       ${req.url === "/broken" ? "<script>fetch('/api/broken')</script>" : ""}</body></html>`);
   });
   await new Promise((resolve) => server.listen(0, "127.0.0.1", resolve));
-  const origin = `http://127.0.0.1:${server.address().port}`;
+  const localOrigin = `http://127.0.0.1:${server.address().port}`;
+  const origin = "https://app.example";
   const fakeSource = "export function authorize(user) {\n  return !!user;\n}\n";
   const sha = "a".repeat(40);
   const broker = load("lib/investigation-source.ts", {
@@ -50,6 +51,13 @@ const { load } = require("./load-module.cjs");
   const drivers = new Map();
   let forcedAction = null;
   const browser = load("src/trigger/browser-agent.ts", {
+    "@/lib/public-http": {
+      ...load("lib/public-http.ts", {}),
+      publicHttpRequest: async (url, options) => {
+        const response = await fetchOriginal(new URL(new URL(url).pathname, localOrigin), { method: options.method, headers: options.headers, body: options.body || undefined, redirect: "manual" });
+        return { status: response.status, headers: Object.fromEntries(response.headers), body: Buffer.from(await response.arrayBuffer()) };
+      },
+    },
     ...deps, "@/lib/schema": schema, "@/lib/check-investigation": policy, "@/lib/finding-evidence": evidence,
     "@/lib/automatic-database": {}, "@/lib/database-verification": {}, "@/lib/database-check-config": {},
     "@/lib/auth-profiles": {}, "@/lib/browser-auth": load("lib/browser-auth.ts", {}),

@@ -3,6 +3,7 @@ import { redirect } from "next/navigation";
 import { createProject } from "@/lib/schema";
 import { createTestWorkspaceProject } from "@/lib/test-workspace";
 import { ProfileError } from "@/lib/auth-profile-state";
+import { publicHttpUrl } from "@/lib/public-http";
 import NewProjectForm, {
   type ProjectFormState,
 } from "@/components/NewProjectForm";
@@ -32,10 +33,10 @@ async function create(
   if (appUrl) {
     let url: URL;
     try {
-      url = new URL(appUrl);
+      url = publicHttpUrl(appUrl);
     } catch {
       return {
-        error: "Enter an app URL starting with http:// or https://.",
+        error: "Enter a public HTTP or HTTPS app URL on port 80 or 443, without embedded credentials.",
         field: "appUrl",
       };
     }
@@ -73,9 +74,7 @@ async function create(
       field: "repo",
     };
   }
-  // Ownership is the security boundary, re-enforced server-side: the repo's
-  // owner segment must be the caller's GitHub login. (The picker verified
-  // existence and access moments before submit.)
+  // Never rely on the client picker to prove repository access.
   if (!githubLogin || repoMatch[1].toLowerCase() !== githubLogin) {
     return {
       error: "You can only connect repositories you own.",
@@ -85,6 +84,13 @@ async function create(
 
   let project;
   try {
+    const [{ loadGithubCredentials }, { verifyRepo }] = await Promise.all([
+      import("@/lib/github-credentials"), import("@/lib/github"),
+    ]);
+    const github = await loadGithubCredentials(githubId);
+    if (!github) return { error: "Reconnect GitHub before adding a repository.", field: "repo" };
+    const verified = await verifyRepo({ ...github, ownerGithubId: githubId }, repoMatch[1], repoMatch[2]);
+    if (!verified.ok) return { error: verified.error, field: "repo" };
     project = await createProject(
       githubId,
       appUrlOrNull,

@@ -288,6 +288,13 @@ const { NextRequest } = require("next/server");
       end: async () => {},
     };
     const worker = load("src/trigger/generate-auth-profile.ts", {
+      "@/lib/public-http": {
+        ...load("lib/public-http.ts", {}),
+        publicHttpRequest: async (url, options) => {
+          const response = await globalThis.fetch(url, options);
+          return { status: response.status, headers: Object.fromEntries(response.headers), body: Buffer.from(await response.arrayBuffer()) };
+        },
+      },
       ...deps,
       "@trigger.dev/sdk": { task: (x) => x },
       "@/lib/schema": schema,

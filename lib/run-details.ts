@@ -14,6 +14,8 @@ export function runStatusLabel(status: string) {
   return status;
 }
 export function safeRunFailure(error: unknown) {
+  if (error && typeof error === "object" && "name" in error && error.name === "TargetAccessError" && "message" in error)
+    return String(error.message).slice(0, 300);
   const message =
     error && typeof error === "object" && "message" in error
       ? String(error.message)

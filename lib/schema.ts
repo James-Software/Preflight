@@ -222,6 +222,20 @@ async function initializeSchema(): Promise<void> {
     )
   `;
   await sql`ALTER TABLE findings ADD COLUMN IF NOT EXISTS fix_summary TEXT`;
+  await sql`CREATE TABLE IF NOT EXISTS run_screenshots (
+    id UUID PRIMARY KEY, run_id INT NOT NULL REFERENCES runs(id),
+    content BYTEA NOT NULL CHECK(octet_length(content)<=2097152),
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`;
+  await sql`CREATE INDEX IF NOT EXISTS run_screenshots_run ON run_screenshots(run_id)`;
+  await sql`CREATE TABLE IF NOT EXISTS retired_screenshot_blobs (
+    url TEXT PRIMARY KEY, retired_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), deleted_at TIMESTAMPTZ,
+    private_content BYTEA CHECK(private_content IS NULL OR octet_length(private_content)<=2097152)
+  )`;
+  await sql`CREATE TABLE IF NOT EXISTS screenshot_migration_state (
+    id TEXT PRIMARY KEY, cursor TEXT, last_page_size INT, last_empty_at TIMESTAMPTZ,
+    last_failures INT, updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`;
   await sql`ALTER TABLE findings ADD COLUMN IF NOT EXISTS evidence_key TEXT`;
   await sql`CREATE UNIQUE INDEX IF NOT EXISTS finding_run_evidence ON findings(run_id,evidence_key) WHERE evidence_key IS NOT NULL`;
   await sql`CREATE TABLE IF NOT EXISTS run_test_results (

@@ -120,9 +120,10 @@ export const runSwarm = task({
     if (!Array.isArray(plan) || plan.length === 0) {
       await updateRunStatus(payload.runId, "planning");
       try {
-        await tasks.triggerAndWait("generate-test-plan", {
+        const planning = await tasks.triggerAndWait("generate-test-plan", {
           runId: payload.runId,
         });
+        if (planning?.ok === false) throw planning.error;
         const r2 = await sql`SELECT plan FROM runs WHERE id = ${payload.runId}`;
         plan =
           Array.isArray(r2) && r2.length > 0

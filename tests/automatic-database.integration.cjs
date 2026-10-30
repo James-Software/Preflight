@@ -34,6 +34,7 @@ const { load } = require("./load-module.cjs");
     "node:timers/promises": { setTimeout: () => new Promise(resolve => setTimeout(resolve, 20)) },
     "@/lib/db": { getSql: () => async (parts, ...values) => {
       const query = parts.join("?");
+      if (query.includes("SELECT r.id FROM runs r")) return [{ id: 1 }];
       if (query.includes("UPDATE run_database_checks SET status=")) stored.push({ status: values[0], summary: values[1] });
       if (query.includes("INSERT INTO run_database_checks") && query.includes("'error'")) stored.push({ status: "error", summary: values[2] });
       if (query.includes("INSERT INTO run_database_cleanup")) proposals.push(JSON.parse(values[3]));
@@ -87,7 +88,8 @@ const { load } = require("./load-module.cjs");
     assert.equal(stored.length, 0, "empty supported tables must not create a setup error");
 
     await new Promise(resolve => server.listen(0, "127.0.0.1", resolve));
-    const origin = `http://127.0.0.1:${server.address().port}`;
+    const localOrigin = `http://127.0.0.1:${server.address().port}`;
+    const origin = "https://app.example";
     browser = await chromium.launch({ executablePath: process.env.CHROMIUM_PATH || "/usr/bin/chromium", args: ["--no-sandbox"] });
     let actionIndex = 0, testEmail;
     const findingEvidence = load("lib/finding-evidence.ts", {});
@@ -96,13 +98,21 @@ const { load } = require("./load-module.cjs");
       "@/lib/automatic-database": automatic,
       "@/lib/database-verification": {},
       "@/lib/database-check-config": config,
-      "@/lib/auth-profiles": {}, "@/lib/browser-auth": {}, "@/lib/db": {},
+      "@/lib/auth-profiles": {}, "@/lib/browser-auth": {}, "@/lib/db": { getSql: () => async () => [{ id: 1 }] },
       "@/lib/finding-evidence": findingEvidence,
       "@/lib/check-investigation": load("lib/check-investigation.ts", { "@/lib/finding-evidence": findingEvidence }),
+      "@/lib/public-http": {
+        ...load("lib/public-http.ts", {}),
+        publicHttpRequest: async (url, options) => {
+          assert.equal(new URL(url).origin, origin);
+          const response = await fetch(new URL(new URL(url).pathname, localOrigin), { method: options.method, headers: options.headers, body: options.body || undefined, redirect: "manual" });
+          return { status: response.status, headers: Object.fromEntries(response.headers), body: Buffer.from(await response.arrayBuffer()) };
+        },
+      },
       "@/lib/browserbase": { createBrowserSession: async () => ({ id: "fixture", connectUrl: "fixture" }), closeBrowserSession: async () => {} },
       // Production worker closes its connection after each run. Keep this
       // isolated local browser alive until all cases have finished.
-      "playwright-core": { chromium: { connectOverCDP: async () => ({ newPage: (...args) => browser.newPage(...args), close: async () => {} }) } },
+      "playwright-core": { chromium: { connectOverCDP: async () => ({ newContext: (...args) => browser.newContext(...args), newPage: (...args) => browser.newPage(...args), close: async () => {} }) } },
       "node:timers/promises": { setTimeout: async () => {} },
       "@/lib/schema": {
         createAgent: async () => ({ id: 1 }), updateAgentStatus: async () => {},

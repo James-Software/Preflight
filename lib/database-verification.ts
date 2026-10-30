@@ -65,6 +65,7 @@ export async function runDatabaseVerifier(runId: number, checkId: string) {
     marker = checkMarker(runId, checkId);
   return {
     check,
+    marker,
     async before(): Promise<Scalar> {
       await runDatabaseConfig(runId); // Recheck disconnect/cancellation before the app action.
       const before = await reader.read(check.query, marker);

@@ -388,7 +388,7 @@ function browserTask({ verdictError = false, severityError = false } = {}) {
     locator: () => ({ ariaSnapshot: async () => "button Pay" }),
   };
   const task = load("src/trigger/browser-agent.ts", {
-    "@/lib/db": {},
+    "@/lib/db": { getSql: () => async () => [{ id: 34 }] },
     "@/lib/check-investigation": load("lib/check-investigation.ts", {"@/lib/finding-evidence": load("lib/finding-evidence.ts", {})}),
     "@/lib/finding-evidence": load("lib/finding-evidence.ts", {}),
     "@/lib/automatic-database": {},
@@ -401,6 +401,7 @@ function browserTask({ verdictError = false, severityError = false } = {}) {
       chromium: {
         connectOverCDP: async () => ({
           newPage: async () => page,
+          newContext: async () => ({ route: async () => {}, routeWebSocket: async () => {}, newPage: async () => page, close: async () => {} }),
           close: async () => {},
         }),
       },

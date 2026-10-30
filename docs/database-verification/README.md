@@ -16,7 +16,8 @@ receives only these schema labels and a random per-step test marker, not databas
 credentials, SQL, customer rows or record fingerprints. It fills a suitable app
 field with the marker, or a unique `preflight-…@example.test` email in an email-only
 waitlist form; before/after reads correlate changes to that record. Waitlist,
-join, subscribe and sign-up buttons, plus Enter submissions, are observed too.
+join and subscribe buttons, plus marked Enter submissions, are observed too.
+Generic account registration and destructive/payment/security workflows are blocked.
 Unsupported schemas, missing workflows and absent observed changes are explicitly
 Unverified. They are not automatically classified as app bugs. Use advanced
 checks for exact business assertions, other schemas and existing customer data.

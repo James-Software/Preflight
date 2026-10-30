@@ -11,9 +11,14 @@ arbitrary existing customer data. See [supported schemas](../database-verificati
 Empty tables work without seed data: discovery uses PostgreSQL catalogs, and an
 empty marker lookup is a valid baseline. Email-only waitlists use the same unique
 marker inside a valid email at the reserved `example.test` domain. Join waitlist,
-Subscribe and Sign up buttons are bracketed by the same read-only observations as
+Subscribe buttons are bracketed by the same read-only observations as
 Create/Save. A success toast without a matching row remains unverified and cannot
 pass the dedicated persistence check through a model judgment.
+Generic account sign-up, edits, deletion, payments, messaging and security changes
+are blocked. A marked creation POST must contain the exact server-generated
+marker and stay on the configured app origin. Advanced checks do not override
+these browser restrictions. Cancellation prevents subsequent actions and requests;
+it cannot undo an application request already submitted.
 
 ## Cleanup approval
 
