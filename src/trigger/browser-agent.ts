@@ -503,7 +503,7 @@ export const browserAgent = task({
             markerUsed &&
             ((action.action === "click" &&
               action.role.toLowerCase() === "button" &&
-              /create|save|add|submit|update|delete|remove|confirm|publish|send|done|finish/i.test(
+              /create|save|add|submit|update|delete|remove|confirm|publish|send|done|finish|join|subscribe|sign[\s-]?up|waitlist|register/i.test(
                 action.name,
               )) ||
               (action.action === "press" && action.key === "Enter"));
@@ -533,10 +533,9 @@ export const browserAgent = task({
           if (
             automatic &&
             action.action === "fill" &&
-            action.value === automatic.marker &&
-            /name|title|label|description|project|draft|slug/i.test(
-              action.name,
-            ) &&
+            ((action.value === automatic.marker &&
+              /name|title|label|description|project|draft|slug/i.test(action.name)) ||
+              (action.value === automatic.email && /e[\s-]?mail/i.test(action.name))) &&
             !result.startsWith("Action failed:")
           )
             markerUsed = true;
@@ -544,10 +543,12 @@ export const browserAgent = task({
             try {
               if (!result.startsWith("Action failed:")) {
                 databaseObserved = true;
-                await automatic.after(
+                const verification = await automatic.after(
                   before,
                   action.action === "click" ? action.name : "Enter",
                 );
+                databasePassed = verification.passed;
+                actionLog.push(redact(`Independent database verification: ${verification.summary}`));
               }
             } catch (error) {
               automaticInspectionFailed = true;
@@ -580,8 +581,8 @@ export const browserAgent = task({
             stepIndex,
             blocked ||
               (markerUsed
-                ? "The unique test name was entered, but no successful create/save submission was exercised. Persistence remains unverified."
-                : "The agent did not find and submit an accessible create form with a name/title field for the unique test marker. Check the test account's permissions and available workflows; the database connection alone cannot provide an app create workflow."),
+                ? "The unique test marker was entered, but no successful create/save/waitlist submission was exercised. Persistence remains unverified."
+                : "The agent did not find and submit an accessible create form with a name/title or email field for the unique test marker. Check the test account's permissions and available workflows; the database connection alone cannot provide an app create workflow."),
           );
         }
         await automatic?.close();
@@ -658,6 +659,14 @@ export const browserAgent = task({
           await outcome(
             "blocked",
             "No supported marked create submission completed. Database persistence was not evaluated.",
+            observation,
+          );
+          continue;
+        }
+        if (step.id === "automatic-database-create" && !databasePassed) {
+          await outcome(
+            "inconclusive",
+            "The marked form was submitted, but no database change was observed. A success notification alone cannot confirm persistence.",
             observation,
           );
           continue;

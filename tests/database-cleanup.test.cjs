@@ -219,6 +219,8 @@ test("automatic verification proposes cleanup only for newly observed marked rec
   });
   const a = await api.automaticDatabase(5, 0, 0);
   assert.match(a.marker, /^preflight-5-0-0-[0-9a-f]{24}$/);
+  assert.equal(a.email, `${a.marker}@example.test`);
+  assert.ok(a.instructions.includes(a.email));
   assert.ok(!a.instructions.includes("private-uri"));
   const before = await a.before();
   await a.after(before, "Create project");

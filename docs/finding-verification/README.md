@@ -72,8 +72,9 @@ and a per-identity limit apply. Other auth providers and GitHub-dependent featur
 still require their own credentials; this flow does not claim those integrations
 were tested.
 
-The verifier marks a name/title only after a successful fill with the exact
-unique marker. It observes the database before and after an actual successful
+The verifier marks a name/title or email field only after a successful fill with
+the exact unique marker or its generated test email. Empty tables are supported
+without seed rows. It observes the database before and after an actual successful
 browser submit command. A matching committed row confirms persistence. No change
 is unverified, not automatically a bug. If no supported submission occurs, the
 report describes a blocked workflow rather than implying the database connection

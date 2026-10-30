@@ -8,6 +8,13 @@ report distinguishes confirmed changes from unverified workflows. This verifies
 persistence of marked records; it does not infer every business rule or validate
 arbitrary existing customer data. See [supported schemas](../database-verification/README.md).
 
+Empty tables work without seed data: discovery uses PostgreSQL catalogs, and an
+empty marker lookup is a valid baseline. Email-only waitlists use the same unique
+marker inside a valid email at the reserved `example.test` domain. Join waitlist,
+Subscribe and Sign up buttons are bracketed by the same read-only observations as
+Create/Save. A success toast without a matching row remains unverified and cannot
+pass the dedicated persistence check through a model judgment.
+
 ## Cleanup approval
 
 The Database tab includes Cleanup with a run selector. Each run report links
@@ -50,6 +57,12 @@ PROFILE_ENCRYPTION_KEY stable and identical in web/worker deployments.
 
 ## Validation
 
+- `PGLITE_MODULE=/path/to/@electric-sql/pglite node tests/automatic-database.integration.cjs`:
+  real schema discovery and Chromium submissions against empty and populated
+  tables, email and email_address support, unsupported key/credential-only schema
+  exclusions, false-success/no-insert detection, first-insert confirmation and
+  email-marker cleanup proposals. Model and hosting boundaries are controlled;
+  database inspection is read-only, and fixture app writes stay in local PGlite.
 - `npm test`: automatic marker observation, real browser-action bracketing,
   cleanup transaction sequencing/row limits, repeated decisions, denial without
   database access, request Origin/auth/ownership/run-status gates, and existing

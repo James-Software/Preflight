@@ -9,7 +9,8 @@ export type ObservedRecord = RecordTarget & {
 export const identifier = (name: string) => `"${name.replaceAll('"', '""')}"`;
 
 // Only ordinary public tables with a single numeric/UUID primary key. Read
-// labels, never arbitrary rows or credential columns. Cap the work per action.
+// labels and marked test emails, never arbitrary rows or credential columns.
+// Discover from catalogs, so empty tables work without seed data.
 export async function recordTargets(client: Client): Promise<RecordTarget[]> {
   const result = await client.query(`
     SELECT c.relname AS table, pk.attname AS key,
@@ -21,7 +22,7 @@ export async function recordTargets(client: Client): Promise<RecordTarget[]> {
     WHERE n.nspname='public' AND c.relkind='r'
       AND pk.atttypid IN ('int2'::regtype,'int4'::regtype,'int8'::regtype,'uuid'::regtype)
       AND a.atttypid IN ('text'::regtype,'varchar'::regtype)
-      AND a.attname ~* '^(name|title|slug|label|display_name|project_name|description)$'
+      AND a.attname ~* '^(name|title|slug|label|display_name|project_name|description|email|email_address)$'
       AND has_table_privilege(c.oid,'SELECT')
     GROUP BY c.relname,pk.attname ORDER BY c.relname LIMIT 24`);
   return result.rows.map((row) => {

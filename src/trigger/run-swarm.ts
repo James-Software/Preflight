@@ -231,7 +231,7 @@ export const runSwarm = task({
                 id: "automatic-database-create",
                 title: "Create a test record",
                 detail:
-                  "Find a safe create workflow available to this test account, such as creating a project or draft. Use the provided unique test marker for its name or title, submit through the app, and inspect the result. If no such workflow is accessible, stop and explain why. Do not create accounts, send messages, make payments, delete existing records or change security settings.",
+                  "Find a safe create workflow available in the app, such as creating a project, draft or waitlist entry. Use the provided unique test marker for its name or title, or the provided test email for an email-only form. Submit through the app and inspect the result. Empty database tables are supported. If no such workflow is accessible, stop and explain why. Do not create login accounts, send messages, make payments, delete existing records or change security settings.",
               },
             ],
           },

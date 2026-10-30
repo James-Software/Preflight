@@ -426,6 +426,7 @@ test("automatic verification brackets a real marked form submission and closes i
       },
       after: async (_before, button) => {
         order.push(button);
+        return { passed: true, summary: "Confirmed a change to marked records." };
       },
       close: async () => {
         order.push("close");
@@ -446,6 +447,60 @@ test("automatic verification brackets a real marked form submission and closes i
   await a.run();
   assert.deepEqual(order, ["before", "Create project", "close"]);
   assert.match(a.driverInputs[0].goal, /Use preflight-test/);
+});
+
+test("email-only waitlist and subscription submissions get independent database checks", async () => {
+  for (const button of ["Join the waitlist", "Subscribe", "Sign up", "Enter"]) {
+    const order = [];
+    const a = agent({
+      steps: [{ id: "automatic-database-create", title: "Join waitlist" }],
+      automatic: {
+        marker: "preflight-test",
+        email: "preflight-test@example.test",
+        supported: true,
+        assertActive: async () => {},
+        before: async () => { order.push("before"); return []; },
+        after: async (_before, label) => {
+          order.push(label);
+          return { passed: false, summary: "No change to uniquely marked records was observed." };
+        },
+        close: async () => { order.push("close"); },
+      },
+      actions: [
+        { ...done, action: "fill", role: "textbox", name: "Email address", value: "preflight-test@example.test" },
+        button === "Enter"
+          ? { ...done, action: "press", role: "textbox", name: "Email address", key: "Enter" }
+          : { ...done, action: "click", role: "button", name: button },
+        done,
+      ],
+    });
+    await a.run();
+    assert.deepEqual(order, ["before", button, "close"]);
+    assert.equal(a.blockedDatabase.length, 0);
+    assert.equal(a.results[0].status, "inconclusive");
+    assert.match(a.results[0].evidence, /Independent database verification: No change/);
+    assert.equal(a.judgments.length, 0, "a model cannot override the missing database change");
+  }
+});
+
+test("an unrelated email cannot be treated as the unique database marker", async () => {
+  let inspections = 0;
+  const a = agent({
+    steps: [{ id: "automatic-database-create", title: "Join waitlist" }],
+    automatic: {
+      marker: "preflight-test", email: "preflight-test@example.test", supported: true,
+      assertActive: async () => {}, close: async () => {},
+      before: async () => { inspections++; return []; },
+    },
+    actions: [
+      { ...done, action: "fill", role: "textbox", name: "Email", value: "other@example.test" },
+      { ...done, action: "click", role: "button", name: "Join the waitlist" },
+      done,
+    ],
+  });
+  await a.run();
+  assert.equal(inspections, 0);
+  assert.equal(a.blockedDatabase.length, 1);
 });
 
 test("a speculative driver report with no executed reproduction stays in review", async () => {

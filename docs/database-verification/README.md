@@ -8,11 +8,15 @@ unrelated effects such as email delivery.
 
 Automatic verification currently supports ordinary `public` tables with a single
 numeric or UUID primary key and text columns named `name`, `title`, `slug`,
-`label`, `display_name`, `project_name` or `description`. Up to 24 tables and six
+`label`, `display_name`, `project_name`, `description`, `email` or `email_address`.
+Discovery reads PostgreSQL schema catalogs, so empty tables need no seed rows.
+Up to 24 tables and six
 label columns per table are inspected, with bounded queries/results. The agent
 receives only these schema labels and a random per-step test marker, not database
 credentials, SQL, customer rows or record fingerprints. It fills a suitable app
-field with the marker; before/after reads correlate changes to that record.
+field with the marker, or a unique `preflight-…@example.test` email in an email-only
+waitlist form; before/after reads correlate changes to that record. Waitlist,
+join, subscribe and sign-up buttons, plus Enter submissions, are observed too.
 Unsupported schemas, missing workflows and absent observed changes are explicitly
 Unverified. They are not automatically classified as app bugs. Use advanced
 checks for exact business assertions, other schemas and existing customer data.
