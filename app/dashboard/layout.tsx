@@ -16,7 +16,14 @@ export default async function DashboardLayout({
       <DashboardHeader
         user={{ name: session.user.name, image: session.user.image }}
         isAdmin={isAdminLogin(session.user.githubLogin)}
+        isGuest={session.user.isGuest}
       />
+      {session.user.isGuest && <div className="border-b border-line bg-panel px-6 py-3 text-sm text-ink dark:text-white" role="status">
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3">
+          <p>Guest demo · Preflight-Example is ready. Your runs are saved in this browser for up to 30 days.</p>
+          <form action="/demo/exit?next=login" method="post"><button className="min-h-11 font-medium text-primary underline underline-offset-4">Sign in with GitHub for your own projects</button></form>
+        </div>
+      </div>}
       {children}
     </div>
   );

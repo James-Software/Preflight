@@ -159,6 +159,7 @@ export default async function RunReportPage({
             findings={findings}
             projectId={projectId}
             runId={runNumber}
+            isGuest={owner.startsWith("guest:")}
           />
         )}
         {!!run.database_snapshot && project.owner_github_id === owner && (

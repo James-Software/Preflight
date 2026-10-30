@@ -32,12 +32,12 @@ export default async function Dashboard() {
               Choose an app to review its runs, or connect a repository.
             </p>
           </div>
-          <a
+          {!session.user.isGuest && <a
             href="/dashboard/projects/new"
             className="pressable btn-primary shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-xs font-medium text-white md:px-5 md:py-2.5 md:text-sm"
           >
             New project
-          </a>
+          </a>}
         </div>
 
         {projects.length === 0 ? (
@@ -91,7 +91,7 @@ export default async function Dashboard() {
             ))}
           </ul>
         )}
-        {!session.user.isTestUser && !githubId.startsWith("test:") && <InviteCard />}
+        {!session.user.isGuest && !session.user.isTestUser && !githubId.startsWith("test:") && <InviteCard />}
       </div>
     </main>
   );

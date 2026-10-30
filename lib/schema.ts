@@ -88,6 +88,16 @@ async function initializeSchema(): Promise<void> {
     PRIMARY KEY(project_id,user_id)
   )`;
   await sql`CREATE INDEX IF NOT EXISTS project_members_user ON project_members(user_id,project_id)`;
+  await sql`CREATE TABLE IF NOT EXISTS guest_demo_links (
+    token_hash TEXT PRIMARY KEY, template_project_id INT NOT NULL REFERENCES projects(id),
+    expires_at TIMESTAMPTZ NOT NULL DEFAULT NOW()+INTERVAL '30 days', revoked_at TIMESTAMPTZ,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`;
+  await sql`CREATE TABLE IF NOT EXISTS guest_demo_sessions (
+    actor_id TEXT PRIMARY KEY, link_hash TEXT NOT NULL REFERENCES guest_demo_links(token_hash),
+    project_id INT UNIQUE NOT NULL REFERENCES projects(id), expires_at TIMESTAMPTZ NOT NULL,
+    revoked_at TIMESTAMPTZ, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`;
   await sql`CREATE TABLE IF NOT EXISTS project_invitations (
     id UUID PRIMARY KEY, project_id INT NOT NULL REFERENCES projects(id), email TEXT NOT NULL,
     token_hash TEXT UNIQUE NOT NULL, status TEXT NOT NULL DEFAULT 'pending',

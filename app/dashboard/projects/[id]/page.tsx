@@ -8,7 +8,7 @@ export default async function ProjectPage({
 }: {
   params: Promise<{ id: string }>;
 }) {
-  const { project } = await projectPage((await params).id);
+  const { project, owner } = await projectPage((await params).id);
   const runs = await listRuns(project.id);
   return (
     <main className="py-2">
@@ -25,6 +25,7 @@ export default async function ProjectPage({
         {project.app_url ||
           "Using the default branch’s latest preview deployment."}
       </p>
+      {owner.startsWith("guest:") && <p className="mt-3 max-w-2xl text-sm leading-relaxed text-muted">Start a swarm to test the example waitlist. Database verification is already connected and selected for you.</p>}
       <RunsList
         projectId={project.id}
         initialRuns={runs.map((r) => ({

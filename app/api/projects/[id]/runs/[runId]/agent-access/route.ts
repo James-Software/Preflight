@@ -9,12 +9,12 @@ async function handle(req: NextRequest, context: Context, action: "read" | "crea
   if (action !== "read" && req.headers.get("origin") !== req.nextUrl.origin)
     return NextResponse.json({ error: "Invalid request origin." }, { status: 403, headers });
   const user = (await auth())?.user;
-  if (!user?.githubId || !user.githubLogin || user.isTestUser)
+  if (!user?.githubId || (!user.githubLogin && !user.isGuest) || user.isTestUser)
     return NextResponse.json({ error: "Sign in with GitHub to connect an agent." }, { status: 401, headers });
   const params = await context.params, projectId = Number(params.id), runId = Number(params.runId);
   try {
     if (action === "read") return NextResponse.json({ active: await hasRunAgentGrants(projectId, runId, user.githubId) }, { headers });
-    if (action === "create") return NextResponse.json(await createRunAgentGrant(projectId, runId, user.githubId, user.githubLogin), { headers });
+    if (action === "create") return NextResponse.json(await createRunAgentGrant(projectId, runId, user.githubId, user.githubLogin || "judge-guest"), { headers });
     await revokeRunAgentGrants(projectId, runId, user.githubId);
     return NextResponse.json({ revoked: true }, { headers });
   } catch (error) { return NextResponse.json({ error: error instanceof AgentAccessError ? error.message : "Could not prepare agent access. Try again." }, { status: error instanceof AgentAccessError ? 404 : 500, headers }); }

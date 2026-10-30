@@ -15,7 +15,7 @@ export default async function ProjectLayout({
     <div className="mx-auto grid max-w-[1440px] gap-7 px-4 py-6 text-ink dark:text-white sm:px-6 lg:grid-cols-[224px_minmax(0,1fr)] lg:gap-10 lg:px-8 lg:py-10">
       <ProjectSidebar
         canManage={project.owner_github_id === owner}
-        isTestUser={owner.startsWith("test:")}
+        isTestUser={owner.startsWith("test:") || owner.startsWith("guest:")}
         project={{
           id: project.id,
           name:

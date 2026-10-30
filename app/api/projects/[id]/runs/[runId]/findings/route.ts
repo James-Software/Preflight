@@ -50,6 +50,8 @@ export async function POST(
     const body = await req.json().catch(() => null);
     if (!body || !["delete", "open-pr"].includes(body.action))
       throw new FixActionError("Choose a valid action.", 400);
+    if (owner.startsWith("guest:") && body.action === "open-pr")
+      return NextResponse.json({ error: "Opening pull requests requires your own GitHub-connected project. You can review and copy this demo's findings." }, { status: 403 });
     const ids = parseFindingIds(body.findingIds);
     if (ids.some((id) => !report.findings.some((f) => f.id === id)))
       throw new FixActionError(

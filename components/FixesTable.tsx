@@ -112,10 +112,12 @@ export default function FixesTable({
   findings,
   projectId,
   runId,
+  isGuest = false,
 }: {
   findings: FindingReport[];
   projectId: number;
   runId: number;
+  isGuest?: boolean;
 }) {
   const router = useRouter();
   const [headerHeight, setHeaderHeight] = useState(80);
@@ -309,8 +311,7 @@ export default function FixesTable({
             Findings & fixes
           </h2>
           <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted">
-            Select fixes to group into one PR. Open a finding to review its
-            evidence.
+            {isGuest ? "Open a finding to review its evidence, or copy a prompt for an agent. Pull requests are available on your own GitHub-connected projects." : "Select fixes to group into one PR. Open a finding to review its evidence."}
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
@@ -325,7 +326,7 @@ export default function FixesTable({
           <button
             type="button"
             className={`${secondary} shrink-0`}
-            disabled={busy || !readyRows.length}
+            disabled={isGuest || busy || !readyRows.length}
             onClick={() => void action("open-pr", readyRows)}
           >
             <PullRequestIcon />
@@ -370,7 +371,7 @@ export default function FixesTable({
         <button
           type="button"
           className="btn-primary inline-flex min-h-11 items-center justify-center gap-2 px-5 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
-          disabled={busy || !canOpen}
+          disabled={isGuest || busy || !canOpen}
           onClick={() => void action("open-pr", selection)}
         >
           <BranchIcon />
@@ -543,7 +544,7 @@ export default function FixesTable({
                         <button
                           type="button"
                           className="inline-flex min-h-11 items-center gap-2 font-medium text-primary disabled:opacity-50"
-                          disabled={busy}
+                          disabled={isGuest || busy}
                           onClick={() =>
                             void action(
                               "open-pr",

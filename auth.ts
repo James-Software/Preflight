@@ -1,4 +1,7 @@
-import { headers } from "next/headers";
+import { headers, cookies } from "next/headers";
+import { guestCookieName } from "@/lib/guest-demo";
+import { readGuestSession } from "@/lib/guest-session";
+import { cache } from "react";
 import { getToken } from "next-auth/jwt";
 import {
   savedGithubOwner,
@@ -20,6 +23,8 @@ declare module "next-auth" {
       githubId?: string;
       githubLogin?: string;
       isTestUser?: boolean;
+      isGuest?: boolean;
+      demoProjectId?: number;
     } & DefaultSession["user"];
   }
 }
@@ -27,7 +32,7 @@ declare module "next-auth" {
 // App sessions use encrypted JWT cookies. GitHub's rotating connection
 // credentials live encrypted on the server so requests can renew them together.
 // Required env: AUTH_GITHUB_ID, AUTH_GITHUB_SECRET, AUTH_SECRET, AUTH_URL.
-export const { handlers, auth, signIn, signOut } = NextAuth({
+const githubAuth = NextAuth({
   providers: [GitHub],
   pages: {
     // Skip Auth.js's default sign-in page; /login goes straight to GitHub.
@@ -187,4 +192,12 @@ export const { handlers, auth, signIn, signOut } = NextAuth({
       return session;
     },
   },
+});
+
+export const { handlers, signIn, signOut } = githubAuth;
+// A separate encrypted cookie preserves any existing GitHub login. A bad or
+// revoked guest cookie fails closed instead of silently switching identities.
+export const auth = cache(async function auth() {
+  const guest = (await cookies()).get(guestCookieName())?.value;
+  return guest ? readGuestSession(guest) : githubAuth.auth();
 });

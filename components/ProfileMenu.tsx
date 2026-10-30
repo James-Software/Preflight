@@ -10,9 +10,11 @@ import useTheme from "./useTheme";
 export default function ProfileMenu({
   user,
   isAdmin = false,
+  isGuest = false,
 }: {
   user: ProfileUser;
   isAdmin?: boolean;
+  isGuest?: boolean;
 }) {
   const [open, setOpen] = useState(false);
   const theme = useTheme();
@@ -165,13 +167,13 @@ export default function ProfileMenu({
             >
               Home
             </a>
-            <button
+            {isGuest ? <form action="/demo/exit" method="post"><button className="min-h-11 w-full rounded-xl px-3 py-2 text-left text-sm text-ink/70 hover:bg-panel dark:text-white/70">Leave guest demo</button></form> : <button
               type="button"
               onClick={() => void signOut({ callbackUrl: "/" })}
               className="w-full rounded-xl px-3 py-2 text-left text-sm text-ink/70 hover:bg-panel dark:text-white/70"
             >
               Sign out
-            </button>
+            </button>}
           </div>
         </div>
       )}

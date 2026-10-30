@@ -17,6 +17,7 @@ async function create(
   const githubId = session?.user?.githubId;
   const githubLogin = session?.user?.githubLogin?.toLowerCase();
   if (!githubId) redirect("/login?callbackUrl=%2Fdashboard%2Fprojects%2Fnew");
+  if (session.user.isGuest) redirect(`/dashboard/projects/${session.user.demoProjectId}`);
 
   const appUrl = String(formData.get("appUrl") ?? "").trim();
   const repoFullName = String(formData.get("repo") ?? "").trim();
@@ -114,6 +115,7 @@ export default async function NewProject({
   const session = await auth();
   if (!session?.user)
     redirect("/login?callbackUrl=%2Fdashboard%2Fprojects%2Fnew");
+  if (session.user.isGuest) redirect(`/dashboard/projects/${session.user.demoProjectId}`);
   const { error } = await searchParams;
 
   return (

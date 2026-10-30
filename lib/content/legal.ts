@@ -27,6 +27,7 @@ export const PRIVACY_SECTIONS: { heading: string; body: string[] }[] = [
     heading: "4. Information collected automatically",
     body: [
       "We use cookies and similar technologies for sign-in sessions, security, and basic product analytics (such as which features are used) so we can improve PreFlight. You can control cookies through your browser settings, though some features require them to work.",
+      "Guest demos use a separate encrypted, HttpOnly session cookie to remember your guest identity and example project for up to 30 days. Guest access does not require a GitHub account. Leaving the demo clears that guest cookie; deleting cookies or using another browser creates a separate demo workspace.",
     ],
   },
   {

@@ -109,6 +109,8 @@ export async function fetchGithub(
   url: string,
   init: RequestInit = {},
 ): Promise<Response> {
+  if (ctx.projectGrant?.actor.startsWith("guest:") && !["GET", "HEAD"].includes((init.method || "GET").toUpperCase()))
+    throw new ProjectRepositoryError("Guest demos cannot change the example repository.");
   if (new URL(url).origin !== API_BASE)
     throw new Error("Invalid GitHub API URL.");
   if (ctx.projectGrant) await assertProjectRepositoryAccess(ctx.projectGrant, new URL(url));

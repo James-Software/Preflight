@@ -15,7 +15,7 @@ test("project invite callbacks accept only a single invitation path on the real 
 test("repository grants recheck membership on every request and reject scope escape before accessing GitHub", async () => {
   let active = true, reads = 0;
   const api = load("lib/project-repository-access.ts", { "@/lib/db": { getSql: () => async (_parts, ...values) => {
-    reads++; assert.deepEqual(values, [1, "owner", "owner/app", "member"]); return active ? [{ id: 1 }] : [];
+    reads++; assert.deepEqual(values, [1, "owner", "owner/app", "member", true]); return active ? [{ id: 1 }] : [];
   } } });
   const grant = { projectId: 1, actor: "member", owner: "owner", repo: "owner/app" };
   await api.assertProjectRepositoryAccess(grant, new URL("https://api.github.com/repos/owner/app/branches/feature%2Fwork"));

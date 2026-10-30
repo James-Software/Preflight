@@ -103,6 +103,11 @@ export async function POST(
       { error: "Choose valid run options." },
       { status: 400 },
     );
+  if (githubId.startsWith("guest:")) {
+    if (body.profileId != null || body.target !== undefined && (body.target?.type !== "branch" || body.target?.ref !== "main"))
+      return NextResponse.json({ error: "The guest demo tests the example app's main branch without a sign-in profile." }, { status: 400 });
+    body.target = { type: "branch", ref: "main" };
+  }
   if (
     body.profileId != null &&
     (!Number.isSafeInteger(body.profileId) || body.profileId <= 0)

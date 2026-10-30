@@ -33,6 +33,8 @@ export async function authenticateRunAgent(authorization: string | null): Promis
     WHERE g.token_hash=${tokenHash(match[1])} AND g.revoked_at IS NULL AND g.expires_at>NOW() AND p.id=g.project_id
       AND r.id=g.run_id AND r.project_id=p.id
       AND (p.owner_github_id=g.actor_id OR EXISTS(SELECT 1 FROM project_members m WHERE m.project_id=p.id AND m.user_id=g.actor_id AND g.created_at>=m.joined_at))
+      AND (g.actor_id NOT LIKE 'guest:%' OR EXISTS(SELECT 1 FROM guest_demo_sessions s JOIN guest_demo_links l ON l.token_hash=s.link_hash
+        WHERE s.actor_id=g.actor_id AND s.project_id=p.id AND s.revoked_at IS NULL AND s.expires_at>NOW() AND l.revoked_at IS NULL AND l.expires_at>NOW()))
     RETURNING g.id,g.project_id,g.run_id,g.actor_id,g.actor_login,p.owner_github_id AS owner_id,g.expires_at`;
   const grant = (rows as any[])[0];
   if (!grant) throw new AgentAccessError("Agent access expired, was revoked, or project membership ended. Copy a new agent prompt from the run.");

@@ -45,12 +45,15 @@ export async function GET(
         { status: 401 },
       );
     const query = req.nextUrl.searchParams;
+    const guest = owner.startsWith("guest:");
     if (query.has("type")) {
       const target = parseRunTarget({
         type: query.get("type"),
         ref: query.get("ref"),
         number: Number(query.get("number")),
       });
+      if (guest && (target.type !== "branch" || target.ref !== "main"))
+        return NextResponse.json({ error: "The guest demo uses the example app's main branch." }, { status: 400 });
       const resolved = await resolveRunTarget(
         ctx,
         project.repo_full_name,
@@ -66,7 +69,9 @@ export async function GET(
       listRunTargets(ctx, project.repo_full_name),
       listAuthProfiles(project.owner_github_id, project.id),
     ]);
-    return NextResponse.json({ ...targets, profiles, canManageProfiles: project.owner_github_id === owner });
+    return NextResponse.json({ ...targets,
+      ...(guest ? { options: targets.options.filter(t => t.type === "branch" && t.ref === "main") } : {}),
+      profiles: guest ? [] : profiles, canManageProfiles: project.owner_github_id === owner });
   } catch (error) {
     return NextResponse.json(
       {
