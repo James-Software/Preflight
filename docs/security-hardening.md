@@ -31,6 +31,9 @@ Destructive, payment, registration, messaging, account/security and edit/update
 actions are blocked by runtime policy. Writes default to blocked. A safe create
 button/marked Enter submission can authorize a short-lived same-origin POST
 containing the exact per-step marker. PUT, PATCH and DELETE remain blocked.
+Account, profile and settings endpoints remain restricted even when a generic
+Save button submits the marker. Sign-in/authorization POSTs are also blocked;
+read-only session inspection and sign-in page discovery remain available.
 Advanced database checks cannot bypass that policy. Blocked requests produce a
 blocked test result, not a confirmed application bug. These boundaries cannot
 infer every business effect of a customer's server handler; use disposable test

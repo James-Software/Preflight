@@ -6,7 +6,7 @@ const origin = "https://app.example";
 const marker = "preflight-1-0-0-abcdef";
 
 test("every run rejects outside navigation and destructive/payment/account actions", () => {
-  for (const name of ["Delete project", "Update permissions", "Pay now", "Send invite", "Sign up", "Reset password", "Disconnect database", "Publish", "Edit customer"])
+  for (const name of ["Delete project", "Update permissions", "Pay now", "Send invite", "Sign up", "Reset password", "Disconnect database", "Publish", "Edit customer", "Save account", "Save profile", "Settings", "Sign in"])
     assert.equal(policy.allowedBrowserAction({ action: "click", role: "button", name }, origin, true), false, name);
   for (const value of ["https://other.example", "https://app.example/delete", "https://app.example/%64elete", "https://app.example/?action=delete", "https://app.example/security"])
     assert.equal(policy.allowedBrowserAction({ action: "goto", value }, origin), false, value);
@@ -20,11 +20,13 @@ test("writes require an authorized same-origin POST containing the unique marker
   assert.equal(policy.browserRequestAllowed(input, origin, marker), true);
   for (const patch of [
     { url: "https://other.example/save" }, { url: origin + "/api/delete" },
+    ...["account", "profiles", "settings", "auth/signin/email", "auth/oauth/authorize"].map(path => ({ url: origin + "/api/" + path })),
     { method: "DELETE" }, { method: "PUT" }, { method: "PATCH" },
     { body: '{"email":"unrelated@example.test"}' },
     { body: JSON.stringify({ marker, action: "delete" }) },
   ]) assert.equal(policy.browserRequestAllowed({ ...input, ...patch }, origin, marker), false, JSON.stringify(patch));
   assert.equal(policy.browserRequestAllowed({ url: "http://127.0.0.1/private", method: "GET", navigation: false, body: "" }, origin), false);
+  assert.equal(policy.browserRequestAllowed({ url: origin + "/api/auth/session", method: "GET", navigation: false, body: "" }, origin), true);
 });
 
 test("browser contexts pin requests, block service writes and websockets, and abort work when closed", async () => {

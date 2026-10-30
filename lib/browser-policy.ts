@@ -3,8 +3,9 @@ import type { AgentAction } from "@/lib/models";
 import { publicHttpUrl, publicHttpRequest, decodedPublicBody } from "@/lib/public-http";
 
 export class BrowserPolicyError extends Error {}
-const unsafe = /\b(?:delete|remove|destroy|drop|purge|truncate|edit|update|pay|purchase|buy|checkout|billing|transfer|withdraw|refund|invite|send|publish|install|connect|disconnect|revoke|logout|sign\s*out|log\s*out|password|credential|security|permission|admin|reset|unsubscribe|register|sign\s*up)\b/i;
-const unsafePath = /(?:^|[\W_])(?:delete|remove|destroy|drop|purge|truncate|edit|update|pay|purchase|checkout|billing|transfer|withdraw|refund|invite|send|publish|install|connect|disconnect|revoke|logout|signout|password|credential|security|permission|admin|reset|unsubscribe|register|signup)(?:$|[\W_])/i;
+const unsafe = /\b(?:delete|remove|destroy|drop|purge|truncate|edit|update|pay|purchase|buy|checkout|billing|transfer|withdraw|refund|invite|send|publish|install|connect|disconnect|revoke|logout|login|sign\s*(?:out|in|up)|log\s*(?:out|in)|password|credential|security|permission|admin|reset|unsubscribe|register|account|profile|settings|oauth|authorize)\b/i;
+const unsafePath = /(?:^|[\W_])(?:delete|remove|destroy|drop|purge|truncate|edit|update|pay|purchase|checkout|billing|transfer|withdraw|refund|invite|send|publish|install|connect|disconnect|revoke|logout|signout|password|credential|security|permission|admin|reset|unsubscribe|register|signup|accounts?|profiles?|settings)(?:$|[\W_])/i;
+const authWritePath = /(?:^|[\W_])(?:login|signin|oauth|authorize)(?:$|[\W_])/i;
 const create = /\b(?:create|save|add|submit|join|subscribe|waitlist|done|finish|confirm)\b/i;
 
 export function safeBrowserUrl(raw: string, origin: string) {
@@ -43,7 +44,7 @@ export function browserRequestAllowed(input: { url: string; method: string; navi
   const same = url.origin === origin;
   if (input.navigation && !same || same && !safeBrowserUrl(url.href, origin)) return false;
   if (["GET", "HEAD", "OPTIONS"].includes(input.method)) return true;
-  return same && input.method === "POST" && !!marker && containsMarker(input.body, marker);
+  return same && input.method === "POST" && !authWritePath.test(decodeURIComponent(url.pathname)) && !!marker && containsMarker(input.body, marker);
 }
 
 /** Every intercepted request is fulfilled through an IP-pinned public connection.
