@@ -24,7 +24,7 @@ PreFlight helps developers and teams test deployed web applications, investigate
 - [Sign in or join the waitlist](https://www.trypreflight.dev/login): interactive GitHub authentication; access is reviewed.
 - [PreFlight QA GitHub App](https://github.com/apps/preflight-qa): repository connection.
 - [Full product reference](https://www.trypreflight.dev/llms-full.txt): workflows, collaboration, evidence and access boundaries.
-- Contact: hello@trypreflight.dev
+- Contact: james@trypreflight.dev
 
 ## Machine-readable public content
 
