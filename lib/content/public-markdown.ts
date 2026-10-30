@@ -45,7 +45,7 @@ Sign in with GitHub to join the waitlist. We review each request before granting
 - [Agent guide](${SITE_URL}/llms.txt)
 - [Authentication instructions](${SITE_URL}/auth.md)
 
-Contact: hello@trypreflight.dev`,
+Contact: james@trypreflight.dev`,
   };
   if (path === "/privacy" || path === "/terms") {
     const privacy = path === "/privacy";
