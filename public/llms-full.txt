@@ -96,4 +96,4 @@ Never include private project data, test credentials, session cookies, OAuth tok
 
 ## Contact
 
-hello@trypreflight.dev
+james@trypreflight.dev
