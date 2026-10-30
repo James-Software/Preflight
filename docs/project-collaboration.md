@@ -23,7 +23,7 @@ Resend currently offers 3,000 emails per month with a 100-email daily limit on i
 
    ```text
    RESEND_API_KEY=<your sending API key>
-   INVITE_FROM_EMAIL=PreFlight <invites@trypreflight.dev>
+   INVITE_FROM_EMAIL=PreFlight <james@trypreflight.dev>
    ```
 
 3. Use an address on the domain verified in Resend, then redeploy the web app. These variables are not needed in Trigger.dev. Both web and worker deployments need the collaboration code for shared PR workers.
