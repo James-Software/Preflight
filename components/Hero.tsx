@@ -31,7 +31,7 @@ export default function Hero() {
 
           <div className="relative min-w-0 w-full px-5 pb-24 pt-20 text-center sm:px-16 sm:pb-24 sm:pt-24 md:px-12 md:pb-32 md:pt-20">
             <h1
-              className={`${headline.className} hero-headline animate-hero-rise mx-auto max-w-[60rem] text-balance leading-[1.04] font-medium tracking-[-0.045em] text-[#142b42]`}
+              className={`${headline.className} hero-headline mx-auto max-w-[60rem] text-balance leading-[1.04] font-medium tracking-[-0.045em] text-[#142b42]`}
             >
               <span className="block">Your build passed.</span>{" "}
               <span className="block">Now test the app.</span>
