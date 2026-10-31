@@ -38,7 +38,7 @@ export default function DatabaseCheckResults({
   }
   const labels: Record<string, string> = {
     passed: "Confirmed",
-    failed: "Not confirmed",
+    failed: "Expectation failed",
     error: "Unverified",
     running: "Checking",
     pending: "Pending",
@@ -53,7 +53,7 @@ export default function DatabaseCheckResults({
       </h2>
       <p className="mt-2 text-sm text-muted">
         {assertions.length
-          ? `${assertions.filter((check) => check.status === "passed").length} of ${assertions.length} database checks confirmed the expected change.`
+          ? `${assertions.filter((check) => ["passed", "failed"].includes(check.status)).length} of ${assertions.length} database checks completed. ${assertions.filter((check) => check.status === "failed").length} failed the configured expectation.`
           : "No database assertions completed. Persistence has not been verified."}
       </p>
       {setup.length > 0 && (

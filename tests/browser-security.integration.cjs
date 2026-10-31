@@ -30,7 +30,7 @@ const { load } = require("./load-module.cjs");
     await new Promise(resolve => app.listen(0, "127.0.0.1", resolve));
     const origin = "https://app.example";
     const project = await schema.createProject("fixture-owner", origin, "fixture/app");
-    browser = await chromium.launch({ executablePath: "/usr/bin/chromium", args: ["--no-sandbox"] });
+    browser = await chromium.launch({ executablePath: require("./browser-fixture.cjs").chromiumPath, args: ["--no-sandbox"] });
     const boundary = {
       ...load("lib/public-http.ts", {}),
       publicHttpRequest: async (raw, options) => {

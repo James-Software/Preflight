@@ -144,7 +144,7 @@ async function hero(browser, fallback) {
 }
 (async () => {
   const browser = await chromium.launch({
-    executablePath: process.env.CHROMIUM_PATH || "/usr/bin/chromium",
+    executablePath: require("./browser-fixture.cjs").chromiumPath,
     args: ["--no-sandbox", "--disable-dev-shm-usage"],
   });
   try {

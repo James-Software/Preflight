@@ -2,7 +2,7 @@ const { chromium } = require("playwright-core");
 const assert = require("node:assert/strict");
 (async () => {
   const b = await chromium.launch({
-    executablePath: "/usr/bin/chromium",
+    executablePath: require("./browser-fixture.cjs").chromiumPath,
     args: [
       "--no-sandbox",
       "--disable-dev-shm-usage",

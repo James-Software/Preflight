@@ -96,7 +96,7 @@ export const runSwarm = task({
       throw error;
     }
 
-    const automaticReady = run.database_snapshot
+    const automaticReady = run.database_snapshot && !databaseChecks.length
       ? await preflightAutomaticDatabase(payload.runId)
       : false;
     const cancelled = async () => {
@@ -122,6 +122,7 @@ export const runSwarm = task({
       try {
         const planning = await tasks.triggerAndWait("generate-test-plan", {
           runId: payload.runId,
+          coveredFormButtons: databaseChecks.map(check => check.buttonLabel),
         });
         if (planning?.ok === false) throw planning.error;
         const r2 = await sql`SELECT plan FROM runs WHERE id = ${payload.runId}`;

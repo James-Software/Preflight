@@ -38,6 +38,13 @@ set its `guest_demo_sessions.revoked_at`. A new request immediately loses access
 including any issued guest agent bearer. This does not undo an already queued run.
 No per-user run quota is introduced.
 
+New guest copies include an explicit waitlist persistence contract and exact
+success-message expectation. A failure is confirmed only after two marked,
+accepted submissions in fresh browser contexts fail the configured read-only SQL
+expectation. Ordinary missing-row observations remain unverified. The planner
+does not mistake preload assets for pages or repeat a form already covered by its
+configured database workflow.
+
 Verify with the usual suite/build and:
 
 ```sh

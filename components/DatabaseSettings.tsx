@@ -11,6 +11,7 @@ type DraftCheck = {
   query: string;
   operator: "equals" | "changes" | "increases" | "decreases";
   expectedText: string;
+  successText?: string;
 };
 const blankCheck = (): DraftCheck => ({
   title: "",
@@ -154,6 +155,7 @@ export default function DatabaseSettings({
         title: check.title,
         instructions: check.instructions,
         buttonLabel: check.buttonLabel,
+        ...(check.successText?.trim() ? { successText: check.successText.trim() } : {}),
         query: check.query,
         operator: check.operator,
         expected:
@@ -473,6 +475,12 @@ export default function DatabaseSettings({
                             />
                           </label>
                         </div>
+                        <label className="mt-4 block text-sm">
+                          Exact success message (optional)
+                          <input maxLength={200} value={check.successText || ""} onChange={(e) => update(index, { successText: e.target.value })}
+                            placeholder="Your task was created" className={field} />
+                          <span className="mt-2 block text-xs leading-relaxed text-muted">If the app accepts a marked submission but the database expectation fails, PreFlight repeats the workflow in a fresh browser before confirming a persistence defect.</span>
+                        </label>
                         <label className="mt-4 block text-sm">
                           Browser workflow
                           <textarea

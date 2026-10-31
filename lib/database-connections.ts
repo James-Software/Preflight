@@ -32,14 +32,16 @@ export type DatabaseMetadata = {
   updated_at: string;
 };
 /** Server-only clone: decrypt and reseal with the new project's AAD. No credentials leave the server. */
-export async function demoDatabaseCopy(templateId: number, projectId: number, owner: string, origin: string) {
+export async function demoDatabaseCopy(templateId: number, projectId: number, owner: string, origin: string, checks?: DatabaseCheck[]) {
   const sql = getSql();
   const rows = await sql`SELECT id,encrypted_config,check_count FROM project_database_connections
     WHERE project_id=${templateId} AND origin=${origin} AND revoked_at IS NULL`;
   const config = (rows as any[])[0];
   if (!config) throw new DatabaseCheckError("The example database connection is unavailable.");
-  const encrypted = seal(unseal(config.encrypted_config, owner, templateId, origin), owner, projectId, origin);
-  return { encrypted, checkCount: config.check_count, sourceId: config.id };
+  const source = unseal(config.encrypted_config, owner, templateId, origin);
+  if (checks) source.checks = parseDatabaseChecks(checks);
+  const encrypted = seal(source, owner, projectId, origin);
+  return { encrypted, checkCount: source.checks.length, sourceId: config.id };
 }
 function encryptionKeyId() {
   return createHash("sha256")

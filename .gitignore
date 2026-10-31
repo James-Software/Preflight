@@ -15,3 +15,7 @@ out/
 
 # trigger.dev
 .trigger/
+
+# Local test output, private browser sessions and generated recordings.
+work/
+artifacts/

@@ -1,5 +1,6 @@
 import { projectGithubContext, ProjectGithubError } from "@/lib/project-github";
 import { databaseForRun } from "@/lib/database-connections";
+import { refreshGuestDemoDatabase } from "@/lib/guest-demo";
 import {
   DatabaseCheckError,
   DatabaseConnectionLocked,
@@ -231,6 +232,7 @@ export async function POST(
   let database;
   if (body.verifyDatabase) {
     try {
+      if (githubId.startsWith("guest:")) await refreshGuestDemoDatabase(githubId, project.id);
       database = await databaseForRun(project.id, project.owner_github_id, targetUrl!);
     } catch (error) {
       return NextResponse.json(

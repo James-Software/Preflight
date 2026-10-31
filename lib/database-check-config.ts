@@ -9,6 +9,7 @@ export type DatabaseCheck = {
   query: string;
   operator: "equals" | "changes" | "increases" | "decreases";
   expected: Scalar;
+  successText?: string;
 };
 export class DatabaseCheckError extends Error {}
 export class DatabaseConnectionLocked extends DatabaseCheckError {}
@@ -80,6 +81,8 @@ export function parseDatabaseChecks(input: unknown): DatabaseCheck[] {
           "The expected value must be a JSON string, number, true, false or null.",
         );
       const query = checkedQuery(raw.query);
+      if (raw.successText !== undefined && (typeof raw.successText !== "string" || !raw.successText.trim() || raw.successText.length > 200))
+        throw new DatabaseCheckError("Use a visible success message of 1 to 200 characters.");
       if (
         (query.includes("$1") ||
           (typeof raw.expected === "string" &&
@@ -100,6 +103,7 @@ export function parseDatabaseChecks(input: unknown): DatabaseCheck[] {
         query,
         operator: raw.operator,
         expected: raw.operator === "equals" ? raw.expected : null,
+        ...(raw.successText ? { successText: raw.successText.trim() } : {}),
       };
     })
     .map((check, index, checks) => {

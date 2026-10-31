@@ -321,7 +321,7 @@ test("run setup snapshots database checks without adding credentials or SQL to t
   assert.deepEqual(triggered[1], { runId: 12, targetUrl: "https://app.test" });
 });
 
-test("database setup fails before browser allocation, and confirmed automatic actions skip only the redundant fallback", async () => {
+test("database setup fails before browser allocation, and explicit workflows do not repeat automatic submissions", async () => {
   for (const [fail, alreadyVerified] of [
     [true, false],
     [false, false],
@@ -412,15 +412,8 @@ test("database setup fails before browser allocation, and confirmed automatic ac
     } else {
       await task.run({ runId: 1 });
       assert.equal(batches, 1);
-      assert.equal(payloads.length, alreadyVerified ? 2 : 3);
-      if (!alreadyVerified) {
-        assert.equal(payloads[0].verifyDatabase, true);
-        assert.equal(
-          payloads[0].assignment.steps[0].id,
-          "automatic-database-create",
-        );
-      } else
-        assert.ok(
+      assert.equal(payloads.length, 2);
+      assert.ok(
           payloads.every(
             (p) => p.assignment.steps[0].id !== "automatic-database-create",
           ),
@@ -428,7 +421,6 @@ test("database setup fails before browser allocation, and confirmed automatic ac
       assert.equal(maxInFlight, 1);
       assert.ok(
         payloads
-          .slice(alreadyVerified ? 0 : 1)
           .every((payload) => payload.assignment.steps[0].databaseCheckId),
       );
       assert.ok(!JSON.stringify(payloads).includes("postgresql://"));

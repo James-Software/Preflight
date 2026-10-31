@@ -231,6 +231,7 @@ async function initializeSchema(): Promise<void> {
       created_at TIMESTAMPTZ DEFAULT NOW()
     )
   `;
+  await sql`ALTER TABLE agents ADD COLUMN IF NOT EXISTS failure_reason TEXT`;
   await sql`ALTER TABLE findings ADD COLUMN IF NOT EXISTS fix_summary TEXT`;
   await sql`CREATE TABLE IF NOT EXISTS run_screenshots (
     id UUID PRIMARY KEY, run_id INT NOT NULL REFERENCES runs(id),

@@ -7,6 +7,7 @@ import {
 import {
   runDatabaseVerifier,
   databaseVerificationError,
+  databaseCheckResult,
 } from "@/lib/database-verification";
 import { DatabaseCheckError } from "@/lib/database-check-config";
 import { getRunAuthentication } from "@/lib/auth-profiles";
@@ -29,6 +30,7 @@ import { uploadScreenshot } from "@/lib/evidence";
 import { MODEL_CONFIG } from "@/lib/model-config";
 import { assertRunActive, RunStopped } from "@/lib/run-lifecycle";
 import { browserPolicy, BrowserPolicyError } from "@/lib/browser-policy";
+import { safeRunFailure } from "@/lib/run-details";
 import {
   createAgent,
   updateAgentStatus,
@@ -136,6 +138,9 @@ async function executeAction(page: Page, action: AgentAction): Promise<string> {
  */
 export const browserAgent = task({
   id: "browser-agent",
+  // Shared infrastructure scheduling, not a per-user run quota. Increase only
+  // when the Browserbase plan supports the configured concurrent sessions.
+  queue: { name: "browser-agents", concurrencyLimit: Math.floor(Math.max(1, Math.min(10, Number(process.env.BROWSER_AGENT_CONCURRENCY) || 1))) },
   maxDuration: 900,
   retry: { maxAttempts: 1 },
   run: async (payload: {
@@ -200,6 +205,7 @@ export const browserAgent = task({
       title: string,
       detail: string,
       evidenceKey: string,
+      runtimeProof = false,
     ): Promise<void> => {
       try {
         const shot = await page.screenshot({ type: "jpeg", quality: 60 });
@@ -218,6 +224,7 @@ export const browserAgent = task({
         detail = redact(detail);
         let severity = "medium";
         try {
+          if (!runtimeProof)
           severity = (await assessSeverity({ title, detail })).severity;
         } catch (error) {
           if (MODEL_CONFIG.judge.provider === "openai-decisions") throw error;
@@ -225,6 +232,8 @@ export const browserAgent = task({
         }
         let fixSummary = `${title}. The unexpected result was reproduced in a fresh browser context. The cause has not been verified in source; investigate the recorded observations and add a regression check before choosing a fix.`;
         try {
+          if (runtimeProof) fixSummary = detail.slice(0, 1500);
+          else
           fixSummary = redact(
             await summarizeFinding({ title, detail: detail.slice(0, 3000) }),
           );
@@ -260,7 +269,7 @@ export const browserAgent = task({
             300,
           ),
         );
-        if (MODEL_CONFIG.judge.provider === "openai-decisions") throw e;
+        if (runtimeProof || MODEL_CONFIG.judge.provider === "openai-decisions") throw e;
       }
     };
 
@@ -420,6 +429,7 @@ export const browserAgent = task({
         }
         let databaseObserved = false;
         let databasePassed = false;
+        let persistenceProof: string | null = null;
         let automaticInspectionFailed = false;
         let finished =
           payload.verifyDatabase === true &&
@@ -509,6 +519,18 @@ export const browserAgent = task({
             // An advanced check authorizes only a marked creation request;
             // it cannot grant arbitrary account/payment/destructive writes.
             policy.permitCreate(databaseVerifier.marker, action);
+            const button = page.getByRole("button", { name: databaseVerifier.check.buttonLabel, exact: true });
+            const success = databaseVerifier.check.successText;
+            const visibleSuccess = async (target: Page) => {
+              if (!success) return false;
+              try { await target.getByText(success, { exact: true }).first().waitFor({ state: "visible", timeout: 3500 }); return true; }
+              catch { return false; }
+            };
+            const alreadySuccessful = success ? await page.getByText(success, { exact: true }).first().isVisible().catch(() => false) : false;
+            const markedForm = success ? await button.evaluate((node, marker) => {
+              const form = (node as HTMLButtonElement).form;
+              return !!form && [...new FormData(form).values()].some(value => typeof value === "string" && value.includes(marker));
+            }, databaseVerifier.marker).catch(() => false) : false;
             const before = await databaseVerifier.before();
             try {
               await page
@@ -526,6 +548,7 @@ export const browserAgent = task({
             actionLog.push(
               `Clicked the configured button "${databaseVerifier.check.buttonLabel}".`,
             );
+            const accepted = !alreadySuccessful && markedForm && await visibleSuccess(page);
             const outcome = await databaseVerifier.after(before);
             databaseObserved = true;
             finished = true;
@@ -534,6 +557,61 @@ export const browserAgent = task({
               action,
               result: "Activated the configured database-verified button.",
             });
+            if (!outcome.passed && accepted && !payload.readOnlyRetry) {
+              // A configured assertion + a newly visible acceptance message is
+              // a candidate. Confirm it with a different marker in a fresh
+              // context; never substitute a model opinion for either fact.
+              let second: Page | null = null;
+              let verifier: Awaited<ReturnType<typeof runDatabaseVerifier>> | null = null;
+              try {
+                const originalMarker = databaseVerifier.marker;
+                verifier = await runDatabaseVerifier(payload.runId, step.databaseCheckId!, true);
+                policy.reset();
+                second = await newAssignmentPage(authentication);
+                await policy.checkAction(second, { action: "goto", value: startUrl, reasoning: "Independently repeat the marked persistence check" });
+                const navigation = await executeAction(second, { action: "goto", value: startUrl, reasoning: "Fresh context" });
+                if (navigation.startsWith("Action failed:")) throw new Error("Persistence replay navigation failed.");
+                let repeated = false;
+                for (const prior of attempted) {
+                  let replayAction = { ...prior.action } as AgentAction;
+                  if (replayAction.action === "done" || replayAction.action === "report_bug") continue;
+                  if (replayAction.action === "fill") replayAction = { ...replayAction, value: replayAction.value.replaceAll(originalMarker, verifier.marker) };
+                  await policy.checkAction(second, replayAction, true);
+                  if (replayAction.action === "click" && replayAction.role.toLowerCase() === "button" && replayAction.name.toLowerCase() === verifier.check.buttonLabel.toLowerCase()) {
+                    const submit = second.getByRole("button", { name: verifier.check.buttonLabel, exact: true });
+                    const containsMarker = await submit.evaluate((node, marker) => {
+                      const form = (node as HTMLButtonElement).form;
+                      return !!form && [...new FormData(form).values()].some(value => typeof value === "string" && value.includes(marker));
+                    }, verifier.marker);
+                    const oldSuccess = await second.getByText(success!, { exact: true }).first().isVisible().catch(() => false);
+                    if (!containsMarker || oldSuccess) break;
+                    const baseline = await verifier.before();
+                    policy.permitCreate(verifier.marker, replayAction);
+                    await submit.click({ timeout: 6000 });
+                    const againAccepted = await visibleSuccess(second);
+                    const observed = await verifier.after(baseline);
+                    await assertRetryActive();
+                    if (!policy.blocked && againAccepted && !observed.passed) {
+                      persistenceProof = `Two independent browser contexts submitted different uniquely marked form values and newly displayed “${success}”. The configured read-only database assertion failed after each accepted submission's 5-second observation window. No missing prerequisite or model judgment is used as defect evidence.\nFirst marker: ${originalMarker}\nIndependent marker: ${verifier.marker}\n${outcome.summary}\n${observed.summary}`;
+                      await recordFinding(second, `Success reported without expected persistence: ${databaseVerifier.check.title}`, persistenceProof,
+                        `persistence:${payload.runId}:${step.databaseCheckId}`, true);
+                      await databaseCheckResult(payload.runId, step.databaseCheckId!, "failed", "Confirmed twice: the app accepted marked submissions but the configured database expectation was not met within either 5-second observation window.");
+                      repeated = true;
+                    }
+                    break;
+                  }
+                  const result = await executeAction(second, replayAction);
+                  if (result.startsWith("Action failed:") || policy.blocked) break;
+                }
+                if (!repeated) policy.reset();
+              } catch {
+                persistenceProof = null;
+                policy.reset();
+              } finally {
+                await verifier?.close().catch(() => {});
+                await second?.context().close().catch(() => {});
+              }
+            }
             break;
           }
           await automatic?.assertActive();
@@ -666,7 +744,9 @@ export const browserAgent = task({
               blocked ||
                 "The configured database-verified button was not successfully activated.",
             );
-          } else
+          } else if (persistenceProof)
+            await outcome("confirmed", "Accepted submissions failed the configured persistence expectation in two independent browser contexts.", persistenceProof);
+          else
             await outcome(
               databasePassed ? "passed" : "inconclusive",
               databasePassed
@@ -992,6 +1072,7 @@ export const browserAgent = task({
             : "The browser workflow did not complete. This database check is unverified.",
         ).catch(() => {});
       await updateAgentStatus(agent.id, "failed").catch(() => {});
+      await getSql()`UPDATE agents SET failure_reason=${safeRunFailure(e)} WHERE id=${agent.id}`.catch(() => {});
       throw e;
     } finally {
       if (runWatch) clearInterval(runWatch);

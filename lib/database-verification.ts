@@ -1,4 +1,5 @@
 import { setTimeout as delay } from "node:timers/promises";
+import { randomBytes } from "node:crypto";
 import { getSql } from "@/lib/db";
 import { runDatabaseConfig } from "@/lib/database-connections";
 import { postgresReader } from "@/lib/postgres-verification";
@@ -54,7 +55,7 @@ export async function preflightRunDatabase(runId: number) {
     throw new DatabaseCheckError(message);
   }
 }
-export async function runDatabaseVerifier(runId: number, checkId: string) {
+export async function runDatabaseVerifier(runId: number, checkId: string, independentReplay = false) {
   const config = await runDatabaseConfig(runId),
     check = config?.checks.find((c) => c.id === checkId);
   if (!config || !check)
@@ -62,7 +63,7 @@ export async function runDatabaseVerifier(runId: number, checkId: string) {
       "The configured database check is unavailable.",
     );
   const reader = await postgresReader(config.connectionString),
-    marker = checkMarker(runId, checkId);
+    marker = checkMarker(runId, checkId) + (independentReplay ? `-replay-${randomBytes(8).toString("hex")}` : "");
   return {
     check,
     marker,

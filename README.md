@@ -1,55 +1,132 @@
 # PreFlight
 
-PreFlight allows an agent swarm to automatically review your application to confirm it is ready for takeoff.
+AI browser testing with evidence you can inspect. PreFlight tests a deployed web
+app in real browsers, checks configured persistence expectations, and saves
+screenshots, observations and findings. Owners can request proposed fix PRs;
+PreFlight never merges them automatically.
 
-A swarm of AI agents acts as real users against your app — clicking through the UI,
-exercising functionality, and catching UX, frontend, and backend bugs. When a bug is
-found, our cloud agent diagnoses the root cause from your code and captured terminal
-output, then opens a pull request with the fix on your connected GitHub repo. You
-merge; one click re-runs the swarm to verify.
+- **Live app:** https://www.trypreflight.dev
+- **Example under test:** https://preflight-example.vercel.app
+- **Submission:** [executive briefing](docs/executive-briefing.md),
+  [architecture](docs/architecture.md), [financial model](docs/monetization.md)
+- **Judge access:** use the invitation shared separately. No GitHub sign-in is
+  required; each guest browser receives isolated run history.
 
-Built for the Galuxium Nexus V2 hackathon (deadline Oct 31, 2026).
+## Implemented workflow
 
-## Architecture
+GitHub/Auth.js accounts, invitations and collaboration; persistent Neon projects,
+runs and findings; guarded Browserbase/Playwright execution; configured database
+assertions; fresh-context reproduction; pinned-source investigation and isolated
+source regressions; private screenshots; cancellation; and owner-requested fix PRs.
 
-- **Web app + dashboard** — Next.js 16 (App Router) on Vercel, React 19, TypeScript,
-  Tailwind CSS v4.
-- **Database + auth** — Supabase (Postgres with RLS on every table). Schema lives in
-  `supabase/schema.sql`.
-- **Test swarm** — Playwright on cloud browsers (Browserbase). An LLM drives each
-  browser agent as a real user through generated test plans.
-- **Decision layer** — OpenAI's Decisions API (`gpt-6-luna`) evaluates step pass/fail
-  with predicate probabilities and bug severity with typed choices. It uses
-  `OPENAI_API_KEY` in the Trigger.dev workers; the browser driver uses OpenRouter.
-- **Fix agent** — a GitHub App (least privilege: contents + PRs on repos you pick).
-  Diagnoses root cause from repo code plus captured console/network output, fixes in
-  a sandbox, and opens a PR. Humans merge — never direct pushes.
-- **Monetization** — credits (1 credit = 1 agent test-step) sold in packs via Stripe,
-  plus flat-rate enterprise plans (SSO, audit logs, scheduled runs). Target: 50%
-  margin, enforced by pricing every run at 2x its infra cost.
+A configured persistence check can require an exact success message. If a marked
+submission is accepted but its SQL expectation fails, the worker repeats recorded
+actions with a different marker in a fresh browser. Only two accepted, failed
+assertions establish a persistence finding. A missing row, rejected submission,
+stale toast or infrastructure error alone does not establish a bug.
 
-## Getting started
+The example waitlist deliberately clears its email field and shows success without
+calling its save API. Guest demos include an explicit SQL expectation for it.
+The example bug is intentionally retained.
 
-```bash
-cp .env.example .env.local   # then fill in your web app values
-npm install
-npm run dev
+**Limits:** arbitrary applications cannot always be confirmed automatically.
+Reports preserve blocked prerequisites and unavailable providers. Use authorized
+public previews and disposable test accounts. Payments, destructive actions and
+account/security changes are blocked. The judge pilot has no per-user run quota.
+Commercial pricing remains proposed until a payment account and genuine
+checkout/webhook flow are verified; Stripe billing is not claimed as live.
+
+## System design
+
+```mermaid
+flowchart LR
+  User[Judge / GitHub user] --> Web[Next.js on Vercel]
+  Web --> Auth[Auth.js + encrypted guest sessions]
+  Web --> DB[(Neon: projects, runs, private evidence)]
+  Web --> Queue[Trigger.dev]
+  Queue --> Browser[Browserbase + guarded Playwright]
+  Browser --> App[Authorized public app]
+  Browser --> SQL[Read-only configured SQL assertions]
+  Queue --> AI[OpenRouter / OpenAI Decisions]
+  Queue --> Broker[Scoped source / regression broker]
+  Broker --> GitHub[GitHub pinned source / reviewed PRs]
+  Broker --> Sandbox[Isolated Vercel Sandbox]
+  Browser --> DB
 ```
 
-Swarm workers also need their own credentials and deployment in Trigger.dev.
-See [swarm setup and model credentials](docs/swarm-setup.md) for Production versus
-Preview routing, “No matching branch env” recovery, and OpenAI Decisions setup.
-Set `OPENAI_API_KEY` in the matching Trigger.dev worker environment before running
-swarms; retain `OPENROUTER_API_KEY` for the browser driver.
+The app uses **Neon Postgres and Auth.js**. Supabase is supported as a customer
+database provider. `supabase/schema.sql` and `lib/supabase.ts` are legacy
+scaffolding, not the active application schema or authentication system.
+Current tables and migrations are in [lib/schema.ts](lib/schema.ts).
 
-## Shared UI
+## Local replication
 
-Headers, profile menus, and appearance controls are shared across public and
-dashboard routes. See [UI structure and theme conventions](docs/ui.md) before
-adding page-specific navigation or theme handling.
+Use Node.js 24 (`nvm use`) and the committed npm lockfile:
 
-## Agent-readable public content
+```bash
+npm ci
+npx playwright-core install --with-deps chromium
+npm test
+npm run typecheck
+npm run build
+npm run test:integration
+```
 
-Public pages support Markdown content negotiation and a read-only discovery
-catalog. See [agent discovery and Cloudflare settings](docs/agent-discovery.md)
-for endpoints, cache boundaries, and live-deployment checks.
+The integration suite uses actual local Chromium and PGlite Postgres databases
+with controlled external-provider boundaries. No production credentials, paid
+model calls or customer database writes are required. Set `CHROMIUM_PATH` to use
+an existing Chromium; otherwise Playwright's installed browser is used.
+
+For the web UI, copy `.env.example` to `.env.local`, configure your own development
+Neon branch and GitHub OAuth app, and run `npm run dev`. The local callback is
+`http://localhost:3000/api/auth/callback/github`. The shipped admin identity is
+`james-software` in `lib/access.ts`; a fork must set its own owner. Public pages
+build without live credentials; authenticated data operations need configuration.
+
+See [local development](docs/local-development.md) for complete runtime setup and
+the distinction between local fixtures and a public cloud preview. Cloud browsers
+cannot reach localhost; the network guard must not be disabled to work around it.
+
+## Runtime configuration
+
+| Variable | Web | Worker | Purpose |
+|---|---|---|---|
+| `NEXT_PUBLIC_APP_URL` | Yes | Yes | Same canonical origin for web/broker calls; defaults to the live PreFlight URL |
+| `DATABASE_URL` | Yes | Yes | Development or production application Neon database |
+| `AUTH_SECRET`, `AUTH_GITHUB_ID`, `AUTH_GITHUB_SECRET`, `AUTH_URL` | Yes | No | Auth.js sessions and GitHub OAuth |
+| `PROFILE_ENCRYPTION_KEY` | Yes | Yes | Same persistent base64 32-byte key in both runtimes |
+| `TRIGGER_SECRET_KEY` | Yes | No | Correct environment's Trigger key |
+| `BROWSERBASE_API_KEY`, `BROWSERBASE_PROJECT_ID` | Yes | Yes | Cloud browsers and optional profile capture |
+| `OPENROUTER_API_KEY` | No | Yes | Driver and source review |
+| `OPENAI_API_KEY` | No | Yes | Typed Decisions judgments |
+| `BROWSER_AGENT_CONCURRENCY` | No | Optional | Shared provider capacity; defaults to one, not a user quota |
+| `RESEND_API_KEY`, `INVITE_FROM_EMAIL` | Optional | No | Collaboration email |
+| `BLOB_READ_WRITE_TOKEN` | Legacy only | Legacy only | Historical public-image retirement; new images use private Neon storage |
+
+Generate independent `AUTH_SECRET` and `PROFILE_ENCRYPTION_KEY` values with
+`openssl rand -base64 32`. Keep encryption keys stable; changing them without
+migration makes saved connections unreadable. Never put a secret in a
+`NEXT_PUBLIC_*` variable. `NEXT_PUBLIC_APP_URL` is intentionally a public URL.
+For a fork, set its Trigger project in `trigger.config.ts`. See
+[swarm setup](docs/swarm-setup.md) for preview/production routing. The driver is
+`openai/gpt-6-luna`; typed judgments use `gpt-6-luna` via OpenAI Decisions.
+
+## Verification and project map
+
+GitHub Actions runs unit tests, types, production build, integration tests,
+production dependency audit and a redacted full-history credential scan. Action
+versions are pinned to SHAs. CI has no production credentials. The single
+`.gitleaksignore` fingerprint is historical documentation prose, not a blanket
+path exclusion. See [security hardening](docs/security-hardening.md).
+
+- `app/`, `components/` — public UI, dashboard, APIs and typed React components
+- `src/trigger/` — planning, browser, investigation and fix workers
+- `lib/` — scoped access, data model, networking, providers and evidence
+- `tests/` — unit and real-browser/database integration tests
+- `docs/` — system design, operational guides and submission documents
+
+Further guides: [judge demos](docs/judge-demo.md),
+[database verification](docs/database-verification/README.md),
+[authenticated testing](docs/authenticated-testing.md),
+[collaboration](docs/project-collaboration.md),
+[run review MCP](docs/run-review-mcp.md), [agent discovery](docs/agent-discovery.md).

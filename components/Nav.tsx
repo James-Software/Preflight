@@ -10,12 +10,26 @@ import type { ProfileUser } from "./Avatar";
 const SCROLL_AFTER = 8;
 
 export default function Nav({
-  user,
-  isAdmin = false,
+  user: initialUser,
+  isAdmin: initialAdmin = false,
+  loadSession = false,
 }: {
   user: ProfileUser | null;
   isAdmin?: boolean;
+  loadSession?: boolean;
 }) {
+  const [user, setUser] = useState(initialUser);
+  const [isAdmin, setIsAdmin] = useState(initialAdmin);
+  const [isGuest, setIsGuest] = useState(false);
+  useEffect(() => {
+    if (!loadSession) return;
+    const controller = new AbortController();
+    void fetch("/api/navigation-session", { cache: "no-store", credentials: "same-origin", signal: controller.signal })
+      .then(response => response.ok ? response.json() : null)
+      .then(session => { if (!controller.signal.aborted && session) { setUser(session.user); setIsAdmin(session.isAdmin === true); setIsGuest(session.isGuest === true); } })
+      .catch(() => {});
+    return () => controller.abort();
+  }, [loadSession]);
   const landing = usePathname() === "/";
   const [scrolled, setScrolled] = useState(false);
 
@@ -90,7 +104,7 @@ export default function Nav({
                 >
                   Dashboard
                 </a>
-                <ProfileMenu user={user} isAdmin={isAdmin} />
+                <ProfileMenu user={user} isAdmin={isAdmin} isGuest={isGuest} />
               </>
             ) : (
               <>

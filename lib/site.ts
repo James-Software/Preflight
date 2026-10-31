@@ -1,4 +1,8 @@
-export const SITE_URL = "https://www.trypreflight.dev";
+const configuredOrigin = new URL(process.env.NEXT_PUBLIC_APP_URL || "https://www.trypreflight.dev");
+if (!["http:", "https:"].includes(configuredOrigin.protocol) || configuredOrigin.username || configuredOrigin.password ||
+  configuredOrigin.pathname !== "/" || configuredOrigin.search || configuredOrigin.hash)
+  throw new Error("NEXT_PUBLIC_APP_URL must be an HTTP(S) origin without a path, query or credentials.");
+export const SITE_URL = configuredOrigin.origin;
 export const SITE_DESCRIPTION = "Run AI agents through your app in real browsers. Review findings with screenshots, console logs and network traces.";
 export const SITE_PREVIEW_IMAGE = {
   url: `${SITE_URL}/images/social-preview.png`,

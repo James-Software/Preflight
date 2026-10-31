@@ -1,6 +1,7 @@
 import { task } from "@trigger.dev/sdk";
 import { getSql } from "@/lib/db";
 import { publicHtml, TargetAccessError } from "@/lib/public-http";
+import { discoverSmokeSteps } from "@/lib/smoke-plan";
 
 type PlanStep = {
   id: string;
@@ -18,7 +19,7 @@ type PlanStep = {
 export const generateTestPlan = task({
   id: "generate-test-plan",
   maxDuration: 300,
-  run: async (payload: { runId: number }) => {
+  run: async (payload: { runId: number; coveredFormButtons?: string[] }) => {
     const sql = getSql();
 
     const rows = await sql`
@@ -68,7 +69,7 @@ export const generateTestPlan = task({
               "Exercise a primary non-destructive interaction or form validation in the authenticated app. Check the expected result and console errors. Do not make payments, delete data, change credentials or log out.",
           },
         ]
-      : await buildSmokePlan(baseUrl);
+      : await buildSmokePlan(baseUrl, (payload.coveredFormButtons || []).filter(label => typeof label === "string" && label.length <= 100).slice(0, 10));
 
     await sql`
       UPDATE runs
@@ -81,7 +82,7 @@ export const generateTestPlan = task({
 });
 
 /** Fetch the homepage and turn discovered links/forms into plan steps. */
-async function buildSmokePlan(appUrl: string): Promise<PlanStep[]> {
+async function buildSmokePlan(appUrl: string, coveredFormButtons: string[] = []): Promise<PlanStep[]> {
   const steps: PlanStep[] = [
     {
       id: "homepage-load",
@@ -100,40 +101,7 @@ async function buildSmokePlan(appUrl: string): Promise<PlanStep[]> {
       });
       return steps;
     }
-    const html = res.html;
-
-    // Distinct internal links (cap at 10).
-    const base = new URL(appUrl);
-    const links = new Set<string>();
-    for (const m of html.matchAll(/href="([^"#]+)"/g)) {
-      try {
-        const u = new URL(m[1], base);
-        if (u.origin === base.origin && u.pathname !== base.pathname) {
-          links.add(u.pathname);
-        }
-      } catch {
-        // ignore malformed hrefs
-      }
-      if (links.size >= 10) break;
-    }
-    for (const pathname of links) {
-      steps.push({
-        id: `visit-${pathname.replace(/[^a-z0-9]+/gi, "-").replace(/^-|-$/g, "") || "root"}`,
-        title: `Visit ${pathname}`,
-        detail: `Navigate to ${pathname}; check for console errors, broken layout, and dead interactions.`,
-      });
-    }
-
-    // Forms (cap at 5).
-    const forms = html.match(/<form[^>]*>/gi) ?? [];
-    forms.slice(0, 5).forEach((_, i) => {
-      steps.push({
-        id: `form-${i + 1}`,
-        title: `Exercise form #${i + 1}`,
-        detail:
-          "Fill required fields with realistic input, submit, and verify the outcome (success message, redirect, or validation).",
-      });
-    });
+    steps.push(...discoverSmokeSteps(appUrl, res.html, coveredFormButtons));
   } catch (error) {
     if (error instanceof TargetAccessError) throw error;
     // Unreachable URL: keep the basic plan; the swarm will report the outage.

@@ -63,7 +63,7 @@ const { load } = require("./load-module.cjs");
     "@/lib/auth-profiles": {}, "@/lib/browser-auth": load("lib/browser-auth.ts", {}),
     "@trigger.dev/sdk": { task: (x) => x },
     "node:timers/promises": { setTimeout: async () => {} },
-    "playwright-core": { chromium: { connectOverCDP: async () => { launches++; return chromium.launch({ executablePath: "/usr/bin/chromium", args: ["--no-sandbox"] }); } } },
+    "playwright-core": { chromium: { connectOverCDP: async () => { launches++; return chromium.launch({ executablePath: require("./browser-fixture.cjs").chromiumPath, args: ["--no-sandbox"] }); } } },
     "@/lib/browserbase": { createBrowserSession: async () => ({ id: "local-only", connectUrl: "local" }), closeBrowserSession: async () => {} },
     "@/lib/evidence": { uploadScreenshot: async () => null },
     "@/lib/model-config": { MODEL_CONFIG: { judge: { provider: "openai-decisions" } } },

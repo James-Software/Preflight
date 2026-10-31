@@ -1,0 +1,4 @@
+# False positive on ordinary prose describing "key separation" in a historical
+# testing paragraph. No credential or assignment appears on this line. This
+# fingerprint suppresses only that exact revision/file/rule/line, not future text.
+bb132ef2fa7377638124a663e3c02d4be834bb5b:docs/swarm-setup.md:generic-api-key:57

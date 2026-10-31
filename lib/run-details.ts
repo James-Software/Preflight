@@ -16,12 +16,30 @@ export function runStatusLabel(status: string) {
 export function safeRunFailure(error: unknown) {
   if (error && typeof error === "object" && "name" in error && error.name === "TargetAccessError" && "message" in error)
     return String(error.message).slice(0, 300);
-  const message =
-    error && typeof error === "object" && "message" in error
-      ? String(error.message)
-      : "";
+  // Trigger serializes thrown strings/custom objects and nested causes. Match
+  // known categories without exposing provider bodies, CDP URLs or credentials.
+  const messages: string[] = [];
+  const visit = (value: unknown, depth = 0) => {
+    if (depth > 3 || !value) return;
+    if (typeof value === "string") { messages.push(value.slice(0, 1000)); return; }
+    if (typeof value !== "object") return;
+    const record = value as Record<string, unknown>;
+    for (const key of ["message", "raw", "code"]) if (typeof record[key] === "string") messages.push(String(record[key]).slice(0, 1000));
+    visit(record.cause, depth + 1);
+    if (Array.isArray(record.causes)) record.causes.slice(0, 3).forEach(cause => visit(cause, depth + 1));
+  };
+  visit(error);
+  const message = messages.join(" ");
   const status = message.match(/\b(?:HTTP|error)\s+([45]\d\d)\b/i)?.[1];
   const suffix = status ? ` (HTTP ${status})` : "";
+  if (/Browserbase|cloud browser|connectOverCDP/i.test(message))
+    return /429|capacity|concurren/i.test(message)
+      ? "Cloud browser capacity was unavailable. Completed observations were kept; retry this run after existing browser sessions finish."
+      : `The cloud browser connection could not complete${suffix}. Completed observations were kept.`;
+  if (/OOM|OUT_OF_MEMORY|MEMORY_EXCEEDED|PROCESS_OOM_KILLED/i.test(message))
+    return "The worker exceeded its memory allocation. Completed observations were kept.";
+  if (/MAX_DURATION|TIMEOUT|timed? ?out|TimeoutError/i.test(message))
+    return "The browser or worker exceeded its time limit. Completed observations were kept.";
   if (
     /Authentication check failed|renew.*session|authentication profile|signed-in page/i.test(
       message,

@@ -44,6 +44,7 @@ async function postChat(args: {
 }): Promise<string> {
   const attempts = args.attempts ?? 3;
   for (let attempt = 0; attempt < attempts; attempt++) {
+    try {
     const res = await fetch(OPENROUTER_CHAT, {
       method: "POST",
       headers: baseHeaders(),
@@ -75,18 +76,17 @@ async function postChat(args: {
             }
           : { type: "json_object" },
         ...(args.schema ? { provider: { require_parameters: true } } : {}),
-        max_tokens: args.maxTokens ?? 1024,
+        max_tokens: args.maxTokens ?? 4096,
       }),
     });
-    if (res.status === 429 && attempt < attempts - 1) {
-      await sleep(10000 * (attempt + 1));
+    if ((res.status === 429 || res.status >= 500) && attempt < attempts - 1) {
+      await res.body?.cancel();
+      await sleep(500 * 2 ** attempt);
       continue;
     }
     if (!res.ok) {
-      const t = await res.text().catch(() => "");
-      throw new Error(
-        `OpenRouter chat error ${res.status}: ${t.slice(0, 200)}`,
-      );
+      await res.body?.cancel();
+      throw new Error(`OpenRouter chat error ${res.status}`);
     }
     const data = (await res.json()) as {
       choices?: { message?: { content?: string } }[];
@@ -96,6 +96,10 @@ async function postChat(args: {
       throw new Error("OpenRouter returned no content");
     }
     return text;
+    } catch (error) {
+      if (attempt === attempts - 1 || /OpenRouter chat error 4\d\d/.test(error instanceof Error ? error.message : "")) throw error;
+      await sleep(500 * 2 ** attempt);
+    }
   }
   throw new Error("OpenRouter chat failed after retries");
 }
@@ -293,6 +297,7 @@ export async function driverDecide(input: {
       user,
       schema: DRIVER_ACTION_SCHEMA,
       previousOutput,
+      attempts: 2,
     });
     try {
       return validateAction(JSON.parse(text));

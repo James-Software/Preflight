@@ -7,7 +7,7 @@ export const PRIVACY_SECTIONS: { heading: string; body: string[] }[] = [
       "Waitlist and contact. PreFlight is currently invite-only. When you sign in with GitHub to request access, we save your GitHub profile: your username, name, and avatar, so we can review your request. If you email us, we keep your message and address so we can reply.",
       "Account. When you sign in with GitHub, we save your GitHub profile: your username, name, and avatar, so we can recognize you and control access. Login credentials are handled by our authentication provider; we never see your password.",
       "Projects. The URLs of the applications you ask us to test, along with your project settings and preferences.",
-      "Payment. Payments are processed directly by Stripe. We never see or store your card numbers. Stripe handles all payment details under its own privacy policy. We store only your plan, credit balance, and billing status.",
+      "Payment. The current judge pilot does not charge participants. If paid plans are enabled, checkout will identify the payment provider and price before purchase. Card details will be handled by that provider; PreFlight will store only the account and billing information needed to operate the purchased plan.",
     ],
   },
   {
@@ -121,7 +121,7 @@ export const TERMS_SECTIONS: { heading: string; body: string[] }[] = [
   {
     heading: "7. Credits, plans, and payments",
     body: [
-      "PreFlight is billed in credits, with free allowances, paid plans, and top-ups as described on our pricing page. Payments are processed by Stripe; by purchasing, you also agree to Stripe's terms. Fees are non-refundable except where required by law. We may change pricing for future billing periods with reasonable notice, and we may suspend service for unpaid amounts.",
+      "The current judge pilot is free and does not automatically charge participants. If paid plans or usage credits are offered, their price, billing period, cancellation terms and payment provider will be shown before purchase. No charge is authorized by merely opening a guest demo or starting a pilot run. Applicable refund rights remain available as required by law.",
     ],
   },
   {
