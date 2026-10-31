@@ -1,3 +1,4 @@
+import { publicHttpUrl } from "@/lib/public-http";
 import { fetchGithub, GithubAuthError, type GithubContext } from "@/lib/github";
 
 export type RunTarget =
@@ -138,7 +139,30 @@ export async function resolveRunTarget(
       /* Invalid deployment URLs are not runnable. */
     }
   }
+  // The repository website is owner-configured, like an explicit App URL. It
+  // is suitable only for the default branch, and does not prove deployed SHA.
+  if (
+    target.type === "branch" &&
+    ref === metadata.default_branch &&
+    typeof metadata.homepage === "string"
+  ) {
+    try {
+      return {
+        url: publicHttpUrl(metadata.homepage.trim()).href,
+        ref,
+        sha,
+        source: "repository-homepage" as const,
+        deploymentVerified: false,
+      };
+    } catch {
+      /* An unsafe or absent homepage cannot become a run target. */
+    }
+  }
+  const guidance =
+    target.type === "branch" && ref === metadata.default_branch
+      ? "Set the project’s App URL in General settings, or publish a deployment for this branch, then try again."
+      : "Deploy that branch or PR with your hosting provider, then try again.";
   throw new RunTargetError(
-    `No successful deployment found for the current commit of ${ref}. Deploy that branch or PR with your hosting provider, then try again.`,
+    `No successful deployment found for the current commit of ${ref}. ${guidance}`,
   );
 }

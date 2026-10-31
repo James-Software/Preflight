@@ -379,7 +379,10 @@ test("run start saves target/profile metadata and sends no credentials in the Tr
     snapshot: { encrypted_state: "encrypted-only" },
   };
   const route = load("app/api/projects/[id]/runs/route.ts", {
-    "@/lib/project-github": { projectGithubContext: async()=>ctx, ProjectGithubError: class extends Error{} },
+    "@/lib/project-github": {
+      projectGithubContext: async () => ctx,
+      ProjectGithubError: class extends Error {},
+    },
     "@/auth": { auth: async () => ({ user: { githubId: "100" } }) },
     "@/lib/database-connections": {},
     "@/lib/database-check-config": {},
@@ -481,4 +484,88 @@ test("redaction masks nested auth tokens without hiding navigation labels or the
     profileRedactor(auth)("private-access-token Workspace admin dark"),
     "[redacted] Workspace admin dark",
   );
+});
+
+test("default-branch discovery uses the repository website when deployment records are absent, with unverified provenance", async (t) => {
+  t.mock.method(globalThis, "fetch", async (raw) => {
+    const url = new URL(raw);
+    if (url.pathname.endsWith("/owner/app"))
+      return Response.json({
+        default_branch: "main",
+        homepage: "https://example.vercel.app",
+      });
+    if (url.pathname.includes("/branches/"))
+      return Response.json({ name: "main", commit: { sha: "current-sha" } });
+    if (url.pathname.endsWith("/deployments")) {
+      assert.equal(url.searchParams.get("sha"), "current-sha");
+      return Response.json([]);
+    }
+    assert.fail(url.pathname);
+  });
+  const result = await targets.resolveRunTarget(
+    ctx,
+    "owner/app",
+    { type: "branch", ref: "main" },
+    null,
+  );
+  assert.equal(result.url, "https://example.vercel.app/");
+  assert.equal(result.sha, "current-sha");
+  assert.equal(result.source, "repository-homepage");
+  assert.equal(result.deploymentVerified, false);
+});
+test("a repository website never substitutes for a missing branch or PR deployment", async (t) => {
+  t.mock.method(globalThis, "fetch", async (raw) => {
+    const url = new URL(raw);
+    if (url.pathname.endsWith("/owner/app"))
+      return Response.json({
+        default_branch: "main",
+        homepage: "https://example.vercel.app",
+      });
+    if (url.pathname.includes("/branches/"))
+      return Response.json({ name: "feature", commit: { sha: "feature-sha" } });
+    if (url.pathname.includes("/pulls/"))
+      return Response.json({
+        state: "open",
+        number: 42,
+        head: { ref: "feature", sha: "feature-sha" },
+      });
+    if (url.pathname.endsWith("/deployments")) return Response.json([]);
+    assert.fail(url.pathname);
+  });
+  for (const target of [
+    { type: "branch", ref: "feature" },
+    { type: "pull-request", number: 42 },
+  ])
+    await assert.rejects(
+      targets.resolveRunTarget(ctx, "owner/app", target, null),
+      /No successful deployment/,
+    );
+});
+test("unsafe repository website URLs cannot become a run target", async (t) => {
+  let homepage;
+  t.mock.method(globalThis, "fetch", async (raw) => {
+    const url = new URL(raw);
+    if (url.pathname.endsWith("/owner/app"))
+      return Response.json({ default_branch: "main", homepage });
+    if (url.pathname.includes("/branches/"))
+      return Response.json({ name: "main", commit: { sha: "current-sha" } });
+    if (url.pathname.endsWith("/deployments")) return Response.json([]);
+    assert.fail(url.pathname);
+  });
+  for (homepage of [
+    "http://127.0.0.1",
+    "https://user:secret@example.com",
+    "https://example.com:5432",
+    "file:///tmp/test",
+    "https://service.internal",
+  ])
+    await assert.rejects(
+      targets.resolveRunTarget(
+        ctx,
+        "owner/app",
+        { type: "branch", ref: "main" },
+        null,
+      ),
+      /General settings/,
+    );
 });

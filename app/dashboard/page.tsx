@@ -1,3 +1,4 @@
+import DeleteProjectButton from "@/components/DeleteProjectButton";
 import ProjectLogo from "@/components/ProjectLogo";
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
@@ -25,19 +26,25 @@ export default async function Dashboard() {
       <div className="mx-auto max-w-6xl px-6 py-14">
         <div className="flex flex-wrap items-center justify-between gap-5">
           <div>
-            <h1 className="font-sans text-3xl font-semibold tracking-tight text-ink dark:text-white">
+            <h1
+              id="projects-heading"
+              tabIndex={-1}
+              className="outline-none font-sans text-3xl font-semibold tracking-tight text-ink dark:text-white"
+            >
               Projects
             </h1>
             <p className="mt-2 text-sm text-muted dark:text-muted">
               Choose an app to review its runs, or connect a repository.
             </p>
           </div>
-          {!session.user.isGuest && <a
-            href="/dashboard/projects/new"
-            className="pressable btn-primary shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-xs font-medium text-white md:px-5 md:py-2.5 md:text-sm"
-          >
-            New project
-          </a>}
+          {!session.user.isGuest && (
+            <a
+              href="/dashboard/projects/new"
+              className="pressable btn-primary shrink-0 whitespace-nowrap rounded-full px-4 py-2 text-xs font-medium text-white md:px-5 md:py-2.5 md:text-sm"
+            >
+              New project
+            </a>
+          )}
         </div>
 
         {projects.length === 0 ? (
@@ -59,10 +66,10 @@ export default async function Dashboard() {
         ) : (
           <ul className="mt-10 divide-y divide-line">
             {projects.map((project) => (
-              <li key={project.id}>
+              <li key={project.id} className="flex items-center gap-2">
                 <a
                   href={`/dashboard/projects/${project.id}`}
-                  className="group -mx-3 grid min-w-0 items-start gap-4 rounded-lg px-3 py-6 transition-colors hover:bg-panel sm:grid-cols-[minmax(0,1fr)_auto]"
+                  className="group -ml-3 grid min-w-0 flex-1 items-start gap-4 rounded-lg px-3 py-6 transition-colors hover:bg-panel sm:grid-cols-[minmax(0,1fr)_auto]"
                 >
                   <div className="flex min-w-0 items-center gap-4">
                     <ProjectLogo
@@ -77,7 +84,11 @@ export default async function Dashboard() {
                       <h2 className="break-words text-lg font-semibold tracking-tight text-ink group-hover:text-primary dark:text-white">
                         {project.display_name || project.repo_full_name}
                       </h2>
-                      {project.role === "member" && <p className="mt-1 text-xs text-muted">Shared with you</p>}
+                      {project.role === "member" && (
+                        <p className="mt-1 text-xs text-muted">
+                          Shared with you
+                        </p>
+                      )}
                       <p className="mt-2 break-all text-sm leading-relaxed text-muted">
                         {project.app_url ?? "Default branch preview deployment"}
                       </p>
@@ -87,11 +98,19 @@ export default async function Dashboard() {
                     Created {formatDate(project.created_at)}
                   </p>
                 </a>
+                {project.role === "owner" && !session.user.isGuest && (
+                  <DeleteProjectButton
+                    projectId={project.id}
+                    name={project.display_name || project.repo_full_name}
+                  />
+                )}
               </li>
             ))}
           </ul>
         )}
-        {!session.user.isGuest && !session.user.isTestUser && !githubId.startsWith("test:") && <InviteCard />}
+        {!session.user.isGuest &&
+          !session.user.isTestUser &&
+          !githubId.startsWith("test:") && <InviteCard />}
       </div>
     </main>
   );

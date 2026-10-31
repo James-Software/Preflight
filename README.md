@@ -141,3 +141,11 @@ Further guides: [judge demos](docs/judge-demo.md),
 [authenticated testing](docs/authenticated-testing.md),
 [collaboration](docs/project-collaboration.md),
 [run review MCP](docs/run-review-mcp.md), [agent discovery](docs/agent-discovery.md).
+
+Project owners can delete a project from its dashboard row using the X and a
+confirmation dialog. Cleanup is atomic, includes archived runs and derived demo
+workspaces, and preserves the external repository, deployment and app database.
+See [project deletion](docs/project-deletion.md). Default-branch discovery can use
+the repository website when hosting deployment records are unavailable; this
+does not verify which commit is deployed. Feature branches and PRs still require
+their own successful deployment.

@@ -22,6 +22,7 @@ export default function RunSwarmButton({ projectId }: { projectId: number }) {
     [search, setSearch] = useState("");
   const [profileId, setProfileId] = useState(""),
     [targetUrl, setTargetUrl] = useState(""),
+    [targetSource, setTargetSource] = useState(""),
     [resolving, setResolving] = useState(false),
     [truncated, setTruncated] = useState(false);
   const [database, setDatabase] = useState<{ check_count: number } | null>(
@@ -63,6 +64,7 @@ export default function RunSwarmButton({ projectId }: { projectId: number }) {
     setSelected(null);
     setError("");
     setTargetUrl("");
+    setTargetSource("");
     setDatabase(null);
     setDatabaseLocked(false);
     setVerifyDatabase(false);
@@ -132,6 +134,7 @@ export default function RunSwarmButton({ projectId }: { projectId: number }) {
     const controller = new AbortController();
     setResolving(true);
     setTargetUrl("");
+    setTargetSource("");
     setDatabase(null);
     setDatabaseLocked(false);
     setVerifyDatabase(false);
@@ -157,6 +160,7 @@ export default function RunSwarmButton({ projectId }: { projectId: number }) {
           throw new Error(data.error || "This deployment is unavailable.");
         if (!controller.signal.aborted) {
           setTargetUrl(data.target.url);
+          setTargetSource(data.target.source || "");
           setDatabase(data.database || null);
           setVerifyDatabase(!!data.database);
           setProfileId((previous) =>
@@ -364,6 +368,7 @@ export default function RunSwarmButton({ projectId }: { projectId: number }) {
                           }
                           onChange={() => {
                             setTargetUrl("");
+                            setTargetSource("");
                             setSelected(target);
                             try {
                               sessionStorage.setItem(
@@ -432,6 +437,13 @@ export default function RunSwarmButton({ projectId }: { projectId: number }) {
                       {targetUrl}
                     </p>
                   )}
+                  {targetSource === "repository-homepage" && (
+                    <p className="mt-2 text-xs text-muted">
+                      Using the repository’s website URL. Its deployed commit
+                      has not been verified. You can change this URL in General
+                      settings.
+                    </p>
+                  )}
                   {targetError && (
                     <p
                       role="alert"
@@ -449,16 +461,18 @@ export default function RunSwarmButton({ projectId }: { projectId: number }) {
                     >
                       Authentication profile
                     </label>
-                    {canManageProfiles && <a
-                      href={createUrl}
-                      aria-disabled={busy}
-                      onClick={(e) => {
-                        if (busy) e.preventDefault();
-                      }}
-                      className="pressable inline-flex min-h-11 items-center text-sm font-medium text-primary"
-                    >
-                      Generate profile
-                    </a>}
+                    {canManageProfiles && (
+                      <a
+                        href={createUrl}
+                        aria-disabled={busy}
+                        onClick={(e) => {
+                          if (busy) e.preventDefault();
+                        }}
+                        className="pressable inline-flex min-h-11 items-center text-sm font-medium text-primary"
+                      >
+                        Generate profile
+                      </a>
+                    )}
                   </div>
                   <select
                     id={`run-profile-${projectId}`}
@@ -477,7 +491,9 @@ export default function RunSwarmButton({ projectId }: { projectId: number }) {
                   <p className="mt-2 text-xs leading-relaxed text-muted">
                     {matchingProfiles.length
                       ? "Saved cookies and headers will be used only for this app origin."
-                      : canManageProfiles ? "Test public pages without a profile, or generate a test account for signed-in pages." : "The owner can add a test account for signed-in pages."}
+                      : canManageProfiles
+                        ? "Test public pages without a profile, or generate a test account for signed-in pages."
+                        : "The owner can add a test account for signed-in pages."}
                   </p>
                 </fieldset>
                 {database && (
@@ -506,7 +522,8 @@ export default function RunSwarmButton({ projectId }: { projectId: number }) {
             <p className="mt-4 text-xs leading-relaxed text-muted">
               Use a preview deployment and a test account. Database verification
               can create marked test records. Screenshots and page content are
-              processed by AI providers; saved evidence is private to your project.
+              processed by AI providers; saved evidence is private to your
+              project.
             </p>
             {error && (
               <div

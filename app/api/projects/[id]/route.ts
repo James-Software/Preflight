@@ -103,3 +103,54 @@ export async function PATCH(
     );
   }
 }
+
+export async function DELETE(
+  req: NextRequest,
+  { params }: { params: Promise<{ id: string }> },
+) {
+  if (req.headers.get("origin") !== req.nextUrl.origin)
+    return NextResponse.json(
+      { error: "Invalid request origin." },
+      { status: 403 },
+    );
+  const session = await auth();
+  const owner = session?.user?.githubId;
+  if (!owner)
+    return NextResponse.json(
+      { error: "Sign in again to delete this project." },
+      { status: 401 },
+    );
+  if (session.user.isGuest || owner.startsWith("guest:"))
+    return NextResponse.json(
+      { error: "Guest workspaces cannot delete projects." },
+      { status: 403 },
+    );
+  const id = Number((await params).id);
+  if (!Number.isSafeInteger(id) || id <= 0)
+    return NextResponse.json(
+      { error: "Project unavailable." },
+      { status: 404 },
+    );
+  try {
+    const { deleteProject } = await import("@/lib/project-deletion");
+    const result = await deleteProject(id, owner);
+    if (!result)
+      return NextResponse.json(
+        { error: "Project unavailable or already deleted." },
+        { status: 404 },
+      );
+    const { closeDeletedProjectResources } = await import(
+      "@/lib/project-deletion-resources"
+    );
+    await closeDeletedProjectResources(result.resources);
+    revalidatePath("/dashboard");
+    for (const removed of result.deleted)
+      revalidatePath(`/dashboard/projects/${removed}`, "layout");
+    return NextResponse.json({ deleted: true });
+  } catch {
+    return NextResponse.json(
+      { error: "Could not delete this project. Refresh and try again." },
+      { status: 500 },
+    );
+  }
+}
