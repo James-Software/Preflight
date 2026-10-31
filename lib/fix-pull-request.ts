@@ -45,9 +45,22 @@ export async function openFixPullRequest(
     if (allow404 && response.status === 404) return null;
     if (!response.ok) {
       if (response.status === 401) throw new GithubAuthError();
-      if (response.status === 403 || response.status === 404)
+      if (
+        response.status === 429 ||
+        (response.status === 403 &&
+          (response.headers.get("x-ratelimit-remaining") === "0" ||
+            response.headers.has("retry-after")))
+      )
         throw new Error(
-          "Allow the PreFlight GitHub App access to this repository with Contents and Pull requests write permissions, then sign in again.",
+          "GitHub rate limited this request. Wait for the limit to reset, then retry this PR group; its branch will be reused.",
+        );
+      if (response.status === 403)
+        throw new Error(
+          "GitHub denied this PR operation. The PreFlight GitHub App owner must set Contents and Pull requests to Read and write. Then approve the updated permissions in the repository's GitHub App installation and retry this PR group. Signing in again alone does not grant repository write access.",
+        );
+      if (response.status === 404)
+        throw new Error(
+          "GitHub could not access this repository or required reference. Check that the PreFlight GitHub App installation includes this repository, then retry this PR group.",
         );
       throw new Error(
         `GitHub could not complete this PR (${response.status}). Retry this group; its branch will be reused.`,

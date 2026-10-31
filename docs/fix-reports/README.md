@@ -31,6 +31,16 @@ the server. The GitHub App must have access to the selected repository with
 **Contents: write** and **Pull requests: write** permissions; after changing App
 permissions, accept them on the installation and sign in again if necessary.
 
+For the hosted PreFlight app, its owner configures these permissions at
+[GitHub App settings](https://github.com/settings/apps/preflight-qa/permissions).
+Set **Repository permissions → Contents → Read and write**, keeping **Pull
+requests → Read and write**, and save. Then open
+[installed GitHub Apps](https://github.com/settings/installations), configure
+**Preflight QA**, approve the new permissions and ensure the target repository is
+included. Organization installations require their organization's approval.
+Retry the existing PR group; signing in alone cannot increase App permissions.
+GitHub rate-limit errors are reported separately from permission failures.
+
 `ensureSchema()` adds `fix_pr_groups`, finding group/deletion columns and a
 short-lived request lease using the existing first-use schema mechanism. No new
 environment variables are required. Group reservations lock candidate findings

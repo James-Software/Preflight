@@ -488,3 +488,27 @@ test("unpatched selected findings queue fix preparation rather than requiring a 
   });
   assert.ok(!route.calls.some((call) => call[0] === "pr"));
 });
+
+test("PR permission recovery distinguishes App configuration, installation access and rate limits", async (t) => {
+  let response;
+  t.mock.method(globalThis, "fetch", async () => response.clone());
+  const { openFixPullRequest } = prModule();
+  const open = () => openFixPullRequest(ctx, "owner/app", "preflight/access", [fix(1)], "https://preflight.test/report");
+  response = Response.json({}, { status: 403 });
+  await assert.rejects(open(), error => {
+    assert.match(error.message, /App owner must set Contents and Pull requests to Read and write/);
+    assert.match(error.message, /approve the updated permissions/);
+    assert.match(error.message, /Signing in again alone does not grant/);
+    return true;
+  });
+  response = Response.json({}, { status: 404 });
+  await assert.rejects(open(), /installation includes this repository/);
+  for (const [status, headers] of [[403, {"x-ratelimit-remaining":"0"}], [403, {"retry-after":"60"}], [429, {}]]) {
+    response = Response.json({}, { status, headers });
+    await assert.rejects(open(), error => {
+      assert.match(error.message, /rate limited/);
+      assert.doesNotMatch(error.message, /App owner|sign in/i);
+      return true;
+    });
+  }
+});
