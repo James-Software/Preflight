@@ -1,3 +1,4 @@
+import { emailPersistenceTarget } from "@/lib/automatic-persistence";
 import { DatabaseCheckError } from "@/lib/database-check-config";
 import { randomBytes, randomUUID, createHash } from "node:crypto";
 import { setTimeout as delay } from "node:timers/promises";
@@ -25,6 +26,8 @@ export async function automaticDatabase(
     await client.query("SET default_transaction_read_only = on");
     await client.query("SET statement_timeout = '2s'");
     const targets = await recordTargets(client);
+    const candidate = emailPersistenceTarget(targets);
+    const emailTarget = candidate && await cleanupEligible(client, candidate) ? candidate : null;
     let sequence = 0;
     const initial = await observeRecords(client, targets, marker);
     if (initial.length) throw new Error("Test marker already exists.");
@@ -34,6 +37,7 @@ export async function automaticDatabase(
     return {
       marker,
       email,
+      emailTarget,
       supported: targets.length > 0,
       async assertActive() {
         await runDatabaseConfig(runId);
@@ -45,9 +49,9 @@ export async function automaticDatabase(
         await runDatabaseConfig(runId);
         return observeRecords(client, targets, marker);
       },
-      async after(before: ObservedRecord[], button: string) {
+      async after(before: ObservedRecord[], button: string, record = true) {
         const id = `auto-${agent}-${step}-${sequence++}-${randomBytes(4).toString("hex")}`;
-        await getSql()`INSERT INTO run_database_checks(run_id,check_id,title,button_label,status) VALUES (${runId},${id},${`Automatic: ${button.slice(0, 100)}`},${button.slice(0, 200)},'running')`;
+        if (record) await getSql()`INSERT INTO run_database_checks(run_id,check_id,title,button_label,status) VALUES (${runId},${id},${`Automatic: ${button.slice(0, 100)}`},${button.slice(0, 200)},'running')`;
         let after = await observeRecords(client, targets, marker);
         const changed = () =>
           after.some(
@@ -77,9 +81,13 @@ export async function automaticDatabase(
         }
         const summary = changed()
           ? `Confirmed a change to uniquely marked test records after clicking “${button.slice(0, 100)}”. Cleanup candidates are limited to records first observed during this run; tables with triggers or dependent records need manual cleanup.`
-          : "No change to uniquely marked records was observed. This action is unverified; no application failure is inferred. Use an advanced check for unsupported tables or workflows.";
-        await getSql()`UPDATE run_database_checks SET status=${changed() ? "passed" : "error"},summary=${summary},completed_at=NOW() WHERE run_id=${runId} AND check_id=${id}`;
-        return { passed: changed(), summary };
+          : "No change to uniquely marked records was observed. This observation is inconclusive until an accepted, correctly matched submission is independently reproduced.";
+        if (record) await getSql()`UPDATE run_database_checks SET status=${changed() ? "passed" : "inconclusive"},summary=${summary},completed_at=NOW() WHERE run_id=${runId} AND check_id=${id}`;
+        return { passed: changed(), summary, checkId: id };
+      },
+      async confirmMissing(checkId: string, summary: string) {
+        await runDatabaseConfig(runId);
+        await getSql()`UPDATE run_database_checks SET status='failed',summary=${summary},completed_at=NOW() WHERE run_id=${runId} AND check_id=${checkId} AND status='inconclusive'`;
       },
       async close() {
         await client.end().catch(() => {});

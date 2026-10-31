@@ -256,6 +256,12 @@ async function initializeSchema(): Promise<void> {
   )`;
   await sql`ALTER TABLE run_test_results ADD COLUMN IF NOT EXISTS retry_context JSONB`;
   await sql`CREATE TABLE IF NOT EXISTS browser_runtime_images (source_snapshot_id TEXT PRIMARY KEY, pinned_snapshot_id TEXT NOT NULL)`;
+  await sql`CREATE TABLE IF NOT EXISTS run_retry_requests (
+    id UUID PRIMARY KEY, source_run_id INT UNIQUE NOT NULL REFERENCES runs(id) ON DELETE CASCADE,
+    requested_owner TEXT NOT NULL, new_run_id INT REFERENCES runs(id) ON DELETE SET NULL,
+    status TEXT NOT NULL DEFAULT 'queued', attempts INT NOT NULL DEFAULT 0, lease_until TIMESTAMPTZ,
+    expires_at TIMESTAMPTZ NOT NULL DEFAULT NOW()+INTERVAL '30 minutes', created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`;
   await sql`CREATE TABLE IF NOT EXISTS browser_sandbox_sessions (
     id UUID PRIMARY KEY, run_id INT NOT NULL REFERENCES runs(id), state TEXT NOT NULL,
     sandbox_name TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()

@@ -1,7 +1,7 @@
 const { spawnSync } = require('node:child_process');
 const files = [
   'guest-demo', 'persistence-contract', 'browser-security', 'private-evidence',
-  'automatic-database', 'check-investigation', 'test-user-issuer',
+  'automatic-database', 'automatic-persistence', 'check-investigation', 'test-user-issuer',
   'project-collaboration', 'project-deletion', 'project-deletion-ui', 'run-mcp',
 ];
 for (const name of files) {

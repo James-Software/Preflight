@@ -12,8 +12,17 @@ Empty tables work without seed data: discovery uses PostgreSQL catalogs, and an
 empty marker lookup is a valid baseline. Email-only waitlists use the same unique
 marker inside a valid email at the reserved `example.test` domain. Join waitlist,
 Subscribe buttons are bracketed by the same read-only observations as
-Create/Save. A success toast without a matching row remains unverified and cannot
-pass the dedicated persistence check through a model judgment.
+Create/Save. A success toast without a matching row cannot pass through a model
+judgment. For an unambiguous waitlist/subscription table, the worker can also
+confirm a missing save automatically: a valid named email input must contain the
+unique marker, submission must produce a new positive acceptance notice, and a
+fresh browser context must reproduce the same acceptance with a different marker
+while both read-only observation windows find no row (4.8 seconds each).
+Ambiguous tables, row security, triggers, rejected inputs, stale notices and
+pending email confirmation remain inconclusive. This is a bounded assertion about
+the matched table, not a claim about every possible asynchronous workflow.
+Page-load/navigation checks do not submit forms; one submitted workflow creates
+one database assertion, including when its expectation fails.
 Generic account sign-up, edits, deletion, payments, messaging and security changes
 are blocked. A marked creation POST must contain the exact server-generated
 marker and stay on the configured app origin. Advanced checks do not override
@@ -62,6 +71,11 @@ PROFILE_ENCRYPTION_KEY stable and identical in web/worker deployments.
 
 ## Validation
 
+- `node tests/automatic-persistence.integration.cjs`: the production browser worker
+  with Chromium and PostgreSQL WASM, no advanced checks, and seven scenarios:
+  broken, working, rejected, stale notice, ambiguous schema, row security and
+  unnamed email input. Only independently reproduced accepted missing saves
+  create a confirmed finding; verification remains read-only.
 - `PGLITE_MODULE=/path/to/@electric-sql/pglite node tests/automatic-database.integration.cjs`:
   real schema discovery and Chromium submissions against empty and populated
   tables, email and email_address support, unsupported key/credential-only schema
@@ -98,3 +112,13 @@ messages. Historical identical setup rows collapse in the UI and are excluded
 from assertion totals. They are never presented as confirmed application bugs.
 The corrected worker requires a new run to obtain real verification evidence;
 previous failures are not retroactively converted to passes.
+
+## Operator-requested reruns
+
+The existing five-minute recovery task also dispatches explicit
+`run_retry_requests`. Requests must match the current project owner and repository
+and an unarchived partial source run. Each request creates at most one fresh run
+with the original encrypted configuration snapshots and a fresh plan. Dispatch
+uses an idempotency key and a bounded retry lease; the original report stays
+unchanged. Requests expire after 30 minutes and cascade when the source run is
+deleted. This queue has no public unauthenticated launch endpoint.

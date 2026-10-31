@@ -1,3 +1,4 @@
+import { dispatchRequestedRunRetry } from "@/lib/requested-run-retry";
 import { runCoverage } from "@/lib/run-coverage";
 import { schedules, task, tasks } from "@trigger.dev/sdk";
 import { ensureSchema } from "@/lib/schema";
@@ -42,6 +43,7 @@ export const recoverPendingVerifications = schedules.task({
   maxDuration: 60,
   run: async () => {
     await ensureSchema();
+    await dispatchRequestedRunRetry((runId, key) => tasks.trigger("run-swarm", { runId }, { idempotencyKey: key }));
     const rows = await getSql()`SELECT r.id,r.project_id FROM runs r
       WHERE r.status='partial' AND r.archived_at IS NULL AND r.verification_version<2
         AND EXISTS(SELECT 1 FROM run_test_results t WHERE t.run_id=r.id AND t.agent_index>=0

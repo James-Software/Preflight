@@ -1,3 +1,4 @@
+import { automaticStepCanWrite, markedEmailSubmission, visibleNotices, newlyAccepted, confirmAutomaticPersistence } from "@/lib/automatic-persistence";
 import {
   automaticDatabase,
   automaticDatabaseUnavailable,
@@ -411,7 +412,7 @@ export const browserAgent = task({
         };
         let markerUsed = false;
         let actionDenied = "";
-        if (payload.verifyDatabase && !step.databaseCheckId) {
+        if (payload.verifyDatabase && !step.databaseCheckId && automaticStepCanWrite(step.id)) {
           try {
             automatic = await automaticDatabase(
               payload.runId,
@@ -504,6 +505,14 @@ export const browserAgent = task({
             if (!allowed) { retryPreventedAction = true; break; }
           }
 
+          if (!automaticStepCanWrite(step.id) && (
+            action.action === "fill" || action.action === "press" && action.key === "Enter" ||
+            action.action === "click" && /create|save|submit|join|subscribe|waitlist/i.test(action.name)
+          )) {
+            actionLog.push("Form interactions are covered by their own workflow; this page/navigation observation is complete.");
+            finished = true;
+            break;
+          }
           if (action.action === "done") {
             finished = true;
             break;
@@ -648,6 +657,8 @@ export const browserAgent = task({
               );
             }
           }
+          const automaticForm = !!(before && automatic && await markedEmailSubmission(page, action, automatic));
+          const oldNotices = automaticForm ? await visibleNotices(page) : [];
           if (automatic && markerUsed) policy.permitCreate(automatic.marker, action);
           await assertRetryActive();
           const result = await executeAction(page, action);
@@ -667,12 +678,28 @@ export const browserAgent = task({
             try {
               if (!result.startsWith("Action failed:")) {
                 databaseObserved = true;
+                const acceptedNotice = automaticForm ? await newlyAccepted(page, oldNotices) : null;
                 const verification = await automatic.after(
                   before,
                   action.action === "click" ? action.name : "Enter",
                 );
                 databasePassed = verification.passed;
                 actionLog.push(redact(`Independent database verification: ${verification.summary}`));
+                if (!verification.passed && acceptedNotice && !payload.readOnlyRetry) {
+                  const first = automatic;
+                  const confirmed = await confirmAutomaticPersistence({ first, checkId: verification.checkId, firstNotice: acceptedNotice, startUrl, actions: attempted,
+                    createVerifier: () => automaticDatabase(payload.runId, payload.agentIndex, stepIndex), newPage: () => newAssignmentPage(authentication),
+                    policy, execute: executeAction,
+                    confirmed: async (proofPage, evidence) => {
+                      await assertRetryActive();
+                      await recordFinding(proofPage, `Success reported without saved email: ${action.action === "click" ? action.name : step.title}`, evidence, `automatic-persistence:${payload.runId}:${step.id || stepIndex}`, true);
+                      persistenceProof = evidence;
+                    },
+                  });
+                  if (!confirmed) persistenceProof = null;
+                }
+                // One submitted workflow is one logical database assertion.
+                finished = true;
               }
             } catch (error) {
               automaticInspectionFailed = true;
@@ -800,7 +827,11 @@ export const browserAgent = task({
           );
           continue;
         }
-        if (step.id === "automatic-database-create" && !databasePassed) {
+        if (persistenceProof) {
+          await outcome("confirmed", "Two independent accepted submissions failed the automatically matched persistence expectation.", persistenceProof);
+          continue;
+        }
+        if (databaseObserved && !databasePassed) {
           await outcome(
             "inconclusive",
             "The marked form was submitted, but no database change was observed. A success notification alone cannot confirm persistence.",

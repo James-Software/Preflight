@@ -19,6 +19,7 @@ test('legacy recovery queues only unarchived partial reports with unresolved che
 test('production sweep queues legacy reports without page views using the same idempotency', async () => {
   const calls = [];
   const scheduled = load('src/trigger/recover-run-verification.ts', {
+    '@/lib/requested-run-retry': { dispatchRequestedRunRetry: async () => 0 },
     '@/lib/db': { getSql: () => async query => {
       const sql = query.join('?');
       assert.match(sql, /archived_at IS NULL/);

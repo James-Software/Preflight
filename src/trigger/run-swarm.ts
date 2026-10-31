@@ -1,3 +1,4 @@
+import { automaticStepCanWrite } from "@/lib/automatic-persistence";
 import { runCoverage } from "@/lib/run-coverage";
 import {
   preflightAutomaticDatabase,
@@ -186,7 +187,7 @@ export const runSwarm = task({
             agentIndex: i,
             assignment,
             appUrl: targetUrl,
-            verifyDatabase: automaticReady,
+            verifyDatabase: automaticReady && assignment.steps.some(step => automaticStepCanWrite(step.id)),
             ...(run.auth_profile_id
               ? { authProfileId: run.auth_profile_id }
               : {}),
@@ -213,10 +214,10 @@ export const runSwarm = task({
       if (await cancelled())
         return { runId: payload.runId, status: "cancelled" };
       const confirmedAutomatic = automaticReady
-        ? await sql`SELECT check_id FROM run_database_checks WHERE run_id=${payload.runId} AND check_id LIKE 'auto-%' AND status='passed' LIMIT 1`
+        ? await sql`SELECT check_id FROM run_database_checks WHERE run_id=${payload.runId} AND check_id LIKE 'auto-%' LIMIT 1`
         : [];
-      // Regular agents may already have verified a marked create action. Only
-      // allocate the fallback workflow when no automatic assertion succeeded.
+      // A submitted form already has its own assertion and bounded replay.
+      // Do not repeat the same workflow merely because its assertion failed.
       if (
         automaticReady &&
         completedAgents > 0 &&

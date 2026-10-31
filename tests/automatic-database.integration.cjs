@@ -138,7 +138,7 @@ const { load } = require("./load-module.cjs");
         assessFinding: async () => ({ category: "inconclusive", confidence: 0.5 }),
       },
     }).browserAgent;
-    for (const [path, expectedRows, expectedStatus] of [["/broken", 0, "error"], ["/working", 1, "passed"], ["/working", 2, "passed"]]) {
+    for (const [path, expectedRows, expectedStatus] of [["/broken", 0, "inconclusive"], ["/working", 1, "passed"], ["/working", 2, "passed"]]) {
       actionIndex = 0;
       await worker.run({
         runId: 1, agentIndex: 0, appUrl: origin + path, verifyDatabase: true,

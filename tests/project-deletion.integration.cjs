@@ -80,6 +80,7 @@ const { load } = require("./load-module.cjs");
     );
     const run = await schema.createRun(main.id, "https://example.test");
     const archived = await schema.createRun(main.id, "https://example.test");
+    await sql`INSERT INTO run_retry_requests(id,source_run_id,requested_owner,new_run_id) VALUES(${randomUUID()},${run.id},'owner',${archived.id})`;
     await sql`UPDATE runs SET status='running' WHERE id=${run.id}`;
     await sql`UPDATE runs SET archived_at=NOW() WHERE id=${archived.id}`;
     const keepRun = await schema.createRun(keep.id, "https://preflight.test");
@@ -201,6 +202,7 @@ const { load } = require("./load-module.cjs");
       "run_test_results",
       "run_check_investigations",
       "run_database_checks",
+      "run_retry_requests",
       "run_database_cleanup",
       "run_screenshots",
       "browser_sandbox_sessions",
