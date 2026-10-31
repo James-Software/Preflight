@@ -39,7 +39,10 @@ remain subject to the worker's existing pinned-address HTTP policy. The VM has n
 production database, GitHub or model credentials. Authenticated CDP bridge tests
 and blocked-egress tests passed in the cloud VM. Production run #29 completed the homepage check and confirmed the waitlist
 persistence bug after two independent accepted submissions failed their database
-expectations. Both fallback VMs closed afterward. The clean runtime was pinned to
+expectations. Both fallback VMs closed afterward. A subsequent live run #30 finished
+automatically as `done`, with one passed check, one confirmed finding, zero
+unresolved checks and no failure reason. All four test VMs were independently
+verified stopped in Vercel. The clean runtime was pinned to
 a snapshot without expiration before test execution. The demo database still
 contained zero records after the run.
 
@@ -55,6 +58,15 @@ A public HTTPS availability probe observed a 117 ms homepage response and 306 ms
 health response from the cloud workspace. These are samples, not service-level
 guarantees. Browser loading varies with location, network, GPU and device; measured
 first-paint results must be reported with that context.
+
+Five fresh, foreground Chromium contexts at 1440×1000 in the cloud workspace,
+without network throttling, measured a median first contentful paint of **1,184 ms**
+(range 1,148–1,676 ms) and median time to first byte of **196 ms** (137–572 ms).
+The homepage paints static HTML before its optional WebGL initialization, but
+these samples do **not** establish a strict sub-second full-page loading claim.
+That acceptance criterion still needs representative-device optimization and
+measurement. Reproduce with `node scripts/measure-public-load.cjs`; the dated
+[sample data](/submission/performance.json) is public.
 
 ## Explicit remaining gates
 

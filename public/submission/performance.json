@@ -1,0 +1,31 @@
+{
+  "measuredAt": "2026-10-31T16:29:28.245Z",
+  "device": "headless Chromium, cloud workspace, foreground tabs, fresh contexts, 1440x1000, no throttling",
+  "samples": [
+    {
+      "ttfbMs": 572,
+      "domReadyMs": 786,
+      "fcpMs": 1676
+    },
+    {
+      "ttfbMs": 179,
+      "domReadyMs": 334,
+      "fcpMs": 1148
+    },
+    {
+      "ttfbMs": 325,
+      "domReadyMs": 502,
+      "fcpMs": 1312
+    },
+    {
+      "ttfbMs": 196,
+      "domReadyMs": 376,
+      "fcpMs": 1184
+    },
+    {
+      "ttfbMs": 137,
+      "domReadyMs": 270,
+      "fcpMs": 1148
+    }
+  ]
+}
