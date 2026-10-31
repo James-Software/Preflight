@@ -21,6 +21,12 @@ actual dashboard header, including when its mobile navigation wraps.
   a GitHub PR.
 - A failed request exposes **Resume PR** on its reserved rows. This resumes the
   original group even after reloading, rather than creating another branch.
+- Selecting every finding in a pending group changes the primary action to
+  **Retry PR** or **Resume PR**. When no ungrouped findings remain and exactly one
+  pending group exists, the top-level action resumes it too. Mixed selections and
+  partial groups cannot create a new group. A fresh request UUID for the exact
+  reserved selection resolves to the original group on the server, preserving its
+  branch, generated patches and any already-created PR.
 
 ## Backend and deployment
 
@@ -40,6 +46,12 @@ requests → Read and write**, and save. Then open
 included. Organization installations require their organization's approval.
 Retry the existing PR group; signing in alone cannot increase App permissions.
 GitHub rate-limit errors are reported separately from permission failures.
+
+`node tests/fix-group-retry.integration.cjs` exercises the production table, API
+and group helpers with Chromium and PostgreSQL WASM: failed-group retry, fresh
+request UUIDs, authorization, mixed/partial selection rejection, original branch
+reuse, refresh after PR creation and mobile retry controls. GitHub writes use a
+fixture; no live PR is created by the test.
 
 `ensureSchema()` adds `fix_pr_groups`, finding group/deletion columns and a
 short-lived request lease using the existing first-use schema mechanism. No new

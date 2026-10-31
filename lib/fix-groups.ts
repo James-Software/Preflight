@@ -43,12 +43,33 @@ export async function reserveFixGroup(
 ): Promise<FixGroup> {
   await ensureSchema();
   const sql = getSql();
+  // A refreshed tab may have a new request UUID. The exact reserved selection
+  // still belongs to its original group and branch, including after a failure.
+  const matchingReservation = async (): Promise<FixGroup | undefined> => {
+    const matches = await sql`
+      SELECT g.* FROM fix_pr_groups g JOIN runs r ON r.id=g.run_id
+      JOIN projects p ON p.id=r.project_id
+      WHERE r.id=${runId} AND p.id=${projectId}
+        AND (p.owner_github_id=${owner} OR EXISTS(SELECT 1 FROM project_members m WHERE m.project_id=p.id AND m.user_id=${owner}))
+        AND g.finding_ids=${JSON.stringify(ids)}::jsonb
+        AND (SELECT COUNT(*) FROM findings f LEFT JOIN diagnoses d ON d.finding_id=f.id
+          WHERE f.run_id=r.id AND f.pr_group_id=g.id AND f.id=ANY(${ids}::int[]) AND f.deleted_at IS NULL
+            AND NOT EXISTS(SELECT 1 FROM pull_requests pr WHERE pr.diagnosis_id=d.id))=${ids.length}
+      ORDER BY g.created_at LIMIT 1
+    `;
+    return (matches as FixGroup[])[0];
+  };
+  const reserved = await matchingReservation();
+  if (reserved) key = reserved.id;
   const branch = `preflight/run-${runId}-${key}`;
-  await sql`
+  if (!reserved)
+    await sql`
     INSERT INTO fix_pr_groups (id, run_id, finding_ids, branch)
     SELECT ${key}::uuid, r.id, ${JSON.stringify(ids)}::jsonb, ${branch}
     FROM runs r JOIN projects p ON p.id = r.project_id
     WHERE r.id = ${runId} AND p.id = ${projectId} AND (p.owner_github_id = ${owner} OR EXISTS(SELECT 1 FROM project_members m WHERE m.project_id=p.id AND m.user_id=${owner}))
+      AND (SELECT COUNT(*) FROM findings f WHERE f.run_id=r.id AND f.id=ANY(${ids}::int[])
+        AND f.deleted_at IS NULL AND (f.pr_group_id IS NULL OR f.pr_group_id=${key}::uuid))=${ids.length}
     ON CONFLICT (id) DO NOTHING
   `;
   const rows = await sql`
@@ -59,8 +80,11 @@ export async function reserveFixGroup(
   const group = Array.isArray(rows)
     ? (rows[0] as FixGroup | undefined)
     : undefined;
-  if (!group || JSON.stringify(group.finding_ids) !== JSON.stringify(ids))
+  if (!group || JSON.stringify(group.finding_ids) !== JSON.stringify(ids)) {
+    const concurrent = await matchingReservation();
+    if (concurrent) return concurrent;
     throw new FixActionError("This PR group does not match the selection.");
+  }
   if (group.state === "open") return group;
   const claimed = await sql`
     WITH candidates AS MATERIALIZED (
@@ -77,10 +101,15 @@ export async function reserveFixGroup(
       AND (pr_group_id IS NULL OR pr_group_id = ${key}::uuid) AND deleted_at IS NULL
     RETURNING id
   `;
-  if (!Array.isArray(claimed) || claimed.length !== ids.length)
+  if (!Array.isArray(claimed) || claimed.length !== ids.length) {
+    // Concurrent tabs can race with different request UUIDs. The winner owns
+    // the full selection; both requests must converge on that same group.
+    const concurrent = await matchingReservation();
+    if (concurrent && concurrent.id !== key) return concurrent;
     throw new FixActionError(
       "Some findings are unavailable, already grouped, or do not have a proposed fix. Refresh the report.",
     );
+  }
   return group;
 }
 

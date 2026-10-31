@@ -163,7 +163,22 @@ export default function FixesTable({
   const allSelected =
     !!selectable.length && selection.length === selectable.length;
   const readyRows = rows.filter(ready);
-  const canOpen = !!selection.length && selection.every(ready);
+  const pendingIds = [
+    ...new Set(rows.filter(pendingGroup).map((f) => f.pr_group_id!)),
+  ];
+  const allResumeRows =
+    !readyRows.length && pendingIds.length === 1
+      ? rows.filter((f) => f.pr_group_id === pendingIds[0])
+      : [];
+  const selectedGroup = selection[0]?.pr_group_id;
+  const canResume =
+    !!selectedGroup &&
+    selection.every(
+      (f) => pendingGroup(f) && f.pr_group_id === selectedGroup,
+    ) &&
+    selection.length ===
+      rows.filter((f) => f.pr_group_id === selectedGroup).length;
+  const canOpen = !!selection.length && (selection.every(ready) || canResume);
   const waiting = rows.some((f) => pendingGroup(f) && !f.pr_error);
   useEffect(() => {
     if (!waiting) return;
@@ -311,7 +326,9 @@ export default function FixesTable({
             Findings & fixes
           </h2>
           <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted">
-            {isGuest ? "Open a finding to review its evidence, or copy a prompt for an agent. Pull requests are available on your own GitHub-connected projects." : "Select fixes to group into one PR. Open a finding to review its evidence."}
+            {isGuest
+              ? "Open a finding to review its evidence, or copy a prompt for an agent. Pull requests are available on your own GitHub-connected projects."
+              : "Select fixes to group into one PR. Open a finding to review its evidence."}
           </p>
         </div>
         <div className="flex flex-wrap gap-3">
@@ -326,11 +343,21 @@ export default function FixesTable({
           <button
             type="button"
             className={`${secondary} shrink-0`}
-            disabled={isGuest || busy || !readyRows.length}
-            onClick={() => void action("open-pr", readyRows)}
+            disabled={
+              isGuest || busy || (!readyRows.length && !allResumeRows.length)
+            }
+            onClick={() =>
+              void action(
+                "open-pr",
+                allResumeRows.length ? allResumeRows : readyRows,
+                allResumeRows[0]?.pr_group_id || undefined,
+              )
+            }
           >
             <PullRequestIcon />
-            Open PR for all{readyRows.length ? ` (${readyRows.length})` : ""}
+            {allResumeRows.length
+              ? `${allResumeRows.some((f) => f.pr_error) ? "Retry" : "Resume"} PR (${allResumeRows.length})`
+              : `Open PR for all${readyRows.length ? ` (${readyRows.length})` : ""}`}
           </button>
         </div>
       </div>
@@ -372,19 +399,28 @@ export default function FixesTable({
           type="button"
           className="btn-primary inline-flex min-h-11 items-center justify-center gap-2 px-5 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50"
           disabled={isGuest || busy || !canOpen}
-          onClick={() => void action("open-pr", selection)}
+          onClick={() =>
+            void action(
+              "open-pr",
+              selection,
+              canResume ? selectedGroup! : undefined,
+            )
+          }
         >
           <BranchIcon />
           {busy
             ? "Working…"
-            : selection.length
-              ? `Open PR (${selection.length})`
-              : "Open PR"}
+            : canResume
+              ? `${selection.some((f) => f.pr_error) ? "Retry" : "Resume"} PR (${selection.length})`
+              : selection.length
+                ? `Open PR (${selection.length})`
+                : "Open PR"}
         </button>
         {selection.length > 0 && !canOpen && (
           <p className="w-full text-xs text-muted">
-            Findings already included in a PR or a pending PR group cannot be
-            grouped again.
+            {selection.every((f) => !!f.pr_url)
+              ? "These findings already have a PR. Open its link below to review it."
+              : "Select all findings from one pending PR group to resume it, or use its Resume/Retry PR button below. Select only ungrouped findings to create a new PR."}
           </p>
         )}
       </div>
