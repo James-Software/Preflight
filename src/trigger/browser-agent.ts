@@ -449,14 +449,18 @@ export const browserAgent = task({
           if (policy.blocked) { finished = true; break; }
           if (payload.readOnlyRetry && Date.now() >= retryDeadline) break;
           await automatic?.assertActive();
-          const screenshot = await page.screenshot({
-            type: "jpeg",
-            quality: 50,
-          });
-          const axTree = (await page.locator("body").ariaSnapshot()).slice(
-            0,
-            20000,
-          );
+          let screenshot: Buffer;
+          let axTree: string;
+          try {
+            screenshot = await page.screenshot({ type: "jpeg", quality: 50 });
+            axTree = (await page.locator("body").ariaSnapshot()).slice(0, 20000);
+          } catch (error) {
+            // A guarded redirect can be denied while Chromium is capturing.
+            // Preserve that policy result; unrelated capture failures still fail.
+            await assertRetryActive();
+            if (policy.blocked) { finished = true; break; }
+            throw error;
+          }
           await assertRetryActive();
           if (policy.blocked) { finished = true; break; }
 

@@ -6,7 +6,7 @@ The public source repository is [James-Software/Preflight](https://github.com/Ja
 The production application is [www.trypreflight.dev](https://www.trypreflight.dev).
 Build and test status is independently visible in [GitHub Actions](https://github.com/James-Software/Preflight/actions).
 
-Local verification passed 249 unit tests, TypeScript checking and a production
+Local verification passed 251 unit tests, TypeScript checking and a production
 build. The integration suite exercises real Chromium and embedded Postgres,
 including guest isolation, cookie encryption, OAuth transitions, action/network
 restrictions, database persistence and source investigation. These tests do not
@@ -79,3 +79,13 @@ private guest flow, confirmed run #29 and architecture. It is 1920×1080, with
 synthetic technical narration, captions and a transcript. Waiting between chapters
 is shortened; outcomes are not fabricated. Recording notes identify the voice
 model and data-source license.
+
+## Guarded navigation and screenshot capture
+
+A blocked navigation can interrupt Chromium while it captures a screenshot or
+accessibility tree. The worker rechecks cancellation and the policy result before
+classifying that interruption. A blocked redirect stays blocked; an unrelated
+capture failure remains a provider error and cannot become a confirmed defect.
+The security integration covers cancellation, destructive actions, external
+navigation, HTTP and meta redirects, unmarked writes, and permitted same-origin
+redirects with cookies. It runs against the same Chrome version as CI.

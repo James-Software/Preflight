@@ -377,17 +377,23 @@ test("cancelled runs skip model validation and never allocate browsers", async (
   assert.equal(parent.batches(), 0);
 });
 
-function browserTask({ verdictError = false, severityError = false } = {}) {
+function browserTask({ verdictError = false, severityError = false, captureBlock = false, captureFailure = false } = {}) {
   const statuses = [],
-    closed = [];
+    closed = [], results = [];
+  const policy = { blocked:"", prepare:async()=>{}, close:async()=>{}, checkAction:async()=>{} };
   const page = {
     url: () => "https://example.com",
     on: () => {},
     goto: async () => {},
-    screenshot: async () => Buffer.from("test-image"),
+    screenshot: async () => {
+      if (captureBlock) policy.blocked = "A redirect was blocked by the origin policy.";
+      if (captureBlock || captureFailure) throw new Error("Unable to capture screenshot");
+      return Buffer.from("test-image");
+    },
     locator: () => ({ ariaSnapshot: async () => "button Pay" }),
   };
   const task = load("src/trigger/browser-agent.ts", {
+    ...(captureBlock || captureFailure ? {"@/lib/browser-policy":{browserPolicy:()=>policy}} : {}),
     "@/lib/db": { getSql: () => async () => [{ id: 34 }] },
     "@/lib/check-investigation": load("lib/check-investigation.ts", {"@/lib/finding-evidence": load("lib/finding-evidence.ts", {})}),
     "@/lib/finding-evidence": load("lib/finding-evidence.ts", {}),
@@ -438,7 +444,7 @@ function browserTask({ verdictError = false, severityError = false } = {}) {
       createAgent: async () => ({ id: 56 }),
       updateAgentStatus: async (_id, status) => statuses.push(status),
       createFinding: async () => {},
-      recordTestResult: async () => {},
+      recordTestResult: async (...args) => results.push(args[2]),
     },
   }).browserAgent;
   return {
@@ -450,7 +456,7 @@ function browserTask({ verdictError = false, severityError = false } = {}) {
         appUrl: "https://example.com",
       }),
     statuses,
-    closed,
+    closed, results,
   };
 }
 test("failed step judgments fail the browser agent and close its cloud session", async () => {
@@ -466,6 +472,21 @@ test("a failing step verdict alone cannot create an application finding", async 
   assert.equal((await task.run()).findings, 0);
   assert.deepEqual(task.statuses, ["running", "done"]);
   assert.deepEqual(task.closed, ["session-test"]);
+});
+test("a blocked navigation during capture preserves its policy outcome", async () => {
+  const task = browserTask({captureBlock:true});
+  const result = await task.run();
+  assert.equal(result.findings,0);
+  assert.equal(task.results[0].status,"blocked");
+  assert.deepEqual(task.statuses,["running","done"]);
+  assert.deepEqual(task.closed,["session-test"]);
+});
+test("an unrelated screenshot failure remains a genuine infrastructure error", async () => {
+  const task = browserTask({captureFailure:true});
+  await assert.rejects(task.run(),/Unable to capture screenshot/);
+  assert.equal(task.results.some(result=>result.status==="blocked"||result.status==="confirmed"),false);
+  assert.deepEqual(task.statuses,["running","failed"]);
+  assert.deepEqual(task.closed,["session-test"]);
 });
 test("worker preflight enforces both provider keys and rejects stale model overrides", (t) => {
   env(t, {

@@ -344,20 +344,29 @@ export default function CloudPhotoMotion({
         releaseGpu();
       };
     }
-    // Let the static photo and headline paint before compiling WebGL shaders.
-    let secondFrame = 0;
+    // Start optional GPU work only after the browser records contentful paint.
+    // Animation-frame callbacks alone can run before the first presented frame.
     let idle = 0;
     let fallbackTimer = 0;
-    const firstFrame = requestAnimationFrame(() => {
-      secondFrame = requestAnimationFrame(() => {
-        if (typeof window.requestIdleCallback === "function") idle = window.requestIdleCallback(configure, { timeout: 1500 });
-        else fallbackTimer = window.setTimeout(configure, 100);
+    let scheduled = false;
+    let paintObserver: PerformanceObserver | undefined;
+    const schedule = () => {
+      if (scheduled) return;
+      scheduled = true;
+      paintObserver?.disconnect();
+      if (typeof window.requestIdleCallback === "function") idle = window.requestIdleCallback(configure, { timeout: 1500 });
+      else fallbackTimer = window.setTimeout(configure, 100);
+    };
+    if (performance.getEntriesByName("first-contentful-paint").length) schedule();
+    else if (typeof PerformanceObserver !== "undefined" && PerformanceObserver.supportedEntryTypes.includes("paint")) {
+      paintObserver = new PerformanceObserver(entries => {
+        if (entries.getEntries().some(entry => entry.name === "first-contentful-paint")) schedule();
       });
-    });
+      paintObserver.observe({ type: "paint", buffered: true });
+    } else fallbackTimer = window.setTimeout(schedule, 1500);
     reduced.addEventListener("change", configure);
     return () => {
-      cancelAnimationFrame(firstFrame);
-      cancelAnimationFrame(secondFrame);
+      paintObserver?.disconnect();
       if (idle) window.cancelIdleCallback(idle);
       clearTimeout(fallbackTimer);
       dispose();
