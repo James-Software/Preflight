@@ -87,6 +87,16 @@ See [local development](docs/local-development.md) for complete runtime setup an
 the distinction between local fixtures and a public cloud preview. Cloud browsers
 cannot reach localhost; the network guard must not be disabled to work around it.
 
+## Submission resources
+
+[Public review hub](https://www.trypreflight.dev/submission) ·
+[3:09 product demonstration](https://www.trypreflight.dev/videos/preflight-demo.mp4) ·
+[Project briefing](docs/executive-briefing.md) · [Commercial blueprint](docs/monetization.md) ·
+[Release evidence and remaining gates](docs/release-verification.md).
+
+The video uses real application screens and synthetic technical narration. Actual
+payment activation remains pending; proposed prices are not live billing.
+
 ## Runtime configuration
 
 | Variable | Web | Worker | Purpose |
@@ -99,6 +109,7 @@ cannot reach localhost; the network guard must not be disabled to work around it
 | `BROWSERBASE_API_KEY`, `BROWSERBASE_PROJECT_ID` | Yes | Yes | Cloud browsers and optional profile capture |
 | `OPENROUTER_API_KEY` | No | Yes | Driver and source review |
 | `OPENAI_API_KEY` | No | Yes | Typed Decisions judgments |
+| `SANDBOX_BROWSER_SNAPSHOT_ID` | Optional | No | Trusted Chromium runtime for isolated Vercel Sandbox fallback; web SDK uses Vercel OIDC |
 | `BROWSER_AGENT_CONCURRENCY` | No | Optional | Shared provider capacity; defaults to one, not a user quota |
 | `RESEND_API_KEY`, `INVITE_FROM_EMAIL` | Optional | No | Collaboration email |
 | `BLOB_READ_WRITE_TOKEN` | Legacy only | Legacy only | Historical public-image retirement; new images use private Neon storage |

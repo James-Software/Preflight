@@ -1,0 +1,124 @@
+WEBVTT
+
+00:00:00.000 --> 00:00:04.934
+This is PreFlight, an AI testing application for deployed websites. The
+
+00:00:04.934 --> 00:00:09.868
+problem is simple: a user interface can look successful while the
+
+00:00:09.868 --> 00:00:14.802
+underlying workflow is broken. PreFlight combines browser interaction, application evidence, and
+
+00:00:14.802 --> 00:00:19.735
+configured database expectations. This demonstration uses the real deployed application and
+
+00:00:19.735 --> 00:00:24.669
+a deliberately broken waitlist. Any time spent waiting for cloud processing
+
+00:00:24.669 --> 00:00:26.912
+is shortened in this recording.
+
+00:00:28.412 --> 00:00:32.483
+Here is the example. I enter an email address and click
+
+00:00:32.483 --> 00:00:36.554
+Join the waitlist. The email disappears, and a toast says, You
+
+00:00:36.554 --> 00:00:40.625
+have entered the waitlist. To a visitor, the action appears successful.
+
+00:00:40.625 --> 00:00:44.696
+But the submit handler never calls the waitlist API. The database
+
+00:00:44.696 --> 00:00:48.767
+remains empty. This is an intentional persistence bug, not a database
+
+00:00:48.767 --> 00:00:52.468
+connection error. Looking only at the toast would miss it.
+
+00:00:53.968 --> 00:00:58.195
+A judge opens a separate invitation and receives an isolated guest
+
+00:00:58.195 --> 00:01:02.422
+workspace, without signing in to GitHub. The secure guest cookie identifies
+
+00:01:02.422 --> 00:01:06.649
+that session. Other guests and the sponsor's personal projects remain inaccessible.
+
+00:01:06.649 --> 00:01:10.875
+The example project already has a read-only database verification configured. The
+
+00:01:10.875 --> 00:01:15.102
+check looks for the unique email marker submitted during this run.
+
+00:01:15.102 --> 00:01:19.329
+I select the workflow and start the swarm. No per-user run
+
+00:01:19.329 --> 00:01:21.635
+quota is enabled for this pilot.
+
+00:01:23.134 --> 00:01:27.716
+The persistence contract requires more than an AI opinion. The browser
+
+00:01:27.716 --> 00:01:32.299
+must submit the current unique marker and observe a newly displayed
+
+00:01:32.299 --> 00:01:36.881
+success message. The read-only query must then fail its expected row
+
+00:01:36.881 --> 00:01:41.464
+count. A fresh browser context repeats the interaction with a different
+
+00:01:41.464 --> 00:01:46.046
+marker. Only when both accepted submissions fail their database expectations does
+
+00:01:46.046 --> 00:01:50.629
+this path confirm a persistence defect. Invalid input, an old toast,
+
+00:01:50.629 --> 00:01:54.794
+or a cloud service failure cannot establish the same conclusion.
+
+00:01:56.294 --> 00:02:01.407
+The architecture separates the web application, background workers, and browser execution.
+
+00:02:01.407 --> 00:02:06.520
+Next.js on Vercel authorizes the project and run. Trigger manages the
+
+00:02:06.520 --> 00:02:11.634
+agents. Neon stores persistent projects and reports. Browser requests pass through
+
+00:02:11.634 --> 00:02:16.747
+a restricted network policy. A Vercel Sandbox fallback runs Chromium in
+
+00:02:16.747 --> 00:02:21.860
+a disposable virtual machine with outbound access denied and without production
+
+00:02:21.860 --> 00:02:26.973
+database, GitHub, or model credentials. Source investigation uses a separately authorized
+
+00:02:26.973 --> 00:02:32.086
+broker and a pinned repository commit. Evidence and uncertainty stay visible
+
+00:02:32.086 --> 00:02:33.481
+in the report.
+
+00:02:34.994 --> 00:02:40.082
+The public repository includes the system design, local setup, automated checks,
+
+00:02:40.082 --> 00:02:45.171
+and deployment history. The submission resources also describe the target customer,
+
+00:02:45.171 --> 00:02:50.259
+distribution plan, and financial assumptions. Proposed pricing is clearly labeled; real
+
+00:02:50.259 --> 00:02:55.347
+payment activation is still pending. The pilot demonstrates the central user
+
+00:02:55.347 --> 00:03:00.436
+loop: connect an app, run a workflow, and inspect evidence about
+
+00:03:00.436 --> 00:03:05.524
+what actually happened. This narration is synthetic. The application screens and
+
+00:03:05.524 --> 00:03:07.374
+recorded interactions are real.

@@ -14,7 +14,7 @@ The home page headline is “Your build passed. Now test the app.” Its checkou
 
 - Home: https://www.trypreflight.dev/ — product overview, a walkthrough at `/#how-it-works`, and early access at `/#early-access`.
 - Blog: https://www.trypreflight.dev/blog — the current published article index. Each published post uses `/blog/{slug}`. Drafts and blog administration are private.
-- Privacy: https://www.trypreflight.dev/privacy — data handling for accounts, waitlist, GitHub integration, testing and payments.
+- Privacy: https://www.trypreflight.dev/privacy — data handling for accounts, waitlist, GitHub integration and testing.
 - Terms: https://www.trypreflight.dev/terms — service terms, responsibilities and usage conditions.
 - Sign-in: https://www.trypreflight.dev/login — interactive account access, not a public content page to index.
 
@@ -112,3 +112,12 @@ Proposed pricing is a blueprint; payment activation is not yet complete.
 Persistence confirmation requires a fresh visible acceptance, a marker-specific
 database expectation, and independent browser replay. Inconclusive evidence
 remains explicit. Infrastructure failures do not establish application defects.
+
+- [Product demonstration video](https://www.trypreflight.dev/videos/preflight-demo.mp4): 3:09, 1080p, real application screens, synthetic technical narration, processing wait shortened.
+- [Demo transcript](https://www.trypreflight.dev/videos/preflight-demo-transcript.md)
+- [English captions](https://www.trypreflight.dev/videos/preflight-demo.en.vtt)
+
+Production demo run #29 confirmed the deliberately broken waitlist's persistence
+defect after two independently accepted submissions failed marked database checks.
+The homepage check passed. A completed negative database assertion counts as a
+completed observation; provider errors and unresolved checks remain incomplete.

@@ -1,3 +1,4 @@
+import { SUBMISSION_DOCUMENTS } from "@/lib/submission-documents";
 import { SITE_URL } from "@/lib/site";
 
 const textResponse = (description: string, mediaType = "text/markdown") => ({ description, content: { [mediaType]: { schema: { type: "string" } } } });
@@ -15,6 +16,11 @@ export function GET() {
       "/markdown": publicContent("Product overview in Markdown", "getProductOverview"),
       "/markdown/privacy": publicContent("Public privacy policy", "getPrivacyPolicy"),
       "/markdown/terms": publicContent("Public terms of service", "getTermsOfService"),
+      "/markdown/submission": publicContent("Submission resources in Markdown", "getSubmissionResources"),
+      "/markdown/submission/{document}": { get: { summary:"Read a submission document", operationId:"getSubmissionDocument", security:[],
+        parameters:[{name:"document",in:"path",required:true,schema:{type:"string",enum:SUBMISSION_DOCUMENTS.map(item=>item.slug)}}],
+        responses:{"200":textResponse("Public submission document"),"404":textResponse("Document not found","text/plain"),"503":textResponse("Document temporarily unavailable","text/plain")},
+      } },
       "/markdown/blog": { get: { summary: "List published blog posts", operationId: "listPublishedBlogPosts", security: [], responses: {
         "200": textResponse("Published post links and descriptions"), "503": textResponse("Public blog temporarily unavailable", "text/plain"),
       } } },

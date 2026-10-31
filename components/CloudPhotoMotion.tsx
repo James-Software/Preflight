@@ -344,9 +344,22 @@ export default function CloudPhotoMotion({
         releaseGpu();
       };
     }
-    configure();
+    // Let the static photo and headline paint before compiling WebGL shaders.
+    let secondFrame = 0;
+    let idle = 0;
+    let fallbackTimer = 0;
+    const firstFrame = requestAnimationFrame(() => {
+      secondFrame = requestAnimationFrame(() => {
+        if (typeof window.requestIdleCallback === "function") idle = window.requestIdleCallback(configure, { timeout: 1500 });
+        else fallbackTimer = window.setTimeout(configure, 100);
+      });
+    });
     reduced.addEventListener("change", configure);
     return () => {
+      cancelAnimationFrame(firstFrame);
+      cancelAnimationFrame(secondFrame);
+      if (idle) window.cancelIdleCallback(idle);
+      clearTimeout(fallbackTimer);
       dispose();
       reduced.removeEventListener("change", configure);
     };

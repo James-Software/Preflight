@@ -1,3 +1,4 @@
+import { runCoverage } from "@/lib/run-coverage";
 import { schedules, task, tasks } from "@trigger.dev/sdk";
 import { ensureSchema } from "@/lib/schema";
 import { getSql } from "@/lib/db";
@@ -25,10 +26,7 @@ export const recoverRunVerification = task({
           AND t.status IN ('inconclusive','needs_review','not_tested','blocked')`;
       await tasks.triggerAndWait("investigate-checks", { runId }, { idempotencyKey: `verification-v2:${runId}` });
     } finally {
-      const pending = await sql`SELECT
-        (SELECT COUNT(*) FROM run_test_results WHERE run_id=${runId} AND status IN ('inconclusive','needs_review','not_tested','blocked')) +
-        (SELECT COUNT(*) FROM run_database_checks WHERE run_id=${runId} AND status<>'passed') AS count`;
-      const incomplete = Number((pending as any[])[0]?.count) > 0;
+      const incomplete = (await runCoverage(runId)).incomplete > 0;
       await sql`UPDATE runs SET status=${incomplete ? "partial" : "done"},finished_at=NOW(),
         failure_reason=${incomplete ? "Autonomous verification completed; remaining prerequisites and evidence limitations are listed per check." : null}
         WHERE id=${runId} AND status='running'`;

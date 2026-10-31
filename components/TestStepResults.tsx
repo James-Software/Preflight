@@ -11,6 +11,7 @@ export default function TestStepResults({
       r.status,
     ),
   );
+  const reproduced = results.filter(r => r.status === "confirmed").length;
   const investigated = results.filter((r) => r.investigation);
   return (
     <section className="mt-10" aria-labelledby="test-coverage">
@@ -19,8 +20,7 @@ export default function TestStepResults({
       </h2>
       <p className="mt-2 text-sm text-muted">
         {results.filter((r) => r.status === "passed").length} passed ·{" "}
-        {results.filter((r) => r.status === "confirmed").length} reproduced
-        failures · {results.filter((r) => r.status === "blocked").length}{" "}
+        {reproduced} reproduced {reproduced === 1 ? "failure" : "failures"} · {results.filter((r) => r.status === "blocked").length}{" "}
         blocked ·{" "}
         {results.filter(r => ["code_confirmed", "code_passed"].includes(r.status)).length} verified in source ·{" "}
         {

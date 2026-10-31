@@ -6,7 +6,7 @@ The public source repository is [James-Software/Preflight](https://github.com/Ja
 The production application is [www.trypreflight.dev](https://www.trypreflight.dev).
 Build and test status is independently visible in [GitHub Actions](https://github.com/James-Software/Preflight/actions).
 
-Local verification passed 248 unit tests, TypeScript checking and a production
+Local verification passed 249 unit tests, TypeScript checking and a production
 build. The integration suite exercises real Chromium and embedded Postgres,
 including guest isolation, cookie encryption, OAuth transitions, action/network
 restrictions, database persistence and source investigation. These tests do not
@@ -37,8 +37,24 @@ The live browser test identified Browserbase HTTP 402 refusing allocation. A
 fallback uses isolated Vercel Sandbox VMs with outbound access denied; app requests
 remain subject to the worker's existing pinned-address HTTP policy. The VM has no
 production database, GitHub or model credentials. Authenticated CDP bridge tests
-and blocked-egress tests passed in the cloud VM. End-to-end production fallback
-verification remains a release gate until a real run completes.
+and blocked-egress tests passed in the cloud VM. Production run #29 completed the homepage check and confirmed the waitlist
+persistence bug after two independent accepted submissions failed their database
+expectations. Both fallback VMs closed afterward. The clean runtime was pinned to
+a snapshot without expiration before test execution. The demo database still
+contained zero records after the run.
+
+A completion-count bug initially labeled this fully evaluated run partial. The
+aggregation now counts a failed database assertion as a completed observation,
+while unresolved browser checks and database/provider errors remain incomplete.
+The saved run status was corrected only after checking all stored outcomes; the
+underlying findings and observations were preserved.
+
+## Performance measurement
+
+A public HTTPS availability probe observed a 117 ms homepage response and 306 ms
+health response from the cloud workspace. These are samples, not service-level
+guarantees. Browser loading varies with location, network, GPU and device; measured
+first-paint results must be reported with that context.
 
 ## Explicit remaining gates
 
@@ -46,5 +62,8 @@ The payment-account connection and genuine checkout/webhook verification are not
 complete. Proposed prices and economics are documented assumptions. Judges are
 not charged and no per-user run limits have been introduced.
 
-The required 2–5 minute product video must show actual execution. It is not
-represented as complete before its recording and final playback checks.
+A [3:09 product video](/videos/preflight-demo.mp4) shows the real deployed app,
+private guest flow, confirmed run #29 and architecture. It is 1920×1080, with
+synthetic technical narration, captions and a transcript. Waiting between chapters
+is shortened; outcomes are not fabricated. Recording notes identify the voice
+model and data-source license.

@@ -1,3 +1,4 @@
+import { runCoverage } from "@/lib/run-coverage";
 import {
   preflightAutomaticDatabase,
   automaticDatabaseBlocked,
@@ -343,21 +344,12 @@ export const runSwarm = task({
       } catch { /* The original evidence remains usable if follow-up infrastructure is unavailable. */ }
     }
     if (await cancelled()) return { runId: payload.runId, status: "cancelled" };
-    const [frows, coverage, database] = await Promise.all([
+    const [frows, coverage] = await Promise.all([
       sql`SELECT COUNT(*)::int AS c FROM findings WHERE run_id=${payload.runId} AND deleted_at IS NULL`,
-      sql`SELECT COUNT(*) FILTER(WHERE status<>'not_tested')::int AS observed,
-        COUNT(*) FILTER(WHERE status IN ('not_tested','inconclusive','needs_review','blocked'))::int AS incomplete
-        FROM run_test_results WHERE run_id=${payload.runId}`,
-      sql`SELECT COUNT(*) FILTER(WHERE status IN ('passed','failed'))::int AS observed,
-        COUNT(*) FILTER(WHERE status<>'passed')::int AS incomplete FROM run_database_checks WHERE run_id=${payload.runId}`,
+      runCoverage(payload.runId),
     ]);
     const findings = Number((frows as any[])[0]?.c) || 0;
-    const observed =
-      (Number((coverage as any[])[0]?.observed) || 0) +
-      (Number((database as any[])[0]?.observed) || 0);
-    const incomplete =
-      (Number((coverage as any[])[0]?.incomplete) || 0) +
-      (Number((database as any[])[0]?.incomplete) || 0);
+    const { observed, incomplete } = coverage;
     const status =
       problems.length && !completedAgents && !findings && !observed
         ? "failed"
