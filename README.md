@@ -28,18 +28,6 @@ Built for the Galuxium Nexus V2 hackathon (deadline Oct 31, 2026).
   plus flat-rate enterprise plans (SSO, audit logs, scheduled runs). Target: 50%
   margin, enforced by pricing every run at 2x its infra cost.
 
-## 20-day milestones
-
-- **By Oct 14** — Scaffold: Next.js + Supabase auth, DB schema, GitHub App created.
-- **By Oct 19** — Swarm v1: single-agent journey, Jev pass/fail, report page with
-  screenshots and captured errors.
-- **By Oct 23** — Multi-agent swarm, diagnosis cards, Stripe credit packs live.
-- **By Oct 27** — Fix-agent-to-PR flow, verify re-run, pricing page, README +
-  architecture docs.
-- **By Oct 30** — Landing page design pass, 2–5 min demo video, executive briefing +
-  fiscal architecture docs, buffer.
-- **Oct 31, 4:30 AM PT** — Submission deadline (everything done the night of Oct 30).
-
 ## Getting started
 
 ```bash
