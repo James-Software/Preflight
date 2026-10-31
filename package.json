@@ -13,6 +13,7 @@
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1",
     "sharp": "^0.35.5",
     "typescript": "^5.6.0"
   },
@@ -32,7 +33,7 @@
     "build": "next build",
     "dev": "next dev",
     "start": "next start",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "next typegen && tsc --noEmit",
     "test": "node --test tests/*.test.cjs",
     "test:scroll": "node tests/scroll-sequence.browser.cjs",
     "test:integration": "node scripts/run-integration-tests.cjs",

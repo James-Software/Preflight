@@ -1,16 +1,20 @@
 "use client";
 
 import ReactMarkdown from "react-markdown";
+import remarkGfm from "remark-gfm";
 
 /* ------------------------------------------------------------------ */
-/* Markdown renderer for blog posts. Themed typography, no plugin      */
-/* deps — plain react-markdown with styled elements.                   */
+/* Markdown renderer for public documents, with accessible GFM tables. */
 /* ------------------------------------------------------------------ */
 
 export default function Markdown({ content }: { content: string }) {
   return (
     <ReactMarkdown
+      remarkPlugins={[remarkGfm]}
       components={{
+        table: ({children}) => <div className="mt-6 overflow-x-auto"><table className="w-full border-collapse text-left text-sm">{children}</table></div>,
+        th: ({children}) => <th className="border-b border-ink/20 px-3 py-3 font-semibold dark:border-white/20">{children}</th>,
+        td: ({children}) => <td className="border-b border-ink/10 px-3 py-3 align-top text-muted dark:border-white/10">{children}</td>,
         h1: ({ children }) => (
           <h1 className="mt-10 text-3xl font-semibold tracking-tight text-ink first:mt-0 md:text-4xl dark:text-white">
             {children}

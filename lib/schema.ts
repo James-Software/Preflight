@@ -255,6 +255,11 @@ async function initializeSchema(): Promise<void> {
     evidence TEXT, completed_at TIMESTAMPTZ NOT NULL DEFAULT NOW(), UNIQUE(run_id,agent_index,step_id)
   )`;
   await sql`ALTER TABLE run_test_results ADD COLUMN IF NOT EXISTS retry_context JSONB`;
+  await sql`CREATE TABLE IF NOT EXISTS browser_runtime_images (source_snapshot_id TEXT PRIMARY KEY, pinned_snapshot_id TEXT NOT NULL)`;
+  await sql`CREATE TABLE IF NOT EXISTS browser_sandbox_sessions (
+    id UUID PRIMARY KEY, run_id INT NOT NULL REFERENCES runs(id), state TEXT NOT NULL,
+    sandbox_name TEXT, created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )`;
   await sql`CREATE TABLE IF NOT EXISTS run_check_investigations (
     run_id INT NOT NULL REFERENCES runs(id), agent_index INT NOT NULL, step_id TEXT NOT NULL,
     budget_slot INT NOT NULL CHECK(budget_slot>=0 AND budget_slot<3),

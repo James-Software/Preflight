@@ -1,3 +1,4 @@
+import { createSandboxBrowser, closeSandboxBrowser } from "@/lib/browser-sandbox-client";
 /* ------------------------------------------------------------------ */
 /* Browserbase: real cloud browsers. Sessions are created per agent and  */
 /* always closed in a finally block. Playwright connects over CDP.       */
@@ -8,6 +9,7 @@ const BB_API = "https://api.browserbase.com/v1/sessions";
 export type BrowserSession = {
   id: string;
   connectUrl: string;
+  connectHeaders?: Record<string, string>;
 };
 
 function bbKey(): string {
@@ -20,6 +22,7 @@ export async function createBrowserSession(
   privateSession = false,
   interactive = false,
   timeoutSeconds = 600,
+  context?: { runId: number },
 ): Promise<BrowserSession> {
   const key = bbKey();
   const body: Record<string, unknown> = {};
@@ -40,6 +43,7 @@ export async function createBrowserSession(
     body: JSON.stringify(body),
   });
   if (!res.ok) {
+    if (!interactive && context && [402, 429, 503].includes(res.status)) return createSandboxBrowser(context.runId);
     const t = await res.text().catch(() => "");
     throw new Error(
       `Browserbase session error ${res.status}: ${t.slice(0, 200)}`,
@@ -54,6 +58,7 @@ export async function createBrowserSession(
 }
 
 export async function closeBrowserSession(sessionId: string): Promise<void> {
+  if (sessionId.startsWith("sandbox:")) return closeSandboxBrowser(sessionId);
   const res = await fetch(`${BB_API}/${sessionId}`, {
     signal: AbortSignal.timeout(10_000),
     method: "POST",

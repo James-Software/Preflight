@@ -6,6 +6,7 @@ export default function Footer() {
           PreFlight
         </p>
         <div className="flex flex-wrap items-center justify-center gap-x-5 gap-y-3">
+          <a href="/submission" className="text-sm text-muted hover:text-ink dark:hover:text-white">Submission resources</a>
           <a
             href="/privacy"
             className="text-sm text-muted transition-colors duration-150 hover:text-ink dark:text-muted dark:hover:text-white"

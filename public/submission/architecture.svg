@@ -1,0 +1,17 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="780" viewBox="0 0 1600 780" role="img" aria-labelledby="title desc">
+<title id="title">PreFlight system architecture</title><desc id="desc">The web app delegates runs to Trigger.dev. Browser agents use isolated cloud browsers. Read-only marked database checks and independent replay establish persistence evidence. GitHub source inspection is separately authorized. Neon stores private reports.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M0 0 L10 5 L0 10z" fill="#7485a2"/></marker></defs>
+<rect width="1600" height="780" rx="28" fill="#f6f8fc"/>
+<g font-family="Arial, sans-serif" fill="#10213f"><text x="70" y="78" font-size="38" font-weight="700">PreFlight · evidence from UI to database</text><text x="70" y="116" font-size="22" fill="#526480">Separate credentials, isolated execution, reviewable results.</text></g>
+<g stroke="#7485a2" stroke-width="3" fill="none" marker-end="url(#arrow)"><path d="M380 295H460"/><path d="M760 295H840"/><path d="M1140 295H1220"/><path d="M990 375V475"/><path d="M610 375V475"/><path d="M1220 560H1140"/><path d="M840 560H760"/></g>
+<g font-family="Arial, sans-serif" font-size="22" fill="#10213f">
+<g><rect x="70" y="205" width="310" height="170" rx="20" fill="white" stroke="#d1dbea"/><text x="96" y="245" font-weight="700">Next.js on Vercel</text><text x="96" y="285">GitHub or guest session</text><text x="96" y="322">Project + run authorization</text></g>
+<g><rect x="460" y="205" width="300" height="170" rx="20" fill="white" stroke="#d1dbea"/><text x="486" y="245" font-weight="700">Trigger.dev workers</text><text x="486" y="285">Plan + browser agents</text><text x="486" y="322">Bounded retries + policy</text></g>
+<g><rect x="840" y="205" width="300" height="170" rx="20" fill="#edf4ff" stroke="#94b9ed"/><text x="866" y="245" font-weight="700">Isolated cloud browser</text><text x="866" y="285">Browserbase / Sandbox</text><text x="866" y="322">Restricted app requests</text></g>
+<g><rect x="1220" y="205" width="310" height="170" rx="20" fill="white" stroke="#d1dbea"/><text x="1246" y="245" font-weight="700">Deployed target app</text><text x="1246" y="285">Visible user interaction</text><text x="1246" y="322">Acceptance + fresh marker</text></g>
+<g><rect x="840" y="475" width="300" height="175" rx="20" fill="#edf8f3" stroke="#9dcab3"/><text x="866" y="515" font-weight="700">Database verification</text><text x="866" y="555">Read-only expected state</text><text x="866" y="592">New marker + fresh replay</text></g>
+<g><rect x="460" y="475" width="300" height="175" rx="20" fill="white" stroke="#d1dbea"/><text x="486" y="515" font-weight="700">Private report in Neon</text><text x="486" y="555">Evidence + run history</text><text x="486" y="592">Scoped screenshot access</text></g>
+<g><rect x="1220" y="475" width="310" height="175" rx="20" fill="white" stroke="#d1dbea"/><text x="1246" y="515" font-weight="700">Target database</text><text x="1246" y="555">Owner-configured SQL</text><text x="1246" y="592">Actual persisted records</text></g>
+<text x="70" y="715" font-size="21" fill="#526480">Source investigation: authorized GitHub broker → pinned commit → network-isolated regression VM.</text>
+<text x="70" y="750" font-size="21" fill="#526480">A model opinion alone cannot confirm a persistence bug. Incomplete infrastructure remains visible.</text>
+</g></svg>

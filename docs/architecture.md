@@ -1,5 +1,8 @@
 # Architecture and trust boundaries
 
+![PreFlight architecture: authorized web app, Trigger workers, isolated browsers, marked database checks and private reports](https://www.trypreflight.dev/submission/architecture.svg)
+
+
 PreFlight uses Next.js 16, React 19 and TypeScript on Vercel, with Neon Postgres.
 Auth.js handles GitHub accounts; encrypted guest sessions are separately scoped.
 Trigger.dev orchestrates Browserbase Chromium workers controlled by Playwright.
@@ -83,3 +86,22 @@ bodies or connection URLs.
 `lib/schema.ts` manages the active schema. Test schema changes against local
 Postgres fixtures or an isolated Neon branch before release. Local tests use
 controlled provider boundaries; live verification remains a separate release gate.
+
+## Cloud browser fallback
+
+Browserbase capacity failures (HTTP 402, 429 or 503) on a running swarm can fall
+back to Vercel Sandbox. Interactive login capture still uses Browserbase. A signed,
+time-bounded internal request reserves a run-scoped allocation. Replayed create
+requests cannot allocate another VM. Cancellation and the run state are checked
+before returning the connection.
+
+The trusted Chromium image is prepared separately and pinned without expiration
+before use. Each test VM denies outbound network access and receives an ephemeral
+CDP token, never production database, GitHub or model credentials. The existing
+worker network policy fulfills permitted app requests. The CDP gateway rejects
+requests without its token. Browser contexts and VMs close in finally blocks; a
+ten-minute VM deadline bounds an orphan if a worker process terminates.
+
+Build a replacement image with `node scripts/build-browser-snapshot.mjs` using
+normal Vercel SDK credentials, then set `SANDBOX_BROWSER_SNAPSHOT_ID` on the web
+deployment. Snapshot only clean installed runtimes, never visited user sites.

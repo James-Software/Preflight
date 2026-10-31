@@ -15,12 +15,13 @@ test("sitemap lists canonical public pages and current published posts", async (
   assert.deepEqual(entries.map(entry => entry.url), [
     `${SITE_URL}/`, `${SITE_URL}/blog`, `${SITE_URL}/blog/testing-real-apps`,
     `${SITE_URL}/privacy`, `${SITE_URL}/terms`,
+    ...["", "/briefing", "/architecture", "/economics", "/development", "/verification"].map(path=>`${SITE_URL}/submission${path}`),
   ]);
   assert.equal(entries[2].lastModified.toISOString(), "2026-10-28T12:00:00.000Z");
 });
 test("an empty published blog still includes all public static pages", async () => {
   const entries = await sitemap(async () => [])();
-  assert.equal(entries.length, 4);
+  assert.equal(entries.length, 10);
   assert.ok(entries.every(entry => !/dashboard|invite|login|api|markdown/.test(new URL(entry.url).pathname)));
 });
 test("blog failures surface for retry rather than dropping published URLs", async () => {

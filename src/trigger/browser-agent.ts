@@ -279,9 +279,9 @@ export const browserAgent = task({
         ? await getRunAuthentication(payload.runId)
         : null;
       if (authentication) redact = profileRedactor(authentication);
-      const session = await createBrowserSession(!!authentication);
+      const session = await createBrowserSession(!!authentication, false, 600, { runId: payload.runId });
       sessionId = session.id;
-      const browser = await chromium.connectOverCDP(session.connectUrl);
+      const browser = await chromium.connectOverCDP(session.connectUrl, { headers: session.connectHeaders });
       const newAssignmentPage = async (auth: typeof authentication) => {
         const prepare = async (context: BrowserContext) => {
           await policy!.prepare(context);

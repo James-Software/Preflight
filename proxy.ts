@@ -21,4 +21,4 @@ export function proxy(request: NextRequest) {
 }
 
 // Authenticated pages, APIs, assets, and login flows never enter negotiation.
-export const config = { matcher: ["/", "/privacy", "/terms", "/blog/:path*"] };
+export const config = { matcher: ["/", "/privacy", "/terms", "/blog/:path*", "/submission/:path*"] };

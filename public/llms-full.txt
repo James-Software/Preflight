@@ -97,3 +97,18 @@ Never include private project data, test credentials, session cookies, OAuth tok
 ## Contact
 
 james@trypreflight.dev
+
+## Submission resources
+
+- [Submission index](https://www.trypreflight.dev/submission)
+- [Project briefing](https://www.trypreflight.dev/submission/briefing)
+- [System architecture](https://www.trypreflight.dev/submission/architecture)
+- [Commercial model](https://www.trypreflight.dev/submission/economics)
+- [Local replication](https://www.trypreflight.dev/submission/development)
+- [Release verification and limitations](https://www.trypreflight.dev/submission/verification)
+
+Judge demo invitations are distributed separately and must not be indexed.
+Proposed pricing is a blueprint; payment activation is not yet complete.
+Persistence confirmation requires a fresh visible acceptance, a marker-specific
+database expectation, and independent browser replay. Inconclusive evidence
+remains explicit. Infrastructure failures do not establish application defects.

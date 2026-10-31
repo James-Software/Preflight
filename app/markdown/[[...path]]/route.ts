@@ -1,3 +1,4 @@
+import { readSubmissionDocument, SUBMISSION_DOCUMENTS } from "@/lib/submission-documents";
 import { getPostBySlug, listPublishedPosts } from "@/lib/blog";
 import { frontmatter, staticDocument, type PublicDocument } from "@/lib/content/public-markdown";
 import { isPublicContentPath } from "@/lib/content/paths";
@@ -14,7 +15,12 @@ export async function GET(_request: Request, { params }: { params: Promise<{ pat
   if (!isPublicContentPath(path)) return new Response("Not found\n", { status: 404 });
   let document: PublicDocument | null = staticDocument(path);
   try {
-    if (path === "/blog") {
+    if (path === "/submission") {
+      document = {path, title:"Submission resources", body:`# PreFlight submission resources\n\n${SUBMISSION_DOCUMENTS.map(item=>`- [${item.title}](${SITE_URL}/submission/${item.slug}): ${item.description}`).join("\n")}\n\nPublic source: https://github.com/James-Software/Preflight\n\nJudge invitations are supplied separately. Billing and video status are stated in release verification.`};
+    } else if (path.startsWith("/submission/")) {
+      const item = await readSubmissionDocument(segments[1]);
+      if (item) document = {path,title:item.title,description:item.description,body:item.body};
+    } else if (path === "/blog") {
       const posts = (await listPublishedPosts()).filter(post => post.published === true);
       document = { path, title: "PreFlight Blog", body: `# Blog\n\nNotes on AI testing, agent swarms, and shipping software that is ready to fly.\n\n${posts.length ? posts.map(post => `## [${post.title.replace(/[\[\]\n\r]/g, " ")}](${SITE_URL}/blog/${encodeURIComponent(post.slug)})\n\n${post.description ?? ""}`).join("\n\n") : "No posts yet. Check back soon."}` };
     } else if (path.startsWith("/blog/")) {
