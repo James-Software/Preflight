@@ -1,3 +1,4 @@
+import { inspectGithubAccess } from "@/lib/github-access-diagnostic";
 import { createHash, randomUUID } from "node:crypto";
 import { getSql } from "@/lib/db";
 import { ensureSchema, getRunReport } from "@/lib/schema";
@@ -184,7 +185,8 @@ export function runAgentTools(grant: RunAgentGrant) {
   ];
   if (grant.owner_id === grant.actor_id) tools.push({ name: "inspect_cleanup", description: "Read-only live verification of one saved proposal: PK, marker, row fingerprint, dependency safeguards and run status. No SQL supplied by the caller is executed.", inputSchema: schema({ key: keySchema }, ["key"]), readOnly: true });
   if (grant.owner_id === grant.actor_id) tools.push({ name: "inspect_database_check", description: "Re-evaluate one saved configured database check using its original bound marker, read-only. Accepts no SQL. Reports current scalar and evidence limits; automatic checks use marked cleanup records.", inputSchema: schema({ key: keySchema }, ["key"]), readOnly: true });
-  return tools.map(({ readOnly, ...tool }) => ({ ...tool, annotations: { readOnlyHint: readOnly, destructiveHint: false, idempotentHint: true, openWorldHint: ["get_source", "inspect_cleanup", "inspect_database_check"].includes(tool.name) } }));
+  if (grant.owner_id === grant.actor_id && !/^(guest|test):/.test(grant.actor_id)) tools.push({ name: "inspect_github_access", description: "Read-only owner-only diagnosis of this run repository: registered App permissions, approved installation permissions and repository inclusion. Returns no credentials and performs no writes.", inputSchema: schema({}), readOnly: true });
+  return tools.map(({ readOnly, ...tool }) => ({ ...tool, annotations: { readOnlyHint: readOnly, destructiveHint: false, idempotentHint: true, openWorldHint: ["get_source", "inspect_cleanup", "inspect_database_check", "inspect_github_access"].includes(tool.name) } }));
 }
 export async function callRunAgentTool(grant: RunAgentGrant, name: string, args: any) {
   const tool = runAgentTools(grant).find((t) => t.name === name);
@@ -197,6 +199,7 @@ export async function callRunAgentTool(grant: RunAgentGrant, name: string, args:
       (args.limit !== undefined && (!Number.isSafeInteger(args.limit) || args.limit < 1 || args.limit > 100))) throw new AgentAccessError("Use a nonnegative offset and a page size from 1 to 100.");
     return runAgentOverview(grant, args.offset, args.limit);
   }
+  if (name === "inspect_github_access") return inspectGithubAccess(grant);
   if (name === "get_evidence") return getAgentEvidence(grant, args.key);
   if (name === "inspect_cleanup") return inspectAgentCleanup(grant, args.key);
   if (name === "inspect_database_check") return inspectAgentDatabaseCheck(grant, args.key);

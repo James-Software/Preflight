@@ -13,6 +13,7 @@ Paste the prompt into Codex. A client with a native PreFlight connection can use
 | `get_source` | List eligible repository paths or read up to six files (120 KB) at the selected commit. Source/deployment matches remain explicitly unverified. |
 | `inspect_database_check` | Owner-only, read-only evaluation of a saved configured query with its original marker. No caller-supplied SQL. A current scalar cannot prove an earlier delta or UI causation. |
 | `inspect_cleanup` | Owner-only live check of a proposed record's primary key, marker, whole-row fingerprint, schema dependencies and run/proposal status. |
+| `inspect_github_access` | Owner-only, read-only comparison of registered App permissions, approved installation permissions and this repository's inclusion. Reports endpoint status/request IDs without credentials or test writes. Unavailable for guest/test identities. |
 | `record_review` | Save a bounded assessment tied to current evidence and actual source lines read through this connection. Does not alter original findings/check statuses or approve deletion. |
 
 Assessments appear in the run report, and cleanup assessments also appear beside the existing Accept/Deny controls. A “safe to cleanup” assessment is accepted only after a fresh deterministic inspection passes and the supplied evidence hash still matches. Changes to a row or proposal invalidate that hash. Existing Cleanup execution still rechecks safeguards under its original table lock after explicit owner approval.

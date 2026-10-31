@@ -54,10 +54,14 @@ export async function openFixPullRequest(
         throw new Error(
           "GitHub rate limited this request. Wait for the limit to reset, then retry this PR group; its branch will be reused.",
         );
-      if (response.status === 403)
+      if (response.status === 403) {
+        const operation = `${method} ${path.split("?")[0] || "/"}`;
+        const id = response.headers.get("x-github-request-id");
+        const requestId = id && /^[\w:-]{1,100}$/.test(id) ? ` Request ID: ${id}.` : "";
         throw new Error(
-          "GitHub denied this PR operation. The PreFlight GitHub App owner must set Contents and Pull requests to Read and write. Then approve the updated permissions in the repository's GitHub App installation and retry this PR group. Signing in again alone does not grant repository write access.",
+          `GitHub denied ${operation} (403). Check this repository's installed Preflight QA permissions: Contents and Pull requests must both be Read and write. Approve updated permissions on the installation, then retry this PR group. App settings and signing in alone do not update installation approval.${requestId}`,
         );
+      }
       if (response.status === 404)
         throw new Error(
           "GitHub could not access this repository or required reference. Check that the PreFlight GitHub App installation includes this repository, then retry this PR group.",

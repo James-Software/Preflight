@@ -10,6 +10,7 @@ import { getProject, getRunReport } from "@/lib/schema";
 import { GithubAuthError } from "@/lib/github";
 import {
   acquireFixGroup,
+  failFixGroup,
   completeFixGroup,
   deleteFindings,
   FixActionError,
@@ -156,6 +157,8 @@ export async function POST(
           { status: 401 },
         );
       // Reservation stays durable. Retrying resumes the same group/branch, including after a timeout.
+      if (!(error instanceof FixPatchError))
+        await failFixGroup(group.id, error instanceof Error ? error.message.slice(0, 500) : "GitHub could not open this PR. Retry the group.");
       revalidatePath(path);
       return NextResponse.json(
         {

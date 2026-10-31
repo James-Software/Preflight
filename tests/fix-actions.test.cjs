@@ -345,6 +345,7 @@ function actionRoute(options = {}) {
     "@/lib/fix-groups": {
       acquireFixGroup: async () => {},
       releaseFixGroupLease: async () => {},
+      failFixGroup: async (...args) => calls.push(["failed", ...args]),
       FixActionError,
       parseFindingIds: groups.parseFindingIds,
       reserveFixGroup: async (owner, projectId, runId, ids, key) => {
@@ -450,6 +451,7 @@ test("invalid patches release their reservation; transient failures retain a res
   });
   assert.equal(retry.status, 502);
   assert.equal((await retry.json()).groupId, key);
+  assert.deepEqual(transient.calls.find(c => c[0] === "failed"), ["failed", key, "GitHub is temporarily unavailable."]);
   assert.ok(
     transient.calls.every((c) => c[0] !== "release" && c[0] !== "complete"),
   );
@@ -496,9 +498,9 @@ test("PR permission recovery distinguishes App configuration, installation acces
   const open = () => openFixPullRequest(ctx, "owner/app", "preflight/access", [fix(1)], "https://preflight.test/report");
   response = Response.json({}, { status: 403 });
   await assert.rejects(open(), error => {
-    assert.match(error.message, /App owner must set Contents and Pull requests to Read and write/);
-    assert.match(error.message, /approve the updated permissions/);
-    assert.match(error.message, /Signing in again alone does not grant/);
+    assert.match(error.message, /GitHub denied GET \/pulls \(403\)/);
+    assert.match(error.message, /Approve updated permissions on the installation/);
+    assert.match(error.message, /App settings and signing in alone do not update installation approval/);
     return true;
   });
   response = Response.json({}, { status: 404 });
