@@ -2,7 +2,7 @@ import { serializeJsonLd } from "@/lib/structured-data";
 import type { Metadata } from "next";
 import { publicAlternates, SITE_URL, SITE_DESCRIPTION } from "@/lib/site";
 import Hero from "@/components/Hero";
-import ProofChapter from "@/components/ProofChapter";
+import ProductOverview from "@/components/ProductOverview";
 import EarlyAccess from "@/components/EarlyAccess";
 
 export const metadata: Metadata = { alternates: publicAlternates("/") };
@@ -21,7 +21,7 @@ export default function Home() {
     <main className="bg-page">
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(structuredData) }} />
       <Hero />
-      <ProofChapter />
+      <ProductOverview />
       <EarlyAccess />
     </main>
   );

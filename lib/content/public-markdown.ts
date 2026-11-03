@@ -15,21 +15,15 @@ export function staticDocument(path: string): PublicDocument | null {
 
 Run AI agents through your app in real browsers. Review findings with screenshots, console logs and network traces.
 
-## How it works
+## Your app. Tested beyond the happy path.
 
-Follow an illustrative checkout bug through the browser, the evidence and a proposed change.
+Give PreFlight your app. AI agents use it in real browsers, investigate what breaks, and bring back evidence and proposed fixes.
 
-1. Connect your application and a GitHub repository you own.
-2. Run agents against your deployed application in real browsers.
-3. Review findings with screenshots, console logs, and network traces.
-4. Review proposed fix pull requests. Humans decide what to merge.
+Traditional test suites cover the paths you write. PreFlight helps explore the gaps.
 
-## Built like a tester, not a script
-
-- **Real browsers:** Every agent drives its own real browser and uses your app like a person would.
-- **Evidence with every bug:** Screenshots, console logs, and network traces attached to each finding.
-- **Root-cause diagnosis:** Agents pair what they saw in the browser with your source code to explain why it broke.
-- **Fix pull requests:** Confident fixes open as PRs with the diff. Nothing ever merges without you.
+- **Less scripting. More exploring.** Agents navigate real workflows, including signed-in pages, without you scripting every click.
+- **Findings with receipts.** Screenshots, console logs and network traces show what happened. Source investigation helps explain why.
+- **Check what actually changed.** Connect a database to verify supported actions saved their changes. Review proposed fixes and open a PR when you're ready.
 
 ## Early access
 

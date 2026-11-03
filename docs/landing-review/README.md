@@ -46,7 +46,7 @@ These after images show the reduced-motion stacked fallback. Before images use t
 
 ## Verification
 
-- Current browser regression: `PREFLIGHT_TEST_URL=http://localhost:3000 npm run test:scroll` (with a local server and Chromium installed; set `CHROMIUM_PATH` if needed). Checks cover the fixed WebGL alpha mask while cloud colors change, a static fallback outline, continuous native wheel/touch/keyboard movement, deliberate fast/reverse scrolling, gentle proximity-only settling and interruption, unimpeded entry/exit, and reduced-motion/short-viewport/no-JavaScript fallbacks. [Current results](native-scroll-verification.jsonl). Earlier one-step gesture and nearest-beat checks below describe the superseded behavior.
+- The checkout walkthrough and its `test:scroll` regression were retired when the landing page switched to a single product overview. The scroll verification artifacts here document the earlier implementation; they do not describe the current landing page.
 
 - Installation, typecheck, production build and diff checks pass. The repository has no lint script; the subsequent site-wide UI fixes add regression checks through `npm test`.
 - All three viewport sizes in both themes: each card expands to its actual window dimensions; windows stay centered and inside the viewport; other cards park at the sides in playing-card proportions; reverse scrolling restores the fan; no clipped window content or horizontal document overflow. The initial screenshot placement is also checked. See balanced-verification.jsonl.

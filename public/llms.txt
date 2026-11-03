@@ -14,7 +14,7 @@ PreFlight helps developers and teams test deployed web applications, investigate
 
 ## Public pages
 
-- [Website](https://www.trypreflight.dev/): product overview, illustrative checkout walkthrough and early-access request.
+- [Website](https://www.trypreflight.dev/): product overview, browser testing, optional database verification and early-access request.
 - [Blog](https://www.trypreflight.dev/blog): published articles; unpublished drafts are private.
 - [Privacy Policy](https://www.trypreflight.dev/privacy): data collection and use across the product.
 - [Terms of Service](https://www.trypreflight.dev/terms): conditions for using PreFlight.

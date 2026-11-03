@@ -8,7 +8,7 @@ Canonical website: https://www.trypreflight.dev/
 
 PreFlight is a web application for developers and teams testing deployed web apps. Multiple AI agents use real browsers to navigate, click, type and check workflows. Reports combine browser observations with evidence and can be investigated against repository source to propose fixes.
 
-The home page headline is “Your build passed. Now test the app.” Its checkout walkthrough is illustrative product content, not a report from a visitor’s application. Evidence and proposed repairs depend on what a real run observes; a fix pull request is not guaranteed for every finding.
+The home page headline is “Your build passed. Now test the app.” Its product overview explains browser exploration, evidence-backed findings and optional database verification. Evidence and proposed repairs depend on what a real run observes; a fix pull request is not guaranteed for every finding.
 
 ## Public website
 
