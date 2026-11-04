@@ -2,6 +2,7 @@
   margin-inline: auto;
   .pf-scene .ss-stage {
     overflow: hidden;
+    mask-image: linear-gradient(to bottom, #000 calc(100% - var(--pf-fade, 64px)), transparent);
     background: var(--page);
     color: var(--ss-text-strong);
     --ss-font: "Inter", ui-sans-serif, system-ui, sans-serif;
@@ -67,6 +68,7 @@
   .pf-fix-explanation .pf-detail-note { font-weight: 400; max-width: 30ch; }
   .pf-review { display: flex; gap: 8px; align-items: center; font-size: 11px; line-height: 16px; color: var(--ss-accent); margin-top: 16px; }
   .ss-stage[data-layout="compact"] {
+    --pf-fade: 20px;
     .pf-browser { top: 16px; left: 16px; width: 500px; height: 300px; }
     .pf-main { padding: 18px 12px; width: 326px; flex: none; }
     .pf-run-heading { font-size: 18px; }
