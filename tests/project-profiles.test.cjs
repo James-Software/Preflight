@@ -180,7 +180,7 @@ test("Database contains cleanup and rejects a run outside the project", async ()
       default: ({ children, ...props }) =>
         React.createElement("a", props, children),
     },
-    "next/navigation": { usePathname: () => "/dashboard/projects/12/database" },
+    "next/navigation": { useRouter: () => ({ push() {} }), usePathname: () => "/dashboard/projects/12/database" },
     "@/components/ProjectLogo": { default: () => null },
   }).default;
   const html = renderToStaticMarkup(

@@ -4,6 +4,7 @@ import { auth } from "@/auth";
 import { redirect } from "next/navigation";
 import { listProjects } from "@/lib/schema";
 import InviteCard from "@/components/InviteCard";
+import { runStatusLabel } from "@/lib/run-details";
 
 function formatDate(iso: string): string {
   return new Date(iso).toLocaleDateString("en-US", {
@@ -81,8 +82,9 @@ export default async function Dashboard() {
                       name={project.display_name || project.repo_full_name}
                     />
                     <div className="min-w-0">
-                      <h2 className="break-words text-lg font-semibold tracking-tight text-ink group-hover:text-primary dark:text-white">
-                        {project.display_name || project.repo_full_name}
+                      <h2 title={project.repo_full_name}
+                        className="truncate text-lg font-semibold tracking-tight text-ink group-hover:text-primary dark:text-white">
+                        {project.display_name || project.repo_full_name.split("/").pop()}
                       </h2>
                       {project.role === "member" && (
                         <p className="mt-1 text-xs text-muted">
@@ -94,9 +96,18 @@ export default async function Dashboard() {
                       </p>
                     </div>
                   </div>
-                  <p className="text-sm text-muted sm:pt-1">
-                    Created {formatDate(project.created_at)}
-                  </p>
+                  <div className="text-sm sm:pt-1 sm:text-right">
+                    {project.latest_run ? (
+                      <>
+                        <p className={`font-medium ${["failed", "partial"].includes(project.latest_run.status) ? "text-red-600 dark:text-red-400" : "text-ink dark:text-white"}`}>
+                          {runStatusLabel(project.latest_run.status)} · {project.latest_run.findings_count} finding{project.latest_run.findings_count === 1 ? "" : "s"}
+                        </p>
+                        <p className="mt-1 text-xs text-muted">Last run {formatDate(project.latest_run.created_at)}</p>
+                      </>
+                    ) : (
+                      <p className="text-muted">No runs yet</p>
+                    )}
+                  </div>
                 </a>
                 {project.role === "owner" && !session.user.isGuest && (
                   <DeleteProjectButton

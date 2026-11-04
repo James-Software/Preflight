@@ -66,7 +66,7 @@ test("collaboration UI gives owners invite controls and members a simple people 
 test("shared project navigation keeps credential settings with the owner", () => {
   const Component = load("components/ProjectSidebar.tsx", {
     "next/link": { default: ({ children, prefetch, ...props }) => React.createElement("a", props, children) },
-    "next/navigation": { usePathname: () => "/dashboard/projects/1/collaboration" },
+    "next/navigation": { useRouter: () => ({ push() {} }), usePathname: () => "/dashboard/projects/1/collaboration" },
     "@/components/ProjectLogo": { default: () => null },
   }).default;
   const html = renderToStaticMarkup(React.createElement(Component, { canManage: false, project: { id: 1, name: "Shared app", repo: "owner/app", appUrl: null } }));

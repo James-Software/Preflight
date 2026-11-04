@@ -12,11 +12,13 @@
     --ss-well: var(--panel);
     --ss-text-strong: #242329;
     --ss-text: #575660;
+    --ss-text-faint: #64636d;
     --ss-radius-window: 12px;
   }
   .ss-stage[data-theme="dark"] {
     --ss-text-strong: #f4f4f5;
     --ss-text: #afb3c4;
+    --ss-text-faint: #afb3c4;
   }
   .pf-browser { position: absolute; top: 32px; left: 32px; width: 836px; height: 466px; }
   .pf-app { display: flex; height: 100%; background: var(--ss-surface); }

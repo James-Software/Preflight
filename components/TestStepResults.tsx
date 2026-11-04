@@ -15,7 +15,7 @@ export default function TestStepResults({
   const investigated = results.filter((r) => r.investigation);
   return (
     <section className="mt-10" aria-labelledby="test-coverage">
-      <h2 id="test-coverage" className="text-xl font-semibold">
+      <h2 id="test-coverage" className="scroll-mt-36 text-xl font-semibold">
         Test coverage
       </h2>
       <p className="mt-2 text-sm text-muted">

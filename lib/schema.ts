@@ -12,6 +12,12 @@ export interface Project {
   role?: "owner" | "member";
   app_url: string | null;
   latest_target_url?: string | null;
+  latest_run?: {
+    id: number;
+    status: string;
+    created_at: string;
+    findings_count: number;
+  } | null;
   repo_full_name: string;
   display_name?: string | null;
   image_url?: string | null;
@@ -363,7 +369,19 @@ export async function listProjects(ownerGithubId: string): Promise<Project[]> {
     SELECT id, owner_github_id, app_url, repo_full_name,
       CASE WHEN owner_github_id=${ownerGithubId} THEN 'owner' ELSE 'member' END AS role,
            github_installation_id, screenshot_retention_days, display_name, image_url, created_at,
-      (SELECT target_url FROM runs WHERE project_id = projects.id AND target_url IS NOT NULL AND (runs.repo_full_name = projects.repo_full_name OR runs.repo_full_name IS NULL) ORDER BY id DESC LIMIT 1) AS latest_target_url
+      (SELECT target_url FROM runs WHERE project_id = projects.id AND target_url IS NOT NULL AND (runs.repo_full_name = projects.repo_full_name OR runs.repo_full_name IS NULL) ORDER BY id DESC LIMIT 1) AS latest_target_url,
+      (SELECT jsonb_build_object(
+        'id', r.id,
+        'status', CASE WHEN r.status='failed' AND (
+          EXISTS(SELECT 1 FROM findings f WHERE f.run_id=r.id AND f.deleted_at IS NULL)
+          OR EXISTS(SELECT 1 FROM run_test_results t WHERE t.run_id=r.id AND t.status<>'not_tested')
+          OR EXISTS(SELECT 1 FROM run_database_checks d WHERE d.run_id=r.id AND d.status IN ('passed','failed'))
+        ) THEN 'partial' ELSE r.status END,
+        'created_at', r.created_at,
+        'findings_count', (SELECT count(*)::int FROM findings f WHERE f.run_id=r.id AND f.deleted_at IS NULL)
+      ) FROM runs r WHERE r.project_id=projects.id
+        AND (r.repo_full_name=projects.repo_full_name OR r.repo_full_name IS NULL)
+        ORDER BY r.id DESC LIMIT 1) AS latest_run
     FROM projects
     WHERE (owner_github_id = ${ownerGithubId} OR EXISTS(SELECT 1 FROM project_members m WHERE m.project_id=projects.id AND m.user_id=${ownerGithubId}))
       -- Demo copies use the sponsor's delegated connections, but belong only

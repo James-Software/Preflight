@@ -316,12 +316,12 @@ export default function FixesTable({
   const secondary =
     "inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-line px-4 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50";
   return (
-    <section className="mt-10" aria-labelledby="fixes-heading" aria-busy={busy}>
+    <section className="mt-6" aria-labelledby="fixes-heading" aria-busy={busy}>
       <div className="flex flex-wrap items-start justify-between gap-5">
         <div>
           <h2
             id="fixes-heading"
-            className="text-xl font-semibold tracking-tight"
+            className="scroll-mt-36 text-xl font-semibold tracking-tight"
           >
             Findings & fixes
           </h2>
@@ -331,14 +331,14 @@ export default function FixesTable({
               : "Select fixes to group into one PR. Open a finding to review its evidence."}
           </p>
         </div>
-        <div className="flex flex-wrap gap-3">
+        <div className={selection.length ? "hidden" : "flex flex-wrap gap-3"}>
           <button
             type="button"
             className={secondary}
             disabled={busy || !rows.length}
             onClick={() => void copyPrompts(rows)}
           >
-            Copy Prompt for all
+            Copy prompts
           </button>
           <button
             type="button"
@@ -361,7 +361,7 @@ export default function FixesTable({
           </button>
         </div>
       </div>
-      <div
+      {selection.length > 0 && <div
         style={{ top: headerHeight }}
         className="sticky z-10 mt-6 flex min-h-20 flex-wrap items-center gap-3 border-y border-line bg-page py-3"
       >
@@ -374,7 +374,7 @@ export default function FixesTable({
           <button
             className="min-h-11 px-2 text-sm text-muted hover:text-primary"
             disabled={busy}
-            onClick={() => setSelected([])}
+            onClick={() => { setSelected([]); selectAll.current?.focus(); }}
           >
             Clear
           </button>
@@ -385,7 +385,7 @@ export default function FixesTable({
           disabled={busy || !selection.length}
           onClick={() => void copyPrompts(selection)}
         >
-          Copy Prompt of selected
+          Copy prompts
         </button>
         <button
           type="button"
@@ -423,7 +423,7 @@ export default function FixesTable({
               : "Select all findings from one pending PR group to resume it, or use its Resume/Retry PR button below. Select only ungrouped findings to create a new PR."}
           </p>
         )}
-      </div>
+      </div>}
       {error && (
         <p
           role="alert"

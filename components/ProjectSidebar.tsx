@@ -1,7 +1,6 @@
 "use client";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
-import { useEffect, useRef } from "react";
+import { usePathname, useRouter } from "next/navigation";
 import ProjectLogo from "@/components/ProjectLogo";
 
 export function ProjectSectionIcon({
@@ -66,14 +65,7 @@ export default function ProjectSidebar({
   isTestUser?: boolean;
 }) {
   const pathname = usePathname();
-  const navigation = useRef<HTMLElement>(null);
-  useEffect(() => {
-    const nav = navigation.current;
-    const selected = nav?.querySelector<HTMLElement>('[aria-current="page"]');
-    if (nav && selected && nav.scrollWidth > nav.clientWidth) {
-      nav.scrollLeft += selected.getBoundingClientRect().left - nav.getBoundingClientRect().left - (nav.clientWidth - selected.offsetWidth) / 2;
-    }
-  }, [pathname]);
+  const router = useRouter();
   const base = `/dashboard/projects/${project.id}`;
   const tabs = [
     { section: "runs", label: "Runs", href: base },
@@ -82,26 +74,49 @@ export default function ProjectSidebar({
     { section: "database", label: "Database", href: `${base}/database` },
     { section: "collaboration", label: "Collaboration", href: `${base}/collaboration` },
   ] as const;
+  const visibleTabs = tabs.filter((tab) =>
+    (canManage || ["runs", "collaboration"].includes(tab.section)) &&
+    (!isTestUser || tab.section !== "collaboration"),
+  );
+  const selectedTab = visibleTabs.find((tab) =>
+    tab.section === "runs"
+      ? pathname === base || pathname.startsWith(`${base}/runs/`)
+      : pathname === tab.href,
+  );
   return (
-    <aside className="min-w-0 border-b border-line pb-5 lg:sticky lg:top-24 lg:self-start lg:border-b-0 lg:border-r lg:pb-0 lg:pr-6">
-      <Link
-        href="/dashboard"
-        className="pressable -ml-2 inline-flex min-h-11 items-center gap-2 rounded-lg px-2 text-sm text-muted transition-colors hover:bg-panel hover:text-primary"
-      >
-        <svg
-          aria-hidden="true"
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.7"
+    <aside className="min-w-0 border-b border-line pb-3 lg:sticky lg:top-24 lg:self-start lg:border-b-0 lg:border-r lg:pb-0 lg:pr-6">
+      <div className="flex min-w-0 items-center gap-2">
+        <Link
+          href="/dashboard"
+          aria-label="Back to projects"
+          className="pressable -ml-2 inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-lg px-2 text-sm text-muted transition-colors hover:bg-panel hover:text-primary"
         >
-          <path d="m12 5-7 7 7 7M5 12h15" />
-        </svg>
-        Back to projects
-      </Link>
-      <div className="mt-4 flex min-w-0 items-center gap-3">
+          <svg
+            aria-hidden="true"
+            width="16"
+            height="16"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="1.7"
+          >
+            <path d="m12 5-7 7 7 7M5 12h15" />
+          </svg>
+          <span className="hidden lg:inline">Back to projects</span>
+        </Link>
+        <p className="min-w-0 flex-1 truncate text-sm font-semibold lg:hidden" title={project.repo}>
+          {project.name}
+        </p>
+        <select
+          aria-label="Project section"
+          value={selectedTab?.href || base}
+          onChange={(event) => router.push(event.target.value)}
+          className="min-h-11 max-w-[48%] rounded-lg border border-line bg-page px-3 text-sm lg:hidden"
+        >
+          {visibleTabs.map((tab) => <option key={tab.section} value={tab.href}>{tab.label}</option>)}
+        </select>
+      </div>
+      <div className="mt-4 hidden min-w-0 items-center gap-3 lg:flex">
         <ProjectLogo
           projectId={project.id}
           name={project.name}
@@ -116,11 +131,10 @@ export default function ProjectSidebar({
         </div>
       </div>
       <nav
-        ref={navigation}
         aria-label="Project sections"
-        className="mt-6 flex gap-1 overflow-x-auto pb-1 lg:flex-col lg:gap-2 lg:overflow-visible"
+        className="mt-6 hidden flex-col gap-2 lg:flex"
       >
-        {tabs.filter((tab) => (canManage || ["runs", "collaboration"].includes(tab.section)) && (!isTestUser || tab.section !== "collaboration")).map((tab) => {
+        {visibleTabs.map((tab) => {
           const selected =
             tab.section === "runs"
               ? pathname === base || pathname.startsWith(`${base}/runs/`)

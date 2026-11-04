@@ -4,7 +4,6 @@ import TestStepResults from "@/components/TestStepResults";
 import { BranchIcon } from "@/components/GitIcons";
 import RunArchiveButton from "@/components/RunArchiveButton";
 import FixesTable from "@/components/FixesTable";
-import ProjectLogo from "@/components/ProjectLogo";
 import { auth } from "@/auth";
 import { redirect, notFound } from "next/navigation";
 import { getProject, getRunReport } from "@/lib/schema";
@@ -58,19 +57,17 @@ export default async function RunReportPage({
           ← All runs
         </a>
         <div className="mt-4 flex flex-wrap items-center justify-between gap-4">
-          <div className="flex min-w-0 flex-wrap items-center gap-3"><h1 className="text-3xl font-semibold tracking-tight">
-            Run #{run.id}
-          </h1>
-          {canConnectAgent && <CopyAgentPrompt projectId={projectId} runId={runNumber} />}</div>
-          <div className="flex flex-wrap items-center gap-3">
-            <CopyRunDetails details={JSON.stringify(details, null, 2)} />
-            <RunArchiveButton
-              projectId={projectId}
-              runId={runNumber}
-              archived={!!run.archived_at}
-              active={active}
-            />
-          </div>
+          <h1 className="text-3xl font-semibold tracking-tight">Run #{run.id}</h1>
+          <details className="relative">
+            <summary className="min-h-11 cursor-pointer rounded-full border border-line px-4 py-3 text-sm font-medium hover:bg-panel">
+              Run actions
+            </summary>
+            <div className="absolute right-0 z-20 mt-2 flex w-72 max-w-[calc(100vw-2rem)] flex-col gap-3 rounded-xl border border-line bg-page p-4 shadow-lg">
+              {canConnectAgent && <CopyAgentPrompt projectId={projectId} runId={runNumber} />}
+              <CopyRunDetails details={JSON.stringify(details, null, 2)} />
+              <RunArchiveButton projectId={projectId} runId={runNumber} archived={!!run.archived_at} active={active} />
+            </div>
+          </details>
         </div>
         {run.archived_at && (
           <p role="status" className="mt-4 text-sm text-muted">
@@ -78,18 +75,7 @@ export default async function RunReportPage({
             it to return it to your runs list.
           </p>
         )}
-        <div className="mt-4 flex items-center gap-3">
-          <ProjectLogo
-            projectId={project.id}
-            imageUrl={project.image_url}
-            appUrl={project.app_url || run.target_url}
-            name={project.repo_full_name}
-          />
-          <p className="min-w-0 break-words text-muted">
-            {run.repo_full_name || project.repo_full_name}
-          </p>
-        </div>
-        <div className="mt-6 flex flex-wrap items-center gap-4 text-sm">
+        <div className="mt-4 flex flex-wrap items-center gap-x-4 gap-y-2 text-sm">
           <span className="rounded-full bg-panel px-3 py-1.5 capitalize">
             {runStatusLabel(details.status)}
           </span>
@@ -123,16 +109,18 @@ export default async function RunReportPage({
         )}
         {run.target_url && (
           <p className="mt-4 break-all text-sm text-muted">
-            Tested URL: {run.target_url}
+            {run.repo_full_name || project.repo_full_name} · {run.target_url}
           </p>
         )}
         <RunReportRefresh active={active} />
-        <DatabaseCheckResults checks={report.databaseChecks || []} />
-        <TestStepResults results={report.testResults || []} />
-        <RunAgentReviews reviews={agentReviews} />
+        <nav aria-label="Report sections" className="mt-5 flex flex-wrap gap-x-5 text-sm font-medium text-primary">
+          <a href="#fixes-heading" className="inline-flex min-h-11 items-center">Findings ({findings.length})</a>
+          {!!report.testResults?.length && <a href="#test-coverage" className="inline-flex min-h-11 items-center">Test coverage ({report.testResults.length})</a>}
+          {!!report.databaseChecks?.length && <a href="#database-results" className="inline-flex min-h-11 items-center">Database ({report.databaseChecks.length})</a>}
+        </nav>
         {!findings.length ? (
           <div className="mt-10 rounded-2xl bg-panel p-8">
-            <h2 className="text-xl font-semibold">
+            <h2 id="fixes-heading" className="scroll-mt-36 text-xl font-semibold">
               {active
                 ? "Agents are collecting evidence."
                 : "No findings recorded."}
@@ -149,7 +137,7 @@ export default async function RunReportPage({
                         "not_tested",
                       ].includes(r.status),
                     )
-                    ? "No confirmed bugs were recorded. See the check investigations above for remaining blockers and follow-up results."
+                    ? "No confirmed bugs were recorded. See test coverage for remaining blockers and follow-up results."
                     : "This run finished without any recorded findings."
                   : "This run ended without recorded findings. You can start another run from the project."}
             </p>
@@ -162,6 +150,9 @@ export default async function RunReportPage({
             isGuest={owner.startsWith("guest:")}
           />
         )}
+        <TestStepResults results={report.testResults || []} />
+        <DatabaseCheckResults checks={report.databaseChecks || []} />
+        <RunAgentReviews reviews={agentReviews} />
         {!!run.database_snapshot && project.owner_github_id === owner && (
           <a
             href={`/dashboard/projects/${projectId}/database?run=${runNumber}#cleanup`}

@@ -48,7 +48,7 @@ export default function DatabaseCheckResults({
     <section className="mt-10" aria-labelledby="database-results">
       <h2
         id="database-results"
-        className="text-xl font-semibold tracking-tight"
+        className="scroll-mt-36 text-xl font-semibold tracking-tight"
       >
         Database verification
       </h2>

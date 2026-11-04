@@ -166,7 +166,7 @@ test("the project sidebar puts Runs first, selects it for reports and includes s
       default: ({ children, prefetch, ...props }) =>
         React.createElement("a", props, children),
     },
-    "next/navigation": { usePathname: () => "/dashboard/projects/1/runs/2" },
+    "next/navigation": { useRouter: () => ({ push() {} }), usePathname: () => "/dashboard/projects/1/runs/2" },
     "@/components/ProjectLogo": { default: () => null },
   }).default;
   const html = renderToStaticMarkup(
@@ -179,7 +179,10 @@ test("the project sidebar puts Runs first, selects it for reports and includes s
       },
     }),
   );
-  assert.ok(html.indexOf(">Runs</a>") < html.indexOf("General info"));
+  const desktopNavigation = html.slice(html.indexOf('<nav'));
+  assert.ok(desktopNavigation.indexOf(">Runs</a>") < desktopNavigation.indexOf("General info"));
+  assert.match(html, /<select[^>]*aria-label="Project section"/);
+  assert.match(html, /<option value="\/dashboard\/projects\/1" selected="">Runs<\/option>/);
   assert.ok(html.includes("Back to projects"));
   assert.match(html, /href="\/dashboard\/projects\/1"[^>]*aria-current="page"/);
   assert.ok(html.includes("/database"));
