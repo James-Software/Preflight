@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { Check, ChevronRight, CircleAlert, Code2, FileCode2, GitBranch, RotateCcw, Square, X } from "lucide-react";
+import { Check, ChevronRight, CircleAlert, Code2, FileCode2, GitBranch, RotateCcw, X } from "lucide-react";
 import { Stage } from "./kit/stage";
 import type { Act } from "./kit/act";
 import { Bar, Text, Window } from "./kit/window";
@@ -39,11 +39,10 @@ async function script(a: Act<Scene>) {
 export default function PreflightDemo() {
   const theme = useTheme();
   const [run, setRun] = useState(0);
-  const [animated, setAnimated] = useState(true);
   return (
     <figure className="pf-demo mx-auto mt-12 max-w-[900px] md:mt-16" aria-label="Illustrated Preflight walkthrough">
       <div role="img" aria-label="Example run: signing in and browsing pass. Saving an address fails with a 500 response. Its evidence leads to a proposed fix that validates the postal code before saving.">
-        <Stage key={run} width={900} height={466} compact={{ below: 700, width: 358, height: 416 }} initial={initial} poster={poster} script={animated ? script : undefined} play="once" theme={theme} fidelity="realistic" cursor={{ at: REST }} className="pf-scene">
+        <Stage key={run} width={900} height={466} compact={{ below: 700, width: 358, height: 416 }} initial={initial} poster={poster} script={script} play="once" theme={theme} fidelity="realistic" cursor={{ at: REST }} className="pf-scene">
           {(s, _rect, layout) => (
             <>
               <Window url="app.trypreflight.dev" className="pf-browser">
@@ -82,13 +81,9 @@ export default function PreflightDemo() {
           )}
         </Stage>
       </div>
-      <figcaption className="pf-caption">
-        <span>Illustrative walkthrough <span aria-hidden="true">·</span> From finding to proposed fix.</span>
-        <div className="pf-playback">
-          {animated && <button type="button" onClick={() => setAnimated(false)}><Square size={12} /> Show result</button>}
-          <button type="button" onClick={() => { setAnimated(true); setRun(n => n + 1); }}><RotateCcw size={13} /> Replay demo</button>
-        </div>
-      </figcaption>
+      <div className="pf-playback">
+        <button type="button" onClick={() => setRun(n => n + 1)}><RotateCcw size={13} /> Replay demo</button>
+      </div>
     </figure>
   );
 }

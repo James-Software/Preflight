@@ -4,7 +4,7 @@ Gold: Stageshow `hero-demo`, copied before adaptation. Kept its pinned browser w
 
 Installed with `npx skills add benjitaylor/skills --skill stageshow --agent codex --yes`. Source: https://github.com/benjitaylor/skills. The installed skill lives in `.agents/skills/stageshow` (ignored as a local development tool); `skills-lock.json` records its source. The portable runtime and its license/notices live beside this component. Only required runtime modules are imported so unrelated phone and messaging styles do not ship.
 
-Beats: completed run → selected failed check → screenshot and failed POST → proposed fix → held diff. Once in view; Replay begins a new story, Show result interrupts playback and displays the completed result. The reduced-motion poster is the completed diff. All content is illustrative; no requests are sent to test an app or create a PR.
+Beats: completed run → selected failed check → screenshot and failed POST → proposed fix → held diff. Once in view; Replay begins a new story. The reduced-motion poster is the completed diff. All content is illustrative; no requests are sent to test an app or create a PR.
 
 Captured: actual marketing page at 1280px and 390px, light and dark, reduced-motion posters; desktop and mobile native-clock contact sheets; marked opening, finding selection, evidence, fix press and held result. Evidence is in `/workspace/preflight-stageshow/` (outside the application). Final visual review frames: `last-review-{1280,390}-{light,dark}.png`. Mobile final marked states: `mobile-states-final.png`; desktop: `wide-states-final.png`.
 

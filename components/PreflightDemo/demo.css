@@ -79,8 +79,7 @@
     .pf-code { font-size: 11px; }
     .pf-request { font-size: 10px; }
   }
-  .pf-caption { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; padding-top: 16px; font-size: 11px; line-height: 1.5; color: var(--muted); }
-  .pf-playback { display: flex; gap: 12px; }
+  .pf-playback { display: flex; justify-content: flex-end; padding-top: 16px; font-size: 11px; line-height: 1.5; color: var(--muted); }
   .pf-playback button { display: inline-flex; align-items: center; gap: 6px; min-height: 44px; color: inherit; cursor: pointer; }
   .pf-playback button:hover { color: var(--accent); }
   .pf-playback button:focus-visible { outline: 2px solid var(--accent); outline-offset: 4px; border-radius: 3px; }
