@@ -99,6 +99,7 @@ test('source results remain visibly separate from deployed browser confirmation'
   assert.match(html, /Bug reproduced in source test/);
   assert.match(html, /repository code; deployed browser behavior is separate/);
   assert.match(html, /not ok 2 - regression/);
-  assert.match(html, /0 reproduced failures/);
+  assert.match(html, /1 verified in source/);
+  assert.doesNotMatch(html, /1 reproduced failure/);
   assert.doesNotMatch(html, /checks need follow-up/);
 });

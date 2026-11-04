@@ -1,3 +1,4 @@
+import { ChevronRight } from "lucide-react";
 import type { DatabaseCheckReport } from "@/lib/schema";
 export default function DatabaseCheckResults({
   checks,
@@ -45,13 +46,19 @@ export default function DatabaseCheckResults({
     pending: "Pending",
   };
   return (
-    <section className="mt-10" aria-labelledby="database-results">
-      <h2
-        id="database-results"
-        className="scroll-mt-36 text-xl font-semibold tracking-tight"
-      >
-        Database verification
-      </h2>
+    <details className="group border-b border-line py-1">
+      <summary className="flex min-h-12 cursor-pointer items-center justify-between gap-4 py-3">
+        <h2 id="database-results" className="text-sm font-medium">Database verification</h2>
+        <span className={`flex items-center gap-3 text-xs ${assertions.some((check) => check.status === "failed") ? "text-red-700 dark:text-red-300" : "text-muted"}`}>
+          {assertions.some((check) => check.status === "failed")
+            ? `${assertions.filter((check) => check.status === "failed").length} failed`
+            : setup.length ? "Needs attention"
+            : assertions.every((check) => check.status === "passed") && assertions.length ? "Passed"
+            : "Not verified"}
+          <ChevronRight size={14} aria-hidden="true" className="transition-transform group-open:rotate-90" />
+        </span>
+      </summary>
+      <div className="pb-5">
       <p className="mt-2 text-sm text-muted">
         {assertions.length
           ? `${assertions.filter((check) => ["passed", "failed"].includes(check.status)).length} of ${assertions.length} database checks completed. ${assertions.filter((check) => check.status === "failed").length} failed persistence expectations.`
@@ -125,6 +132,7 @@ export default function DatabaseCheckResults({
           </table>
         </div>
       )}
-    </section>
+      </div>
+    </details>
   );
 }

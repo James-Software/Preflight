@@ -1,3 +1,4 @@
+import { ChevronRight } from "lucide-react";
 import type { TestStepResult } from "@/lib/schema";
 
 export default function TestStepResults({
@@ -14,22 +15,21 @@ export default function TestStepResults({
   const reproduced = results.filter(r => r.status === "confirmed").length;
   const investigated = results.filter((r) => r.investigation);
   return (
-    <section className="mt-10" aria-labelledby="test-coverage">
-      <h2 id="test-coverage" className="scroll-mt-36 text-xl font-semibold">
-        Test coverage
-      </h2>
-      <p className="mt-2 text-sm text-muted">
-        {results.filter((r) => r.status === "passed").length} passed ·{" "}
-        {reproduced} reproduced {reproduced === 1 ? "failure" : "failures"} · {results.filter((r) => r.status === "blocked").length}{" "}
-        blocked ·{" "}
-        {results.filter(r => ["code_confirmed", "code_passed"].includes(r.status)).length} verified in source ·{" "}
-        {
-          results.filter((r) =>
-            ["needs_review", "inconclusive", "not_tested"].includes(r.status),
-          ).length
-        }{" "}
-        awaiting verification
-      </p>
+    <details className="group border-b border-line py-1">
+      <summary className="flex min-h-12 cursor-pointer items-center justify-between gap-4 py-3">
+        <h2 id="test-coverage" className="text-sm font-medium">Test coverage</h2>
+        <span className="flex items-center gap-3 text-xs text-muted">{results.length} {results.length === 1 ? "check" : "checks"}<ChevronRight size={14} aria-hidden="true" className="transition-transform group-open:rotate-90" /></span>
+      </summary>
+      <div className="pb-5">
+        <p className="text-sm text-muted">
+          {[
+            [results.filter((r) => r.status === "passed").length, "passed"],
+            [reproduced, reproduced === 1 ? "reproduced failure" : "reproduced failures"],
+            [results.filter((r) => r.status === "blocked").length, "blocked"],
+            [results.filter((r) => ["code_confirmed", "code_passed"].includes(r.status)).length, "verified in source"],
+            [results.filter((r) => ["needs_review", "inconclusive", "not_tested"].includes(r.status)).length, "awaiting verification"],
+          ].filter(([count]) => Number(count) > 0).map(([count, label]) => `${count} ${label}`).join(" · ")}
+        </p>
       {investigated.length > 0 && (
         <details className="mt-4 rounded-lg border border-line bg-panel px-4">
           <summary className="min-h-11 cursor-pointer py-3 text-sm text-muted">
@@ -130,6 +130,7 @@ export default function TestStepResults({
           </ul>
         </details>
       )}
-    </section>
+      </div>
+    </details>
   );
 }

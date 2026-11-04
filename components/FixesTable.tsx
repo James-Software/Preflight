@@ -1,6 +1,7 @@
 "use client";
 import { findingsPrompt, findingFixParagraph } from "@/lib/finding-prompts";
 
+import { ChevronRight } from "lucide-react";
 import { Fragment, useEffect, useRef, useState } from "react";
 import { reconnectGithub, githubReconnected } from "@/lib/github-reconnect";
 import { useRouter } from "next/navigation";
@@ -130,6 +131,7 @@ export default function FixesTable({
     observer.observe(header);
     return () => observer.disconnect();
   }, []);
+  const [selecting, setSelecting] = useState(false);
   const [selected, setSelected] = useState<number[]>([]);
   const [expanded, setExpanded] = useState<number | null>(null);
   const [busy, setBusy] = useState(false);
@@ -162,14 +164,6 @@ export default function FixesTable({
   const selection = rows.filter((f) => selected.includes(f.id));
   const allSelected =
     !!selectable.length && selection.length === selectable.length;
-  const readyRows = rows.filter(ready);
-  const pendingIds = [
-    ...new Set(rows.filter(pendingGroup).map((f) => f.pr_group_id!)),
-  ];
-  const allResumeRows =
-    !readyRows.length && pendingIds.length === 1
-      ? rows.filter((f) => f.pr_group_id === pendingIds[0])
-      : [];
   const selectedGroup = selection[0]?.pr_group_id;
   const canResume =
     !!selectedGroup &&
@@ -317,58 +311,22 @@ export default function FixesTable({
     "inline-flex min-h-11 items-center justify-center gap-2 rounded-full border border-line px-4 text-sm font-medium disabled:cursor-not-allowed disabled:opacity-50";
   return (
     <section className="mt-6" aria-labelledby="fixes-heading" aria-busy={busy}>
-      <div className="flex flex-wrap items-start justify-between gap-5">
-        <div>
-          <h2
-            id="fixes-heading"
-            className="scroll-mt-36 text-xl font-semibold tracking-tight"
-          >
-            Findings & fixes
-          </h2>
-          <p className="mt-2 max-w-xl text-sm leading-relaxed text-muted">
-            {isGuest
-              ? "Open a finding to review its evidence, or copy a prompt for an agent. Pull requests are available on your own GitHub-connected projects."
-              : "Select fixes to group into one PR. Open a finding to review its evidence."}
-          </p>
-        </div>
-        <div className={selection.length ? "hidden" : "flex flex-wrap gap-3"}>
-          <button
-            type="button"
-            className={secondary}
-            disabled={busy || !rows.length}
-            onClick={() => void copyPrompts(rows)}
-          >
-            Copy prompts
-          </button>
-          <button
-            type="button"
-            className={`${secondary} shrink-0`}
-            disabled={
-              isGuest || busy || (!readyRows.length && !allResumeRows.length)
-            }
-            onClick={() =>
-              void action(
-                "open-pr",
-                allResumeRows.length ? allResumeRows : readyRows,
-                allResumeRows[0]?.pr_group_id || undefined,
-              )
-            }
-          >
-            <PullRequestIcon />
-            {allResumeRows.length
-              ? `${allResumeRows.some((f) => f.pr_error) ? "Retry" : "Resume"} PR (${allResumeRows.length})`
-              : `Open PR for all${readyRows.length ? ` (${readyRows.length})` : ""}`}
-          </button>
-        </div>
+      <div className="flex items-center justify-between gap-4">
+        <h2 id="fixes-heading" className="text-base font-semibold">
+          {rows.length} finding{rows.length === 1 ? "" : "s"}
+        </h2>
+        {(rows.length > 1 || selecting) && <button type="button" disabled={busy}
+          onClick={() => { setSelecting(!selecting); setSelected([]); }}
+          className="min-h-11 px-2 text-sm text-muted hover:text-primary">
+          {selecting ? "Done" : "Select"}
+        </button>}
       </div>
-      {selection.length > 0 && <div
+      {selecting && selection.length > 0 && <div
         style={{ top: headerHeight }}
         className="sticky z-10 mt-6 flex min-h-20 flex-wrap items-center gap-3 border-y border-line bg-page py-3"
       >
         <p className="mr-auto text-sm text-muted" aria-live="polite">
-          {selection.length
-            ? `${selection.length} selected`
-            : `${readyRows.length} available for PR`}
+          {selection.length} selected
         </p>
         {!!selection.length && (
           <button
@@ -452,46 +410,26 @@ export default function FixesTable({
           )}
         </p>
       )}
-      <div className="mt-4 overflow-x-auto rounded-lg border border-line">
+      <div className="mt-2 border-y border-line">
         <table className="w-full table-fixed border-collapse text-left text-sm">
-          <caption className="sr-only">
-            Run findings, proposed fixes and pull requests. Select rows to
-            create a grouped PR or delete them.
-          </caption>
-          <thead className="bg-panel text-xs text-muted">
+          <caption className="sr-only">Findings and proposed fixes</caption>
+          <colgroup>
+            {selecting && <col className="w-11" />}
+            <col />
+            <col className="w-24 sm:w-32" />
+          </colgroup>
+          <thead className={selecting ? "text-xs text-muted" : "sr-only"}>
             <tr>
-              <th scope="col" className="w-12 px-3 py-1 sm:w-14 sm:px-4">
+              {selecting && <th scope="col" className="w-11 py-2">
                 <label className="flex min-h-11 items-center">
-                  <input
-                    ref={selectAll}
-                    type="checkbox"
-                    aria-label="Select all findings"
-                    checked={allSelected}
-                    disabled={busy || !selectable.length}
+                  <input ref={selectAll} type="checkbox" aria-label="Select all findings"
+                    checked={allSelected} disabled={busy || !selectable.length}
                     className="size-4 cursor-pointer accent-primary"
-                    onChange={() =>
-                      setSelected(
-                        allSelected ? [] : selectable.map((f) => f.id),
-                      )
-                    }
-                  />
+                    onChange={() => setSelected(allSelected ? [] : selectable.map((f) => f.id))} />
                 </label>
-              </th>
-              <th scope="col" className="px-1 py-4 font-medium sm:px-3">
-                Finding
-              </th>
-              <th
-                scope="col"
-                className="w-0 p-0 font-medium sm:w-28 sm:px-3 sm:py-4"
-              >
-                <span className="hidden sm:inline">Severity</span>
-              </th>
-              <th
-                scope="col"
-                className="w-28 px-3 py-4 font-medium sm:w-48 sm:px-4"
-              >
-                Fix status
-              </th>
+              </th>}
+              <th scope="col" className="font-medium">Finding</th>
+              <th scope="col" className="text-right font-medium">Action</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-line">
@@ -500,142 +438,64 @@ export default function FixesTable({
               const isExpanded = expanded === f.id;
               return (
                 <Fragment key={f.id}>
-                  <tr
-                    className={
-                      selected.includes(f.id)
-                        ? "bg-panel"
-                        : "bg-page hover:bg-panel/50"
-                    }
-                  >
-                    <td className="px-3 py-3 align-top sm:px-4">
+                  <tr className={selected.includes(f.id) && selecting ? "bg-panel" : ""}>
+                    {selecting && <td className="w-11 py-3 align-top">
                       <label className="flex min-h-11 items-center">
-                        <input
-                          type="checkbox"
-                          checked={selection.some((row) => row.id === f.id)}
-                          disabled={busy}
-                          aria-label={`Select ${f.title}`}
+                        <input type="checkbox" checked={selection.some((row) => row.id === f.id)}
+                          disabled={busy} aria-label={`Select ${f.title}`}
                           className="size-4 cursor-pointer accent-primary"
-                          onChange={(e) =>
-                            setSelected((previous) =>
-                              e.target.checked
-                                ? [...previous, f.id]
-                                : previous.filter((id) => id !== f.id),
-                            )
-                          }
-                        />
+                          onChange={(e) => setSelected((previous) => e.target.checked ? [...previous, f.id] : previous.filter((id) => id !== f.id))} />
                       </label>
-                    </td>
-                    <th
-                      scope="row"
-                      className="px-1 py-3 text-left font-medium sm:px-3"
-                    >
-                      <button
-                        type="button"
-                        className="flex min-h-11 w-full items-start gap-2 py-2.5 text-left sm:gap-3 hover:text-primary"
-                        aria-expanded={isExpanded}
-                        aria-controls={`evidence-${f.id}`}
-                        onClick={() => setExpanded(isExpanded ? null : f.id)}
-                      >
-                        <span
-                          className="mt-0.5 shrink-0 text-muted"
-                          aria-hidden="true"
-                        >
-                          {isExpanded ? "−" : "+"}
-                        </span>
+                    </td>}
+                    <th scope="row" className="py-3 pr-4 font-medium">
+                      <button type="button" className="flex min-h-11 w-full items-start gap-3 text-left hover:text-primary"
+                        aria-expanded={isExpanded} aria-controls={`evidence-${f.id}`}
+                        onClick={() => setExpanded(isExpanded ? null : f.id)}>
+                        <ChevronRight size={16} aria-hidden="true" className={`mt-0.5 shrink-0 text-muted transition-transform ${isExpanded ? "rotate-90" : ""}`} />
                         <span className="min-w-0 break-words">
                           {f.title}
-                          <span className="mt-1 block text-xs font-normal text-muted">
-                            #{f.id}
-                            <span className="capitalize sm:hidden">
-                              {" "}
-                              · {f.severity || "Unclassified"}
-                            </span>
+                          <span className={`mt-1 block text-xs font-normal capitalize ${["critical", "high"].includes(f.severity || "") ? "text-red-700 dark:text-red-300" : "text-muted"}`}>
+                            {f.severity || "Unclassified"}
                           </span>
                         </span>
                       </button>
                     </th>
-                    <td className="p-0 align-top capitalize sm:px-3 sm:py-6">
-                      <span
-                        className={
-                          f.severity === "critical" || f.severity === "high"
-                            ? "hidden font-medium text-red-700 dark:text-red-300 sm:inline"
-                            : "hidden text-muted sm:inline"
-                        }
-                      >
-                        {f.severity || "Unclassified"}
-                      </span>
-                    </td>
-                    <td className="px-3 py-3 align-top sm:px-4">
+                    <td className="w-24 py-3 text-right align-top sm:w-32">
                       {pr ? (
-                        <a
-                          className="inline-flex min-h-11 items-center gap-2 font-medium text-primary hover:underline"
-                          href={pr}
-                          target="_blank"
-                          rel="noreferrer"
-                        >
-                          <PullRequestIcon />
-                          PR #{f.pr_number || "opened"}
-                        </a>
+                        <a className="inline-flex min-h-11 items-center gap-2 whitespace-nowrap text-primary hover:underline"
+                          href={pr} target="_blank" rel="noreferrer"><PullRequestIcon /> PR #{f.pr_number || "opened"}</a>
                       ) : pendingGroup(f) ? (
-                        <button
-                          type="button"
-                          className="inline-flex min-h-11 items-center gap-2 font-medium text-primary disabled:opacity-50"
+                        <button type="button" className="inline-flex min-h-11 items-center whitespace-nowrap text-primary disabled:opacity-50"
                           disabled={isGuest || busy}
-                          onClick={() =>
-                            void action(
-                              "open-pr",
-                              rows.filter(
-                                (row) => row.pr_group_id === f.pr_group_id,
-                              ),
-                              f.pr_group_id!,
-                            )
-                          }
-                        >
-                          <BranchIcon />
+                          onClick={() => void action("open-pr", rows.filter((row) => row.pr_group_id === f.pr_group_id), f.pr_group_id!)}>
                           {f.pr_error ? "Retry PR" : "Resume PR"}
                         </button>
-                      ) : (
-                        <span className="inline-flex min-h-11 items-center gap-2 text-muted">
-                          {ready(f) && <BranchIcon />}
-                          {ready(f)
-                            ? f.patch_diff?.trim()
-                              ? "Ready for PR"
-                              : "Prepare fix on request"
-                            : "In a PR group"}
-                        </span>
-                      )}
-                      {f.pr_error && (
-                        <p className="mt-2 max-w-xs break-words text-xs text-red-700 dark:text-red-300">
-                          {f.pr_error}
-                        </p>
-                      )}
+                      ) : !isGuest && ready(f) ? (
+                        <button type="button" className="min-h-11 whitespace-nowrap text-primary disabled:opacity-50"
+                          disabled={busy} onClick={() => void action("open-pr", [f])}>Prepare fix</button>
+                      ) : null}
+                      {f.pr_error && <p className="mt-2 max-w-xs break-words text-xs text-red-700 dark:text-red-300">{f.pr_error}</p>}
                     </td>
                   </tr>
                   <tr id={`evidence-${f.id}`} hidden={!isExpanded}>
-                    <td
-                      colSpan={4}
-                      className="max-w-0 border-t border-line bg-surface px-6 py-4 sm:px-8"
-                    >
-                      {isExpanded && <Evidence finding={f} />}
+                    <td colSpan={selecting ? 3 : 2} className="max-w-0 pb-5 pl-7">
+                      {isExpanded && <>
+                        <Evidence finding={f} />
+                        <div className="flex items-center gap-5 border-t border-line pt-2">
+                          <button type="button" className="min-h-11 text-xs text-muted hover:text-primary" disabled={busy} onClick={() => void copyPrompts([f])}>Copy prompt</button>
+                          <button type="button" className="min-h-11 text-xs text-muted hover:text-red-600" disabled={busy || pendingGroup(f)}
+                            onClick={() => { setSelected([f.id]); dialog.current?.showModal(); }}>Delete finding</button>
+                        </div>
+                      </>}
                     </td>
                   </tr>
                 </Fragment>
               );
             })}
-            {!rows.length && (
-              <tr>
-                <td colSpan={4} className="px-6 py-12 text-center text-muted">
-                  No findings remaining in this report.
-                </td>
-              </tr>
-            )}
+            {!rows.length && <tr><td colSpan={selecting ? 3 : 2} className="py-8 text-sm text-muted">No findings remaining.</td></tr>}
           </tbody>
         </table>
       </div>
-      <p className="mt-3 text-xs leading-relaxed text-muted">
-        Each selection creates one branch and one PR. Open PR for all combines
-        every remaining ready fix into a single PR.
-      </p>
       <dialog
         ref={dialog}
         aria-labelledby="delete-findings-title"
