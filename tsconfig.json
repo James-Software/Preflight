@@ -29,6 +29,7 @@
     "target": "ES2017"
   },
   "exclude": [
+    ".agents",
     "node_modules"
   ],
   "include": [

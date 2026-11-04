@@ -19,3 +19,6 @@ out/
 # Local test output, private browser sessions and generated recordings.
 work/
 artifacts/
+
+# Locally installed agent skills (source pinned in skills-lock.json).
+.agents/

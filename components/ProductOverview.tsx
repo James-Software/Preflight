@@ -1,3 +1,5 @@
+import PreflightDemo from "./PreflightDemo/PreflightDemo";
+
 const DIFFERENCES = [
   {
     title: "Less scripting. More exploring.",
@@ -54,6 +56,8 @@ export default function ProductOverview() {
             explore the gaps.
           </p>
         </div>
+
+        <PreflightDemo />
 
         <div className="mt-14 grid gap-8 border-t border-line pt-8 md:mt-20 md:grid-cols-3 md:gap-12 md:pt-10">
           {DIFFERENCES.map(({ title, body }) => (
