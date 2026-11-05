@@ -1,6 +1,6 @@
 export default function Footer() {
   return (
-    <footer className="bg-page">
+    <footer className="site-footer bg-page">
       <div className="mx-auto flex max-w-6xl flex-col items-center justify-between gap-5 px-6 py-10 sm:flex-row">
         <p className="font-display text-sm font-bold tracking-tight text-ink dark:text-white">
           PreFlight

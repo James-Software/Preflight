@@ -75,6 +75,7 @@ export default function Nav({
       className="site-nav fixed inset-x-0 top-0 z-50"
       data-scrolled={scrolled}
       data-glass={glass}
+      data-landing={landing}
     >
       <div className="site-nav-frame relative mx-auto mt-3">
         <div
