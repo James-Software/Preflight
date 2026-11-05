@@ -1,4 +1,6 @@
+import Image from "next/image";
 import { ArrowUpRight, Github } from "lucide-react";
+import clouds from "@/public/images/pero-kalimero-clouds.webp";
 
 export default function EarlyAccess() {
   return (
@@ -7,6 +9,7 @@ export default function EarlyAccess() {
         <h2 id="flight-access-title">Ship with<br />your eyes open.</h2>
         <div className="flight-access-bottom">
           <div>
+            <p>Put your next release through its paces.</p>
             <p>Sign in with GitHub to request early access.<br />We review each request before granting access.</p>
           </div>
           <div className="flight-access-action">
@@ -15,6 +18,7 @@ export default function EarlyAccess() {
           </div>
         </div>
       </div>
+      <div className="flight-access-photo"><Image src={clouds} alt="Sunlit clouds beneath a clear blue sky" fill sizes="(max-width: 760px) 100vw, 32vw" placeholder="blur" /></div>
     </section>
   );
 }

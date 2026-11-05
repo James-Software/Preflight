@@ -1,5 +1,5 @@
 import Image from "next/image";
-import { ArrowDown, ArrowUpRight } from "lucide-react";
+import { ArrowDown, ArrowDownRight, ArrowUpRight, Check, CircleAlert } from "lucide-react";
 import CloudPhotoMotion from "./CloudPhotoMotion";
 import clouds from "@/public/images/pero-kalimero-clouds.webp";
 
@@ -21,7 +21,13 @@ export default function Hero() {
               Get early access <ArrowUpRight size={19} aria-hidden="true" />
             </a>
           </div>
-
+          <a href="#how-it-works" className="flight-peek" aria-label="Explore a sample test finding">
+            <div className="flight-peek-heading"><span>A little off the happy path.</span><ArrowDownRight size={20} aria-hidden="true" /></div>
+            <div className="flight-peek-row"><Check size={15} aria-hidden="true" /><span>Sign in</span><span>Passed</span></div>
+            <div className="flight-peek-row"><Check size={15} aria-hidden="true" /><span>Browse products</span><span>Passed</span></div>
+            <div className="flight-peek-row flight-peek-failed"><CircleAlert size={15} aria-hidden="true" /><span>Save delivery address</span><span>500</span></div>
+            <div className="flight-peek-caption">Sample run <span>Follow the finding <ArrowUpRight size={13} aria-hidden="true" /></span></div>
+          </a>
         </div>
       </div>
       <div className="flight-hero-foot">
