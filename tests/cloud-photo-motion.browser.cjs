@@ -222,6 +222,8 @@ const assert = require("node:assert/strict");
           await p.locator("#top canvas").evaluate((surface, extra) => {
             const host = surface.parentElement.parentElement;
             host.style.flex = "none";
+            // Override viewport-height minimums so the fixture forces a real resize.
+            host.style.minHeight = "0px";
             host.style.height = `${700 + extra}px`;
           }, extraHeight);
           await p.evaluate(() => scrollTo(0, 80));
@@ -242,6 +244,7 @@ const assert = require("node:assert/strict");
         await p.locator("#top canvas").evaluate((surface) => {
           surface.parentElement.parentElement.style.removeProperty("height");
           surface.parentElement.parentElement.style.removeProperty("flex");
+          surface.parentElement.parentElement.style.removeProperty("min-height");
           scrollTo(0, 0);
         });
         await p.waitForTimeout(1000);
