@@ -1,7 +1,7 @@
 "use client";
 
 import { useId, useState, type KeyboardEvent } from "react";
-import { ArrowRight, Check, ChevronRight, CircleAlert, FileCode2, GitBranch, Globe, LockKeyhole } from "lucide-react";
+import { Check, ChevronRight, CircleAlert, FileCode2, GitBranch, Globe, LockKeyhole } from "lucide-react";
 
 const checks = [
   { name: "Sign in", route: "/login", title: "A session that holds.", description: "The agent signed in and verified the authenticated session.", method: "GET", endpoint: "/api/session", status: 200, result: "Session verified", log: "Session established. Authenticated account is available.", time: "84 ms" },
@@ -46,7 +46,7 @@ export default function LandingTestFlight() {
               </button>
             ))}
           </div>
-          <div className="flight-journey-note"><span>Follow the detour.</span><p>Select a check to see what the agent found along the way.</p><ArrowRight size={26} strokeWidth={1.2} aria-hidden="true" /></div>
+
         </aside>
 
         <div className="flight-inspection">
@@ -68,7 +68,7 @@ export default function LandingTestFlight() {
                   <span className="flight-shot-error"><CircleAlert size={13} aria-hidden="true" />Something went wrong. Try again.</span>
                 </div> : <div className="flight-passed-shot"><Check size={36} strokeWidth={1.3} aria-hidden="true" /><strong>{check.result}</strong><p>{selected === 0 ? "The account is signed in and ready to use." : "The catalog and product details are available."}</p></div>}
               </div>
-              <div className="flight-capture-note"><span>{failed ? "The missed step." : "Checked in a real browser."}</span><p>{failed ? "An empty postal code made it past the form. The request failed, and the address never saved." : "The agent followed the workflow and recorded the result."}</p>{failed && <button type="button" onClick={() => setView("Proposed fix")}>See the proposed fix <ArrowRight size={15} aria-hidden="true" /></button>}</div>
+
             </div>}
             {view === "Console" && <div className="flight-console-view"><div className="flight-evidence-label">Browser console <span>{failed ? "1 error" : "No errors"}</span></div><pre className={failed ? "flight-console-error" : ""}><code>{check.log}</code></pre><p>{failed ? "The error was captured when the agent tried to save the address." : "No browser errors were recorded during this check."}</p></div>}
             {view === "Network" && <div className="flight-network-view"><div className="flight-evidence-label">Network trace <span>1 request</span></div><dl><div><dt>Request</dt><dd><code>{check.method} {check.endpoint}</code></dd></div><div><dt>Status</dt><dd className={failed ? "flight-status-error" : "flight-status-ok"}>{check.status} {failed ? "Internal Server Error" : "OK"}</dd></div><div><dt>Duration</dt><dd>{check.time}</dd></div><div><dt>{failed ? "Request body" : "Response"}</dt><dd><code>{failed ? '{ "street": "41 Market Street", "postalCode": "" }' : selected === 0 ? '{ "authenticated": true }' : '{ "products": [ … ] }'}</code></dd></div></dl></div>}
