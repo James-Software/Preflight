@@ -61,7 +61,7 @@ export default function LandingTestFlight() {
               </div>
               <div
                 className="flight-address-shot"
-                role="img"
+                role="group"
                 aria-label="Sample address form: 41 Market Street, postal code empty, saving failed."
               >
                 <span className="flight-shot-heading">Delivery address</span>
@@ -69,7 +69,7 @@ export default function LandingTestFlight() {
                 <div className="flight-shot-field">41 Market Street</div>
                 <span className="flight-shot-label">Postal code</span>
                 <div className="flight-shot-field flight-shot-empty">Enter postal code</div>
-                <div className="flight-shot-button">Save address</div>
+                <button type="button" className="flight-shot-button">Save address</button>
                 <span className="flight-shot-error">
                   <CircleAlert size={13} aria-hidden="true" />
                   Something went wrong. Try again.

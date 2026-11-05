@@ -118,7 +118,9 @@
 .flight-shot-label { font-size: 9px; margin-bottom: 5px; }
 .flight-shot-field { padding: 9px; border: 1px solid color-mix(in srgb, var(--flight-ink) 17%, transparent); border-radius: 3px; font-size: 10px; margin-bottom: 12px; background: var(--flight-white); }
 .flight-shot-empty { color: var(--flight-secondary); }
-.flight-shot-button { font-size: 10px; padding: 10px; text-align: center; background: #203b4d; color: #fff; border-radius: 3px; }
+.flight-shot-button { cursor: pointer; font-size: 10px; padding: 10px; text-align: center; background: #203b4d; color: #fff; border-radius: 3px; }
+.flight-shot-button:hover { background: #2b4b60; }
+.flight-shot-button:active { background: #172e3e; }
 .flight-shot-error { display: flex; align-items: center; gap: 6px; font-size: 9px; margin-top: 10px; color: var(--flight-red); }
 .flight-shot-error > svg { flex: none; }
 .flight-capture-note > span { font-size: 19px; letter-spacing: -.035em; font-weight: 500; }
