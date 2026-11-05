@@ -1,4 +1,3 @@
-import { SUBMISSION_DOCUMENTS } from "@/lib/submission-documents";
 import type { MetadataRoute } from "next";
 import { SITE_URL } from "@/lib/site";
 import { listPublishedPosts } from "@/lib/blog";
@@ -39,7 +38,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "monthly",
       priority: 0.3,
     },
-    {url:`${base}/submission`,changeFrequency:"weekly",priority:0.7},
-    ...SUBMISSION_DOCUMENTS.map(item=>({url:`${base}/submission/${item.slug}`,changeFrequency:"monthly" as const,priority:0.5})),
   ];
 }

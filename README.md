@@ -7,10 +7,6 @@ PreFlight never merges them automatically.
 
 - **Live app:** https://www.trypreflight.dev
 - **Example under test:** https://preflight-example.vercel.app
-- **Submission:** [executive briefing](docs/executive-briefing.md),
-  [architecture](docs/architecture.md), [financial model](docs/monetization.md)
-- **Judge access:** use the invitation shared separately. No GitHub sign-in is
-  required; each guest browser receives isolated run history.
 
 ## Implemented workflow
 
@@ -87,16 +83,6 @@ See [local development](docs/local-development.md) for complete runtime setup an
 the distinction between local fixtures and a public cloud preview. Cloud browsers
 cannot reach localhost; the network guard must not be disabled to work around it.
 
-## Submission resources
-
-[Public review hub](https://www.trypreflight.dev/submission) ·
-[3:09 product demonstration](https://www.trypreflight.dev/videos/preflight-demo.mp4) ·
-[Project briefing](docs/executive-briefing.md) · [Commercial blueprint](docs/monetization.md) ·
-[Release evidence and remaining gates](docs/release-verification.md).
-
-The video uses real application screens and synthetic technical narration. Actual
-payment activation remains pending; proposed prices are not live billing.
-
 ## Runtime configuration
 
 | Variable | Web | Worker | Purpose |
@@ -134,10 +120,9 @@ path exclusion. See [security hardening](docs/security-hardening.md).
 - `src/trigger/` — planning, browser, investigation and fix workers
 - `lib/` — scoped access, data model, networking, providers and evidence
 - `tests/` — unit and real-browser/database integration tests
-- `docs/` — system design, operational guides and submission documents
+- `docs/` — system design and operational guides
 
-Further guides: [judge demos](docs/judge-demo.md),
-[database verification](docs/database-verification/README.md),
+Further guides: [database verification](docs/database-verification/README.md),
 [authenticated testing](docs/authenticated-testing.md),
 [collaboration](docs/project-collaboration.md),
 [run review MCP](docs/run-review-mcp.md), [agent discovery](docs/agent-discovery.md).

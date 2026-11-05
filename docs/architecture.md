@@ -1,6 +1,5 @@
 # Architecture and trust boundaries
 
-![PreFlight architecture: authorized web app, Trigger workers, isolated browsers, marked database checks and private reports](https://www.trypreflight.dev/submission/architecture.svg)
 
 
 PreFlight uses Next.js 16, React 19 and TypeScript on Vercel, with Neon Postgres.
