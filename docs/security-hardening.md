@@ -52,7 +52,26 @@ requires current project ownership/membership or an active bearer grant for that
 exact run. Invalid bearer credentials do not fall back to cookie authentication.
 Responses are private/no-store, JPEG-only and never accept caller-supplied URLs.
 
-The production `privatize-screenshots` schedule runs every five minutes. It moves
+Legacy Blob migration is **paused by default**, including manual task retries:
+`privatizeLegacyScreenshots()` returns `paused: true` before any database or Blob
+access unless the Trigger.dev worker has `ENABLE_LEGACY_BLOB_MIGRATION=true`.
+Leave this unset while Blob quota is exhausted. Routine runs save screenshots in
+the database and daily retention only touches the database, so default operation
+makes **zero Blob requests**, regardless of run count.
+
+The production `privatize-screenshots` schedule now runs once daily at 10:00 UTC,
+with task retries disabled. Deploy the Trigger.dev worker (the GitHub integration
+tracks `main`) for the schedule and guard to take effect; a Vercel-only deployment
+does not update Trigger.dev. Existing public images and the durable migration
+cursor/deletion outbox are preserved while paused.
+
+After quota recovers, explicitly opt in to resume the legacy migration. Each
+scheduled invocation lists at most one page: 30 listings per 30 days before SDK
+transport retries. Legacy reads and deletions consume separate operations; manual
+invocations and other applications using the store add their own usage. Unset the
+flag again when migration is complete to avoid empty-store polling.
+
+When enabled, it moves
 old public images into private storage, rewrites finding links atomically and
 uses `retired_screenshot_blobs` as a durable deletion outbox. Failed deletions are
 retried. It also paginates the old screenshot Blob prefix to privatize orphaned
