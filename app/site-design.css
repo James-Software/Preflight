@@ -1,0 +1,171 @@
+/* Shared visual language from the photographic landing page. */
+.btn-primary {
+  background: var(--action);
+  color: var(--action-ink);
+  box-shadow: none;
+  text-shadow: none;
+}
+.btn-primary:hover { background: var(--action-hover); }
+:is(button, a).bg-primary { background: var(--action); color: var(--action-ink); }
+::selection { background: #c3d9e4; color: #152f43; }
+:focus-visible { outline-color: var(--accent); }
+body:not(:has(.flight-page)) :is(h1, h2, h3) {
+  font-family: var(--font-display), "Inter", sans-serif;
+  font-weight: 500;
+  letter-spacing: -.045em;
+}
+.public-shell:not(:has(.flight-page)) h1 {
+  font-size: clamp(2.5rem, 5.4vw, 5rem);
+  line-height: 1.06;
+  letter-spacing: -.06em;
+}
+.public-shell:not(:has(.flight-page)) main > :is(.max-w-sm, .max-w-md) h1 {
+  font-size: clamp(2rem, 4vw, 2.75rem);
+}
+
+/* Public pages keep the landing's open frame without repeating its hero. */
+.public-shell:not(:has(.flight-page)) .site-nav-frame {
+  width: calc(100% - 48px);
+  max-width: none;
+}
+.public-shell:not(:has(.flight-page)) .site-nav-glass {
+  background: color-mix(in srgb, var(--page) 94%, transparent);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+}
+.public-shell:not(:has(.flight-page)) .brand-wordmark-reveal {
+  mask-size: 100% 100%;
+  -webkit-mask-size: 100% 100%;
+}
+.public-shell:not(:has(.flight-page)) main { min-height: 70svh; }
+.public-shell:not(:has(.flight-page)) main > div {
+  padding-top: clamp(140px, 13vw, 190px);
+  padding-bottom: 100px;
+}
+.public-shell:not(:has(.flight-page)) main > .max-w-3xl { max-width: 920px; }
+.public-shell:not(:has(.flight-page)) main > .max-w-3xl :is(p, section) { max-width: 68ch; }
+.public-shell:not(:has(.flight-page)) main :is(p, li) { line-height: 1.8; }
+.public-shell:not(:has(.flight-page)) main section { margin-top: 48px; }
+.public-shell:not(:has(.flight-page)) main ul:has(time) > li {
+  padding-block: 28px;
+  border-top: 1px solid var(--row-line);
+}
+.public-shell:not(:has(.flight-page)) .site-footer {
+  background: var(--panel);
+  padding-inline: clamp(22px, 3.3vw, 64px);
+}
+.public-shell:not(:has(.flight-page)) .site-footer > div {
+  max-width: 1440px;
+  padding-inline: 0;
+  padding-block: 38px;
+}
+
+/* A generous application frame, with practical type sizes for working screens. */
+.workspace-shell { --workspace-gutter: clamp(22px, 3.3vw, 64px); }
+.workspace-header { border-color: var(--row-line); }
+.workspace-header-inner, .workspace-content {
+  width: 100%;
+  max-width: 1440px;
+  padding-inline: var(--workspace-gutter);
+}
+.workspace-content { padding-block: 64px 100px; }
+.workspace-page-heading { margin-bottom: 48px; align-items: end; }
+.workspace-page-heading > div > p { margin-top: 18px; max-width: 48ch; line-height: 1.8; }
+.workspace-shell h1 { font-size: clamp(2.5rem, 4vw, 4rem) !important; }
+.workspace-navigation { gap: 28px; }
+.workspace-navigation a { position: relative; font-weight: 400; }
+.workspace-navigation a[aria-current="page"]::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 2px;
+  background: currentColor;
+}
+.workspace-shell .btn-primary { min-height: 46px; padding: 13px 23px; font-size: 14px; }
+.workspace-shell :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), textarea, select) {
+  border-radius: 3px;
+  border-color: var(--line);
+  background-color: var(--surface);
+  min-height: 46px;
+}
+.workspace-shell :is(.rounded-lg, .rounded-xl, .rounded-2xl) { border-radius: 4px; }
+.workspace-shell :is(dialog, [role="dialog"]) { border-radius: 8px; }
+.workspace-shell :is(dialog, [role="dialog"]) h1 { font-size: 2rem !important; }
+.project-workspace { padding-inline: var(--workspace-gutter); }
+.project-workspace main > h1 + p,
+.project-workspace main > div:first-child > div:first-child > h1 + p { margin-top: 16px; line-height: 1.8; }
+.project-navigation nav a { border-radius: 0; padding-block: 14px; }
+.project-navigation nav a[aria-current="page"] {
+  background: var(--panel);
+  box-shadow: inset 2px 0 var(--ink);
+}
+.project-navigation { font-size: 14px; }
+
+/* Projects and runs are rectangular rows, with one clear dividing rule. */
+.project-list, .run-list {
+  list-style: none;
+  padding: 0;
+  border-top: 1px solid var(--row-line);
+}
+.project-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 18px;
+  padding-right: 20px;
+  border-bottom: 1px solid var(--row-line);
+  border-radius: 0;
+}
+.project-row-link {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 32px;
+  min-width: 0;
+  padding: 30px 24px;
+  min-height: 132px;
+  transition: background-color 160ms;
+}
+.project-row:has(.project-row-link:hover) { background: var(--panel); }
+.project-row-link h2 { font-size: 22px; letter-spacing: -.035em; }
+.project-row-url { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.project-row-status { max-width: 280px; line-height: 1.65; }
+.project-row-status > p + p { margin-top: 7px; }
+.run-row {
+  padding: 26px 24px;
+  min-height: 128px;
+  border-bottom: 1px solid var(--row-line);
+  border-radius: 0;
+  background: transparent;
+}
+.run-row:hover { background: color-mix(in srgb, var(--panel) 65%, transparent); }
+.workspace-invite {
+  margin-top: 64px;
+  padding: 0;
+  background: transparent;
+  border-radius: 0;
+}
+.workspace-invite > div > p:first-child { font-weight: 500; }
+.auth-handoff > div { width: 100%; max-width: 560px; }
+
+@media (max-width: 760px) {
+  .public-shell:not(:has(.flight-page)) .site-nav-frame { width: calc(100% - 20px); }
+  .public-shell:not(:has(.flight-page)) main > div { padding-top: 132px; padding-bottom: 64px; }
+  .workspace-content { padding-block: 38px 64px; }
+  .workspace-page-heading { margin-bottom: 32px; align-items: start; }
+  .workspace-page-heading > div > p { margin-top: 12px; }
+  .workspace-page-heading .btn-primary { margin-top: 4px; }
+  .workspace-navigation { gap: 24px; }
+  .project-workspace { padding-top: 24px; }
+  .project-row { gap: 4px; padding-right: 0; }
+  .project-row-link { grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 24px 8px; }
+  .project-row-link h2 { font-size: 20px; }
+  .project-row-status { padding-left: 56px; text-align: left; font-size: 12px; }
+  .project-row-status p { overflow-wrap: anywhere; }
+  .run-row { padding: 24px 8px; gap: 18px; }
+  .workspace-invite { margin-top: 42px; gap: 20px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .project-row-link { transition: none; }
+}

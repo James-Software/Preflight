@@ -53,7 +53,7 @@ export default function InviteCard() {
   };
 
   return (
-    <div className="mt-8 flex flex-wrap items-center justify-between gap-4 rounded-lg px-6 py-5 bg-panel">
+    <div className="workspace-invite mt-8 flex flex-wrap items-center justify-between gap-4">
       <div className="min-w-0">
         <p className="font-display text-base font-bold tracking-tight text-ink dark:text-white">
           Invite to PreFlight

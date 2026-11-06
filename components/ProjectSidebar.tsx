@@ -84,7 +84,7 @@ export default function ProjectSidebar({
       : pathname === tab.href,
   );
   return (
-    <aside className="min-w-0 border-b border-line pb-3 lg:sticky lg:top-24 lg:self-start lg:border-b-0 lg:border-r lg:pb-0 lg:pr-6">
+    <aside className="project-navigation min-w-0 border-b border-line pb-3 lg:sticky lg:top-24 lg:self-start lg:border-b-0 lg:pb-0 lg:pr-6">
       <div className="flex min-w-0 items-center gap-2">
         <Link
           href="/dashboard"

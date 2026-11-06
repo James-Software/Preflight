@@ -1,15 +1,13 @@
 import type { Metadata, Viewport } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
+import "./site-design.css";
 import Providers from "@/components/Providers";
 import { SITE_URL, SITE_DESCRIPTION, SITE_PREVIEW_IMAGE } from "@/lib/site";
 
 const display = localFont({
-  src: [
-    { path: "./fonts/space-grotesk-latin-500-normal.woff2", weight: "500" },
-    { path: "./fonts/space-grotesk-latin-600-normal.woff2", weight: "600" },
-    { path: "./fonts/space-grotesk-latin-700-normal.woff2", weight: "700" },
-  ],
+  src: "./fonts/instrument-sans-latin-wght-normal.woff2",
+  weight: "400 700",
   variable: "--font-display",
   display: "swap",
 });
@@ -55,7 +53,7 @@ export const metadata: Metadata = {
 };
 
 export const viewport: Viewport = {
-  themeColor: "#4a7cff",
+  themeColor: "#152f43",
 };
 
 // Runs before first paint: picks the theme from the saved choice, else the

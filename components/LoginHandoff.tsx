@@ -40,10 +40,12 @@ export default function LoginHandoff({ returnTo }: { returnTo: string }) {
     };
   }, [returnTo]);
   return (
-    <main className="flex min-h-svh items-center justify-center bg-black px-6 text-white">
-      <p role="status" className="text-base">
-        Connecting to Github...
-      </p>
+    <main className="auth-handoff flex min-h-svh items-center justify-center bg-page px-6 text-ink dark:text-white">
+      <div>
+        <p className="mb-8 text-sm font-medium">PreFlight</p>
+        <h1 className="text-4xl font-medium tracking-tight">One moment.</h1>
+        <p role="status" className="mt-5 text-base text-muted">Connecting to GitHub…</p>
+      </div>
     </main>
   );
 }

@@ -12,7 +12,7 @@ export default async function DashboardLayout({
   // Pages enforce auth before data reads and preserve their own return URL.
   if (!session?.user) return children;
   return (
-    <div className="min-h-svh bg-page">
+    <div className="workspace-shell min-h-svh bg-page">
       <DashboardHeader
         user={{ name: session.user.name, image: session.user.image }}
         isAdmin={isAdminLogin(session.user.githubLogin)}

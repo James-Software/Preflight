@@ -24,8 +24,8 @@ export default async function Dashboard() {
 
   return (
     <main className="min-h-[calc(100svh-5rem)] bg-page">
-      <div className="mx-auto max-w-6xl px-6 py-14">
-        <div className="flex flex-wrap items-center justify-between gap-5">
+      <div className="workspace-content mx-auto px-6 py-14">
+        <div className="workspace-page-heading flex flex-wrap items-center justify-between gap-5">
           <div>
             <h1
               id="projects-heading"
@@ -65,12 +65,12 @@ export default async function Dashboard() {
             </a>
           </div>
         ) : (
-          <ul className="mt-10 divide-y divide-line">
+          <ul className="project-list">
             {projects.map((project) => (
-              <li key={project.id} className="flex items-center gap-2">
+              <li key={project.id} className="project-row">
                 <a
                   href={`/dashboard/projects/${project.id}`}
-                  className="group -ml-3 grid min-w-0 flex-1 items-start gap-4 rounded-lg px-3 py-6 transition-colors hover:bg-panel sm:grid-cols-[minmax(0,1fr)_auto]"
+                  className="project-row-link group"
                 >
                   <div className="flex min-w-0 items-center gap-4">
                     <ProjectLogo
@@ -91,12 +91,12 @@ export default async function Dashboard() {
                           Shared with you
                         </p>
                       )}
-                      <p className="mt-2 break-all text-sm leading-relaxed text-muted">
+                      <p title={project.app_url ?? "Default branch preview deployment"} className="project-row-url mt-2 text-sm leading-relaxed text-muted">
                         {project.app_url ?? "Default branch preview deployment"}
                       </p>
                     </div>
                   </div>
-                  <div className="text-sm sm:pt-1 sm:text-right">
+                  <div className="project-row-status text-sm sm:text-right">
                     {project.latest_run ? (
                       <>
                         <p className={`font-medium ${["failed", "partial"].includes(project.latest_run.status) ? "text-red-600 dark:text-red-400" : "text-ink dark:text-white"}`}>

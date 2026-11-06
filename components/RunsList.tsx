@@ -155,11 +155,11 @@ export default function RunsList({
           Updates are delayed. Reconnecting automatically…
         </p>
       )}
-      <ul className="mt-4 space-y-3">
+      <ul className="run-list mt-6">
         {visibleRuns.map((run) => (
           <li
             key={run.id}
-            className="flex min-w-0 flex-col gap-4 rounded-xl border border-line bg-surface px-5 py-4 sm:flex-row sm:items-center sm:justify-between"
+            className="run-row flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
           >
             <div className="min-w-0 flex-1">
               <a

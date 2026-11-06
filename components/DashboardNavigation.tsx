@@ -28,7 +28,7 @@ export default function DashboardNavigation({ isAdmin }: { isAdmin: boolean }) {
   return (
     <nav
       aria-label="Dashboard navigation"
-      className="order-last flex w-full flex-wrap gap-x-5 sm:order-none sm:w-auto"
+      className="workspace-navigation order-last flex w-full flex-wrap gap-x-5 sm:order-none sm:w-auto"
     >
       {links.map(({ href, label, active }) => (
         <a

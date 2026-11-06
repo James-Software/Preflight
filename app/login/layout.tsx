@@ -4,7 +4,7 @@ export default function LoginLayout({
 }: {
   children: React.ReactNode;
 }) {
-  return <div className="min-h-svh bg-black text-white">{children}</div>;
+  return <div className="min-h-svh bg-page text-ink dark:text-white">{children}</div>;
 }
 
 export const metadata: Metadata = { robots: { index: false, follow: false } };

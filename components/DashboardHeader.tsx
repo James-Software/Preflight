@@ -13,8 +13,8 @@ export default function DashboardHeader({
   isGuest?: boolean;
 }) {
   return (
-    <header className="sticky top-0 z-50 border-b border-line bg-page">
-      <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3 sm:px-6 sm:py-4">
+    <header className="workspace-header sticky top-0 z-50 border-b border-line bg-page">
+      <div className="workspace-header-inner mx-auto flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3 sm:px-6 sm:py-4">
         <Brand />
         <DashboardNavigation isAdmin={isAdmin} />
         <ProfileMenu user={user} isAdmin={isAdmin} isGuest={isGuest} />

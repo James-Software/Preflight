@@ -7,7 +7,7 @@ export default function PublicLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-svh bg-page">
+    <div className="public-shell min-h-svh bg-page">
       <Nav user={null} loadSession />
       {children}
       <Footer />

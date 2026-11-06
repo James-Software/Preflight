@@ -12,7 +12,7 @@ export default async function ProjectLayout({
   if (!(await auth())?.user?.githubId) return children;
   const { project, owner } = await projectPage((await params).id);
   return (
-    <div className="mx-auto grid max-w-[1440px] gap-7 px-4 py-6 text-ink dark:text-white sm:px-6 lg:grid-cols-[224px_minmax(0,1fr)] lg:gap-10 lg:px-8 lg:py-10">
+    <div className="project-workspace mx-auto grid max-w-[1440px] gap-7 px-4 py-6 text-ink dark:text-white sm:px-6 lg:grid-cols-[192px_minmax(0,1fr)] lg:gap-14 lg:px-8 lg:py-14">
       <ProjectSidebar
         canManage={project.owner_github_id === owner}
         isTestUser={owner.startsWith("test:") || owner.startsWith("guest:")}
