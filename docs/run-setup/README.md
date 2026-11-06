@@ -19,8 +19,8 @@ and 8px bottom gutter are retained.
 
 ## Evidence
 
-- [Desktop panel](panel-desktop.png), [phone panel](panel-mobile.png),
-  [profiles](profiles.png).
+- Desktop panel, phone panel,
+  profiles.
 - [Browser verification](browser-verification.jsonl): 1440×1000 and 390×844,
   light/dark; branch and PR filtering, missing deployment, profile creation,
   return with selection, launch payload, no overflow/page errors, measured cloud

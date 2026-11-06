@@ -152,5 +152,5 @@ automatic schema/SQL inference and other database engines are not implemented.
   was used. [GitHub recovery regression](github-recovery-verification.jsonl) also
   passes with the new minimal loading screen.
 
-Views: [settings](settings-desktop.png), [launch](launch-mobile.png),
-[report](results-mobile.png), [GitHub loading](github-loading.png).
+Views: settings, launch,
+report, GitHub loading.

@@ -2,7 +2,7 @@
 
 Reviewed October 24, 2026, from merged base `b828fd3`. The aim is to remove repeated generated-site defaults while keeping PreFlight's established purple identity, plasma artwork, robot summaries and scroll-controlled evidence sequence. This is a refinement of the existing product, not a replacement brand.
 
-Follow-up: the user preferred the original blue gradient (`#8aa5ff` → `#6a6df5` → `#4e2fd8`). The earlier dark-purple restoration was the wrong historical version; the primary action now uses the original blue gradient, pill corners and highlight/shadow treatment from `b226852`. The linked dark-purple verification below is historical; [current blue-gradient verification](blue-gradient-verification.jsonl) checks both themes on desktop and phone. The earlier restoration used the refined control shape ([current phone screenshot](screenshots/after-restored-gradient-390-dark.png), [four rendered checks](gradient-verification.jsonl)). The flat-button screenshots below document the initial design pass; the other refinements remain.
+Follow-up: the user preferred the original blue gradient (`#8aa5ff` → `#6a6df5` → `#4e2fd8`). The earlier dark-purple restoration was the wrong historical version; the primary action now uses the original blue gradient, pill corners and highlight/shadow treatment from `b226852`. The linked dark-purple verification below is historical; [current blue-gradient verification](blue-gradient-verification.jsonl) checks both themes on desktop and phone. The earlier restoration used the refined control shape (current phone screenshot, [four rendered checks](gradient-verification.jsonl)). The flat-button screenshots below document the initial design pass; the other refinements remain.
 
 The later landing-motion update fixes the cloud outline and replaces one-step scroll locking with native scrolling and proximity-only settling. The older gesture checks below remain historical evidence for that initial design pass; see [current motion behavior and verification](../landing-review/README.md).
 
@@ -32,11 +32,11 @@ The first tablet review exposed a four-line hero. The final fluid type scale kee
 
 | Surface | Before | After |
 | --- | --- | --- |
-| Phone hero | [View](screenshots/before-hero-390-light.png) | [View](screenshots/after-hero-390-light.png) |
-| Desktop hero | [View](screenshots/before-hero-1440-light.png) | [View](screenshots/after-hero-1440-light.png) |
-| Access section | [View](screenshots/before-access-1440-light.png) | [View](screenshots/after-access-1440-light.png) |
-| Final tablet headline | — | [View](screenshots/after-hero-768-light.png) |
-| Preserved PR/robot scene | — | [View](screenshots/after-motion-pr-390-dark.png) |
+| Phone hero | View | View |
+| Desktop hero | View | View |
+| Access section | View | View |
+| Final tablet headline | — | View |
+| Preserved PR/robot scene | — | View |
 
 ### 2. Blog and reading — titles carry the hierarchy
 
@@ -44,8 +44,8 @@ Before: the floating glass nav and another rounded white card frame a short arti
 
 | Surface | Before | After |
 | --- | --- | --- |
-| Desktop blog | [View](screenshots/before-03-blog-list-1440-light.png) | [View](screenshots/after-03-blog-list-1440-light.png) |
-| Phone/dark blog | [View](screenshots/before-03-blog-list-390-dark.png) | [View](screenshots/after-03-blog-list-390-dark.png) |
+| Desktop blog | View | View |
+| Phone/dark blog | View | View |
 
 ### 3. Projects and working screens — readable rows and consistent controls
 
@@ -53,10 +53,10 @@ Before: repository names compete with repeated rounded cards, and long names wra
 
 | Surface | Before | After |
 | --- | --- | --- |
-| Desktop projects | [View](screenshots/before-12-dashboard-1440-light.png) | [View](screenshots/after-12-dashboard-1440-light.png) |
-| Phone projects | [View](screenshots/before-12-dashboard-390-light.png) | [View](screenshots/after-12-dashboard-390-light.png) |
-| Profile dialog | — | [View](screenshots/after-25-profile-menu-1440-dark.png) |
-| Blog editor | — | [View](screenshots/after-23-edit-post-390-light.png) |
+| Desktop projects | View | View |
+| Phone projects | View | View |
+| Profile dialog | — | View |
+| Blog editor | — | View |
 
 ## Verification
 

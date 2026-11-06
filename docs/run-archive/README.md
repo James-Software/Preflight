@@ -20,5 +20,5 @@ idempotent archiving, report access and restore. Synthetic browser checks cover
 archive/restore, both view counts, active controls, failed-request recovery and
 report access at desktop/mobile widths in both themes. No live customer records
 were changed. Evidence: [browser](browser-verification.jsonl),
-[database](database-verification.jsonl), [desktop](desktop-light.png),
-[mobile](mobile-dark.png).
+[database](database-verification.jsonl), desktop,
+mobile.

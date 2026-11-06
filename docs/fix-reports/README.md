@@ -109,7 +109,7 @@ See [fix preparation validation](../finding-fix-preparation/README.md).
   responses. GitHub integration tests mock the remote API. No live customer data,
   paid swarm runs or real GitHub branches/PRs were changed by verification.
 
-See [desktop](desktop-light.png), [mobile](mobile-dark.png),
+See desktop, mobile,
 [browser checks](browser-verification.jsonl),
 [additional browser checks](additional-browser-verification.jsonl) and
 [database checks](database-verification.jsonl).

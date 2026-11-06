@@ -67,4 +67,4 @@ behavior.
   Unit tests independently cover denied and accepted repository verification.
   No live GitHub repository was changed or paid swarm run started for validation.
 
-[Runs](runs-desktop.png) · [General info](general-desktop.png) · [Mobile Database](database-mobile.png)
+Runs · General info · Mobile Database

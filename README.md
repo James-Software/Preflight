@@ -28,7 +28,7 @@ The example bug is intentionally retained.
 **Limits:** arbitrary applications cannot always be confirmed automatically.
 Reports preserve blocked prerequisites and unavailable providers. Use authorized
 public previews and disposable test accounts. Payments, destructive actions and
-account/security changes are blocked. The judge pilot has no per-user run quota.
+account/security changes are blocked. The guest demo has no per-user run quota.
 Commercial pricing remains proposed until a payment account and genuine
 checkout/webhook flow are verified; Stripe billing is not claimed as live.
 
@@ -36,7 +36,7 @@ checkout/webhook flow are verified; Stripe billing is not claimed as live.
 
 ```mermaid
 flowchart LR
-  User[Judge / GitHub user] --> Web[Next.js on Vercel]
+  User[GitHub user] --> Web[Next.js on Vercel]
   Web --> Auth[Auth.js + encrypted guest sessions]
   Web --> DB[(Neon: projects, runs, private evidence)]
   Web --> Queue[Trigger.dev]
@@ -79,9 +79,8 @@ Neon branch and GitHub OAuth app, and run `npm run dev`. The local callback is
 `james-software` in `lib/access.ts`; a fork must set its own owner. Public pages
 build without live credentials; authenticated data operations need configuration.
 
-See [local development](docs/local-development.md) for complete runtime setup and
-the distinction between local fixtures and a public cloud preview. Cloud browsers
-cannot reach localhost; the network guard must not be disabled to work around it.
+Cloud browsers cannot reach localhost; use a public development preview rather
+than disabling the network guard.
 
 ## Runtime configuration
 

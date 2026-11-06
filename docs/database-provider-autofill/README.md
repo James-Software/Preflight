@@ -106,7 +106,7 @@ snapshots remain the worker access path.
 - [UI](ui.jsonl) covers both providers at desktop/phone sizes in both themes, token
   and simulated OAuth return, picker selection, no mandatory SQL setup, secret
   clearing, adding checks later, no overflow/page errors and zero Axe WCAG A/AA
-  violations in the tested picker screens. [Neon picker](neon-picker.png).
+  violations in the tested picker screens. Neon picker.
 - No live OAuth app, customer database/password, paid swarm or production provider
   account was used. Live authorization and hosted database connectivity still need
   smoke testing after the operator configures the OAuth apps/credentials.

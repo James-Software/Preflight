@@ -69,4 +69,4 @@ timeout. API fields and live-view URLs were checked against the
   Axe found no WCAG A/AA violations in the tested live-view screens. These checks
   do not replace a live-provider OAuth/MFA smoke test after deployment.
 
-Views: [setup](setup-desktop.png), [mobile browser](browser-mobile.png).
+Views: setup, mobile browser.

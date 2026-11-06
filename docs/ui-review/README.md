@@ -19,17 +19,17 @@ These are local synthetic users, projects, posts and findings, not production da
 
 | Surface | Before | After |
 | --- | --- | --- |
-| Mobile run history | [View](screenshots/before-17-project-runs-390-light.png) | [Light](screenshots/17-project-runs-390-light.png) · [Dark](screenshots/17-project-runs-390-dark.png) |
-| Mobile blog management | [View](screenshots/before-21-admin-blog-390-light.png) | [Light](screenshots/21-admin-blog-390-light.png) · [Dark](screenshots/21-admin-blog-390-dark.png) |
-| Run report | — | [Phone](screenshots/30-run-report-390-light.png) · [Desktop dark](screenshots/30-run-report-1440-dark.png) |
-| No recorded findings | — | [View](screenshots/32-run-empty-390-light.png) |
-| Full article preview | — | [View](screenshots/24-editor-preview-1440-light.png) |
-| Disabled pending save | — | [View](screenshots/action-saving-390-light.png) |
-| Preserved invalid URL and selected repository | — | [View](screenshots/action-project-preserved-390-light.png) |
-| Login retry | — | [View](screenshots/action-login-retry-390-light.png) |
-| Explicit waitlist confirmation | — | [View](screenshots/35-waitlisted-390-light.png) |
+| Mobile run history | View | Light · Dark |
+| Mobile blog management | View | Light · Dark |
+| Run report | — | Phone · Desktop dark |
+| No recorded findings | — | View |
+| Full article preview | — | View |
+| Disabled pending save | — | View |
+| Preserved invalid URL and selected repository | — | View |
+| Login retry | — | View |
+| Explicit waitlist confirmation | — | View |
 
-The preserved landing sequence: [desktop](screenshots/landing-pr-1440-dark.png) · [phone](screenshots/landing-pr-390-dark.png).
+The preserved landing sequence: desktop · phone.
 
 ## Validation
 

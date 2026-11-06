@@ -63,7 +63,7 @@ in both themes with zero Axe WCAG A/AA violations. Image backgrounds need visual
 contrast review in addition to automated checks; desktop and phone captures were
 reviewed after adding motion.
 
-[Desktop preview](desktop.png) · [Mobile preview](mobile.png)
+Desktop preview · Mobile preview
 
 ## Scroll/resize frame stability
 

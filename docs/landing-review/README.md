@@ -8,7 +8,7 @@ Agent summaries also appear on the opening checkout scene and the final fix scen
 
 The browser, evidence, diagnosis and PR still form one centered pinned sequence. Evidence gets four scroll beats: fan opening, screenshot forward, console forward and network forward. The page releases after the PR. Wheel, trackpad, touch and keyboard input now remain native: no gesture is consumed, no input is prevented and no per-step lock is applied. The runway is longer (1000svh), giving each beat more scroll distance and making accidental skips less likely. After 260ms idle, the page settles only when already within 80px (or 10% of a viewport, whichever is smaller) of a beat center. The small settle happens without an ongoing page-scroll animation that could catch the next gesture. Movement between centers stays where the user left it; fresh input cancels pending settling. Snapping remains restricted to the pinned range and disabled during touch contact, reduced motion and short-viewport fallbacks. The floating site nav stays hidden during the sequence.
 
-The hero cloud window now has a fixed rounded-rectangle outline in both WebGL and the CSS fallback. It fills the space below the navigation with side gutters of `calc(8px + 0.5vw)`, an 8px bottom gutter and 12px corners, with no extra renderer insets. The blue primary buttons retain inset highlights but have no outer glow. [Earlier six viewport/theme checks](wide-cloud-verification.jsonl) cover the previous 8px side spacing; the [run setup review](../run-setup/README.md) verifies the additional 0.5vw on each side. Only its interior clouds move; no edge displacement or border-radius morph runs. [WebGL view](fixed-cloud-window.png) · [CSS fallback](fixed-cloud-fallback.png).
+The hero cloud window now has a fixed rounded-rectangle outline in both WebGL and the CSS fallback. It fills the space below the navigation with side gutters of `calc(8px + 0.5vw)`, an 8px bottom gutter and 12px corners, with no extra renderer insets. The blue primary buttons retain inset highlights but have no outer glow. [Earlier six viewport/theme checks](wide-cloud-verification.jsonl) cover the previous 8px side spacing; the [run setup review](../run-setup/README.md) verifies the additional 0.5vw on each side. Only its interior clouds move; no edge displacement or border-radius morph runs. WebGL view · CSS fallback.
 
 Reduced motion, JavaScript-disabled browsers and short viewports show the three cards in natural document flow, fully readable without animation. The code/logs and browser frame are built as HTML rather than squeezing wide screenshots into narrow cards.
 
@@ -16,23 +16,23 @@ Reduced motion, JavaScript-disabled browsers and short viewports show the three 
 
 | Viewport / theme | Fan opens | Browser window | Console window | Network window |
 | --- | --- | --- | --- | --- |
-| 1440 × 900 / light | [View](fan/1440-light-0.png) | [View](fan/1440-light-1.png) | [View](fan/1440-light-2.png) | [View](fan/1440-light-3.png) |
-| 1440 × 900 / dark | [View](fan/1440-dark-0.png) | [View](fan/1440-dark-1.png) | [View](fan/1440-dark-2.png) | [View](fan/1440-dark-3.png) |
-| 768 × 1024 / light | [View](fan/768-light-0.png) | [View](fan/768-light-1.png) | [View](fan/768-light-2.png) | [View](fan/768-light-3.png) |
-| 768 × 1024 / dark | [View](fan/768-dark-0.png) | [View](fan/768-dark-1.png) | [View](fan/768-dark-2.png) | [View](fan/768-dark-3.png) |
-| 390 × 844 / light | [View](fan/390-light-0.png) | [View](fan/390-light-1.png) | [View](fan/390-light-2.png) | [View](fan/390-light-3.png) |
-| 390 × 844 / dark | [View](fan/390-dark-0.png) | [View](fan/390-dark-1.png) | [View](fan/390-dark-2.png) | [View](fan/390-dark-3.png) |
+| 1440 × 900 / light | View | View | View | View |
+| 1440 × 900 / dark | View | View | View | View |
+| 768 × 1024 / light | View | View | View | View |
+| 768 × 1024 / dark | View | View | View | View |
+| 390 × 844 / light | View | View | View | View |
+| 390 × 844 / dark | View | View | View | View |
 
 ## Opening and completed-action summaries
 
 | Viewport / theme | Checkout issue | Opened PR |
 | --- | --- | --- |
-| 1440 × 900 / light | [View](pinned/1440-light-0.png) | [View](pinned/1440-light-3.png) |
-| 1440 × 900 / dark | [View](pinned/1440-dark-0.png) | [View](pinned/1440-dark-3.png) |
-| 768 × 1024 / light | [View](pinned/768-light-0.png) | [View](pinned/768-light-3.png) |
-| 768 × 1024 / dark | [View](pinned/768-dark-0.png) | [View](pinned/768-dark-3.png) |
-| 390 × 844 / light | [View](pinned/390-light-0.png) | [View](pinned/390-light-3.png) |
-| 390 × 844 / dark | [View](pinned/390-dark-0.png) | [View](pinned/390-dark-3.png) |
+| 1440 × 900 / light | View | View |
+| 1440 × 900 / dark | View | View |
+| 768 × 1024 / light | View | View |
+| 768 × 1024 / dark | View | View |
+| 390 × 844 / light | View | View |
+| 390 × 844 / dark | View | View |
 
 ## Full-page comparison
 
@@ -40,9 +40,9 @@ These after images show the reduced-motion stacked fallback. Before images use t
 
 | Viewport | Light before / after | Dark before / after |
 | --- | --- | --- |
-| 1440 × 900 | [Before](before/1440-light.png) · [After](after/1440-light.png) | [Before](before/1440-dark.png) · [After](after/1440-dark.png) |
-| 768 × 1024 | [Before](before/768-light.png) · [After](after/768-light.png) | [Before](before/768-dark.png) · [After](after/768-dark.png) |
-| 390 × 844 | [Before](before/390-light.png) · [After](after/390-light.png) | [Before](before/390-dark.png) · [After](after/390-dark.png) |
+| 1440 × 900 | Before · After | Before · After |
+| 768 × 1024 | Before · After | Before · After |
+| 390 × 844 | Before · After | Before · After |
 
 ## Verification
 
