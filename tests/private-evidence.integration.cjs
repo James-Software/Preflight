@@ -6,6 +6,8 @@ const { NextRequest } = require("next/server");
 const { load } = require("./load-module.cjs");
 
 (async () => {
+  const previousMigrationSetting = process.env.ENABLE_LEGACY_BLOB_MIGRATION;
+  process.env.ENABLE_LEGACY_BLOB_MIGRATION = "true";
   const db = new PGlite();
   const sql = async (parts, ...values) => { let q = parts[0]; values.forEach((_, i) => { q += `$${i + 1}` + parts[i + 1]; }); return (await db.query(q, values)).rows; };
   const deps = { "@/lib/db": { getSql: () => sql } };
@@ -88,5 +90,9 @@ const { load } = require("./load-module.cjs");
     await schema.cancelRun(run.id, project.id);
     await assert.rejects(evidence.uploadScreenshot(run.id, 0, 1, jpeg), /no longer save/);
     console.log(JSON.stringify({ privateImageBytes: true, anonymousAndForeignDenied: true, currentMembersOnly: true, scopedBearerSupported: true, revokedAndOtherRunBearerDenied: true, publicLegacyPreservedPrivately: true, publicDeletionRetryDurable: true, unreferencedImagesPrivatized: true, unownedImagesInPrivateVault: true, migrationIdempotent: true, privateRetentionAtomic: true, cancelledRunCannotUpload: true }));
-  } finally { await db.close(); }
+  } finally {
+    if (previousMigrationSetting === undefined) delete process.env.ENABLE_LEGACY_BLOB_MIGRATION;
+    else process.env.ENABLE_LEGACY_BLOB_MIGRATION = previousMigrationSetting;
+    await db.close();
+  }
 })().catch(error => { console.error(error); process.exitCode = 1; });

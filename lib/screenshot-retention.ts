@@ -38,6 +38,11 @@ async function readLegacyImage(url: string) {
 /** Preserve the image privately and durably queue deletion before retiring a URL.
  * Retries never lose evidence, repeat a migration, or forget a failed deletion. */
 export async function privatizeLegacyScreenshots() {
+  // Fail closed while Blob is quota-blocked. Keep this check before schema/DB
+  // access so old schedules and manual retries cannot touch Blob by default.
+  if (process.env.ENABLE_LEGACY_BLOB_MIGRATION !== "true") {
+    return { migrated: 0, deleted: 0, failed: 0, paused: true };
+  }
   await ensureSchema();
   const sql = getSql();
   const rows = await sql`SELECT id,run_id,screenshot_url,created_at FROM findings
