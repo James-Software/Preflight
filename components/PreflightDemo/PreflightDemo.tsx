@@ -14,10 +14,10 @@ import "./demo.css";
 type Scene = { evidence: boolean; fix: boolean };
 const initial: Scene = { evidence: false, fix: false };
 const poster: Scene = { evidence: true, fix: true };
-const REST = { wide: { x: 438, y: 368 }, compact: { x: 304, y: 388 } };
+const REST = { wide: { x: 480, y: 400 }, compact: { x: 304, y: 420 } };
 
 async function script(a: Act<Scene>) {
-  await a.wait(850);
+  await a.wait(1100);
   await a.move({ at: "finding", x: 0.85, y: 0.5 });
   await a.wait(300);
   a.mark("select-finding");
@@ -25,7 +25,7 @@ async function script(a: Act<Scene>) {
   await a.set({ evidence: true });
   a.mark("evidence");
   await a.move("rest");
-  await a.wait(2200);
+  await a.wait(2700);
   await a.move({ at: "fix", x: 0.85, y: 0.5 });
   await a.wait(350);
   a.mark("open-fix");
@@ -33,25 +33,25 @@ async function script(a: Act<Scene>) {
   await a.set({ fix: true });
   a.mark("proposed-fix");
   await a.move("rest");
-  await a.wait(2400);
+  await a.wait(2800);
 }
 
 export default function PreflightDemo() {
   const theme = useTheme();
   const [run, setRun] = useState(0);
   return (
-    <figure className="pf-demo mx-auto mt-12 max-w-[900px] md:mt-16" aria-label="Illustrated Preflight walkthrough">
+    <figure className="pf-demo" aria-label="Illustrated Preflight walkthrough">
       <div role="img" aria-label="Example run: signing in and browsing pass. Saving an address fails with a 500 response. Its evidence leads to a proposed fix that validates the postal code before saving.">
-        <Stage key={run} width={900} height={466} compact={{ below: 700, width: 358, height: 416 }} initial={initial} poster={poster} script={script} play="once" theme={theme} fidelity="realistic" cursor={{ at: REST }} className="pf-scene">
+        <Stage key={run} width={1000} height={500} compact={{ below: 780, width: 358, height: 438 }} initial={initial} poster={poster} script={script} play="once" theme={theme} fidelity="realistic" cursor={{ at: REST, style: "circle" }} className="pf-scene">
           {(s, _rect, layout) => (
             <>
-              <Window url="app.trypreflight.dev" className="pf-browser">
+              <Window url="trypreflight.dev" className="pf-browser">
                 <div className="pf-app">
                   {layout === "wide" && <aside className="pf-sidebar">
                     <img src={theme === "dark" ? "/logo-white.png" : "/logo.png"} width="88" height="32" alt="" />
-                    <div className="pf-nav-selected">Test runs</div>
+                    <div className="pf-nav-selected">Runs</div>
                     <Text className="pf-nav">Profiles</Text>
-                    <Text className="pf-nav">Settings</Text>
+                    <Text className="pf-nav">Database</Text>
                     <div className="pf-sidebar-filler" aria-hidden="true">{[68, 82, 54].map(w => <Bar key={w} w={w} h={6} tone={2} />)}</div>
                   </aside>}
                   <div className="pf-main" data-crop>
@@ -67,12 +67,12 @@ export default function PreflightDemo() {
                 </div>
               </Window>
               {layout === "wide" ? (
-                <Window title="Finding details" toolbar={<X size={14} />} className="pf-evidence" data-show={s.evidence}>
+                <Window title="Finding details" toolbar={<span className="pf-close"><X size={14} /></span>} className="pf-evidence" data-show={s.evidence}>
                   <FindingDetails fix={s.fix} />
                 </Window>
               ) : (
                 <aside className="pf-evidence pf-evidence-sheet" data-show={s.evidence}>
-                  <div className="pf-sheet-heading">Finding details <X size={14} /></div>
+                  <div className="pf-sheet-heading">Finding details <span className="pf-close"><X size={14} /></span></div>
                   <FindingDetails fix={s.fix} />
                 </aside>
               )}

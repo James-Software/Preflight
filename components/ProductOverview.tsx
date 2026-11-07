@@ -1,5 +1,5 @@
 import { ArrowUpRight, GitPullRequest } from "lucide-react";
-import LandingTestFlight from "./LandingTestFlight";
+import PreflightDemo from "./PreflightDemo/PreflightDemo";
 
 export default function ProductOverview() {
   return (
@@ -12,8 +12,7 @@ export default function ProductOverview() {
             <p>Agents explore your app, including signed-in pages, and investigate what breaks. Take a look inside a sample run.</p>
           </div>
         </div>
-        <LandingTestFlight />
-        <div className="flight-explore-caption"><span>An illustrative run. Real-shaped evidence.</span><span>Explore the checks and switch evidence views above.</span></div>
+        <PreflightDemo />
       </section>
       <section className="flight-story" aria-labelledby="flight-story-title">
         <div className="flight-story-top">
