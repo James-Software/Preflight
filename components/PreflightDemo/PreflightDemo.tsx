@@ -10,7 +10,7 @@ import { Badge } from "./kit/controls/Badge";
 import { Code } from "./kit/code";
 import { Camera } from "./kit/motion/Camera";
 import { States } from "./kit/motion/States";
-import type { Rect } from "./kit/measure";
+import type { Point, Rect } from "./kit/measure";
 import useTheme from "../useTheme";
 import "./demo.css";
 
@@ -19,13 +19,23 @@ type Scene = { evidence: boolean; fix: boolean; phase: Phase; focus: Rect | null
 const initial: Scene = { evidence: false, fix: false, phase: "exploring", focus: null };
 const poster: Scene = { evidence: true, fix: true, phase: "ready", focus: null };
 const REST = { wide: { x: 480, y: 458 }, compact: { x: 300, y: 450 } };
+const glide = (t: number, from: Point, to: Point): Point => ({
+  x: from.x + (to.x - from.x) * t,
+  y: from.y + (to.y - from.y) * t,
+});
 
 async function script(a: Act<Scene>) {
   a.mark("exploring");
   await a.wait(1300);
-  await a.set({ evidence: true, phase: "reproducing" });
+  await a.set({ phase: "reproducing" });
   a.mark("failure-found");
-  await a.wait(1800);
+  await a.move("finding", { duration: 1000, path: glide });
+  await a.wait(180);
+  a.mark("open-finding");
+  await a.click();
+  await a.set({ evidence: true });
+  await a.move("rest", { duration: 650, path: glide });
+  await a.wait(1000);
   await a.set({ phase: "preparing" });
   a.mark("preparing-fix");
   await a.wait(1700);
@@ -35,14 +45,14 @@ async function script(a: Act<Scene>) {
   await a.set({ focus: a.rect("review-panel", { layout: true }) });
   a.mark("zoom-review");
   await a.wait(1100);
-  await a.move({ at: "merge", x: 0.92, y: 0.75 }, { duration: 1200 });
+  await a.move("merge", { duration: 1200, path: glide });
   await a.wait(220);
   a.mark("merge-pr");
   await a.click();
   await a.set({ phase: "merged" });
   a.mark("merged");
   await a.wait(500);
-  await a.move("rest", { duration: 650 });
+  await a.move("rest", { duration: 650, path: glide });
   await a.set({ focus: null });
   await a.wait(1100);
   a.mark("complete");
@@ -54,8 +64,8 @@ export default function PreflightDemo() {
   const [run, setRun] = useState(0);
   return (
     <figure className="pf-demo" aria-label="Illustrated Preflight walkthrough">
-      <div role="img" aria-label="Example autonomous run: agents explore the app, reproduce an address-save failure, prepare a fix and open PR 42 with passing checks. A person reviews the patch and clicks Merge PR.">
-        <Stage key={run} width={1000} height={540} compact={{ below: 780, width: 358, height: 476 }} initial={initial} poster={poster} script={script} play="once" theme={theme} fidelity="realistic" cursor={{ at: REST, style: "circle" }} className="pf-scene">
+      <div role="img" aria-label="Example autonomous run: agents find an address-save failure. A person opens the finding while agents reproduce it, prepare a fix and open PR 42 with passing checks, then reviews the patch and clicks Merge PR.">
+        <Stage key={run} width={1000} height={540} compact={{ below: 780, width: 358, height: 476 }} initial={initial} poster={poster} script={script} play="once" theme={theme} fidelity="realistic" cursor={{ at: REST, style: "real", idle: false }} className="pf-scene">
           {(s, _rect, layout) => (
             <>
               <Camera className="pf-camera" focus={s.focus} max={layout === "wide" ? 1.2 : 1.04} pad={layout === "wide" ? 24 : 4} duration={1100} feather={layout === "wide" ? 20 : 8}>
@@ -74,7 +84,7 @@ export default function PreflightDemo() {
                     <div className="pf-list-label">Browser checks</div>
                     <Row className="pf-check" lead={<Check size={16} className="pf-success" />} title="Sign in" subtitle={layout === "wide" ? "Session verified" : undefined} pad={12} />
                     <Row className="pf-check" lead={<Check size={16} className="pf-success" />} title="Browse products" subtitle={layout === "wide" ? "Product details loaded" : undefined} pad={12} />
-                    <Row className="pf-check pf-finding" data-target="finding" selected={s.evidence} lead={<States value={s.phase === "exploring" ? "testing" : "failed"} states={{ testing: <LoaderCircle size={16} className="pf-spin" />, failed: <CircleAlert size={16} className="pf-danger" /> }} />} title="Save delivery address" subtitle={layout === "wide" ? <States align="start" value={s.phase === "exploring" ? "testing" : "failed"} states={{ testing: "Agent exploring this flow", failed: "Changes were not saved" }} /> : undefined} pad={12}><ChevronRight size={16} /></Row>
+                    <Row className="pf-check pf-finding" data-target="finding" data-cursor="hand" selected={s.evidence} lead={<States value={s.phase === "exploring" ? "testing" : "failed"} states={{ testing: <LoaderCircle size={16} className="pf-spin" />, failed: <CircleAlert size={16} className="pf-danger" /> }} />} title="Save delivery address" subtitle={layout === "wide" ? <States align="start" value={s.phase === "exploring" ? "testing" : "failed"} states={{ testing: "Agent exploring this flow", failed: "Changes were not saved" }} /> : undefined} pad={12}><ChevronRight size={16} /></Row>
                     {layout === "wide" && <Row className="pf-check" lead={<Check size={16} className="pf-success" />} title="Update cart" subtitle="Quantity persisted" pad={12} />}
                     <div className="pf-list-filler" aria-hidden="true"><Bar w={135} h={7} tone={2} /><Bar w={90} h={6} tone={1} /></div>
                   </div>
