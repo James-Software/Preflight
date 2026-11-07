@@ -108,14 +108,14 @@ export default function ProjectGeneralSettings({
       method="post"
       action={`/api/projects/${project.id}`}
       onSubmit={save}
-      className="mt-8 max-w-3xl space-y-7"
+      className="workspace-settings mt-8 max-w-3xl space-y-7"
     >
       <fieldset
         disabled={!ready || busy}
         className="min-w-0 space-y-7 disabled:opacity-60"
       >
         <section
-          className="rounded-xl border border-line bg-surface p-5 sm:p-6"
+          className="workspace-settings-section"
           aria-labelledby="project-identity"
         >
           <h2 id="project-identity" className="text-base font-semibold">
@@ -175,7 +175,7 @@ export default function ProjectGeneralSettings({
           </label>
         </section>
         <section
-          className="rounded-xl border border-line bg-surface p-5 sm:p-6"
+          className="workspace-settings-section"
           aria-labelledby="project-app"
         >
           <h2 id="project-app" className="text-base font-semibold">
@@ -202,7 +202,7 @@ export default function ProjectGeneralSettings({
           </p>
         </section>
         <section
-          className="rounded-xl border border-line bg-surface p-5 sm:p-6"
+          className="workspace-settings-section"
           aria-labelledby="project-github"
         >
           <div className="flex flex-wrap items-center justify-between gap-3">

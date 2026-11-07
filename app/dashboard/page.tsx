@@ -34,9 +34,6 @@ export default async function Dashboard() {
             >
               Projects
             </h1>
-            <p className="mt-2 text-sm text-muted dark:text-muted">
-              Choose an app to review its runs, or connect a repository.
-            </p>
           </div>
           {!session.user.isGuest && (
             <a
@@ -49,20 +46,14 @@ export default async function Dashboard() {
         </div>
 
         {projects.length === 0 ? (
-          <div className="mt-10 rounded-lg bg-panel px-6 py-10 md:px-8">
-            <p className="font-display text-lg font-bold text-ink dark:text-white">
+          <div className="workspace-empty">
+            <h2 className="text-base font-medium text-ink dark:text-white">
               No projects yet
-            </p>
-            <p className="mt-3 max-w-md text-base leading-relaxed text-muted">
+            </h2>
+            <p className="mt-2 max-w-md text-sm leading-relaxed text-muted">
               Connect an app URL and a GitHub repository to run your first
               swarm.
             </p>
-            <a
-              href="/dashboard/projects/new"
-              className="pressable btn-primary mt-6 inline-block rounded-full px-6 py-3 text-sm font-medium text-white"
-            >
-              Create your first project
-            </a>
           </div>
         ) : (
           <ul className="project-list">
@@ -72,7 +63,7 @@ export default async function Dashboard() {
                   href={`/dashboard/projects/${project.id}`}
                   className="project-row-link group"
                 >
-                  <div className="flex min-w-0 items-center gap-4">
+                  <div className="flex min-w-0 items-center gap-3">
                     <ProjectLogo
                       projectId={project.id}
                       imageUrl={project.image_url}
@@ -80,29 +71,27 @@ export default async function Dashboard() {
                         project.app_url || project.latest_target_url || null
                       }
                       name={project.display_name || project.repo_full_name}
+                      size="sm"
                     />
                     <div className="min-w-0">
-                      <h2 title={project.repo_full_name}
-                        className="truncate text-lg font-semibold tracking-tight text-ink group-hover:text-primary dark:text-white">
-                        {project.display_name || project.repo_full_name.split("/").pop()}
-                      </h2>
-                      {project.role === "member" && (
-                        <p className="mt-1 text-xs text-muted">
-                          Shared with you
-                        </p>
-                      )}
-                      <p title={project.app_url ?? "Default branch preview deployment"} className="project-row-url mt-2 text-sm leading-relaxed text-muted">
-                        {project.app_url ?? "Default branch preview deployment"}
+                      <div className="flex min-w-0 items-center gap-2">
+                        <h2 title={project.repo_full_name} className="truncate font-medium text-ink group-hover:text-primary dark:text-white">
+                          {project.display_name || project.repo_full_name.split("/").pop()}
+                        </h2>
+                        {project.role === "member" && <span className="shrink-0 text-xs text-muted">Shared</span>}
+                      </div>
+                      <p title={project.app_url || project.repo_full_name} className="project-row-url text-xs text-muted">
+                        {project.app_url?.replace(/^https?:\/\//, "").replace(/\/$/, "") || project.repo_full_name}
                       </p>
                     </div>
                   </div>
-                  <div className="project-row-status text-sm sm:text-right">
+                  <div className="project-row-status">
                     {project.latest_run ? (
                       <>
-                        <p className={`font-medium ${["failed", "partial"].includes(project.latest_run.status) ? "text-red-600 dark:text-red-400" : "text-ink dark:text-white"}`}>
+                        <p className={["failed", "partial"].includes(project.latest_run.status) ? "text-red-700 dark:text-red-300" : "text-ink dark:text-white"}>
                           {runStatusLabel(project.latest_run.status)} · {project.latest_run.findings_count} finding{project.latest_run.findings_count === 1 ? "" : "s"}
                         </p>
-                        <p className="mt-1 text-xs text-muted">Last run {formatDate(project.latest_run.created_at)}</p>
+                        <time className="block text-xs text-muted" dateTime={project.latest_run.created_at} aria-label={`Last run ${formatDate(project.latest_run.created_at)}`}>{formatDate(project.latest_run.created_at)}</time>
                       </>
                     ) : (
                       <p className="text-muted">No runs yet</p>

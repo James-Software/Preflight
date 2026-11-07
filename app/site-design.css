@@ -62,17 +62,17 @@ body:not(:has(.flight-page)) :is(h1, h2, h3) {
 }
 
 /* A generous application frame, with practical type sizes for working screens. */
-.workspace-shell { --workspace-gutter: clamp(22px, 3.3vw, 64px); }
+.workspace-shell { --workspace-gutter: clamp(20px, 3vw, 40px); --row-line: var(--line); }
 .workspace-header { border-color: var(--row-line); }
 .workspace-header-inner, .workspace-content {
   width: 100%;
-  max-width: 1440px;
+  max-width: 1280px;
   padding-inline: var(--workspace-gutter);
 }
-.workspace-content { padding-block: 64px 100px; }
-.workspace-page-heading { margin-bottom: 48px; align-items: end; }
-.workspace-page-heading > div > p { margin-top: 18px; max-width: 48ch; line-height: 1.8; }
-.workspace-shell h1 { font-size: clamp(2.5rem, 4vw, 4rem) !important; }
+.workspace-content { padding-block: 40px 64px; }
+.workspace-page-heading { margin-bottom: 28px; align-items: center; }
+.workspace-page-heading > div > p { margin-top: 8px; max-width: 48ch; line-height: 1.6; }
+.workspace-shell h1 { font-size: clamp(1.75rem, 2.5vw, 2.25rem) !important; }
 .workspace-navigation { gap: 28px; }
 .workspace-navigation a { position: relative; font-weight: 400; }
 .workspace-navigation a[aria-current="page"]::after {
@@ -82,23 +82,23 @@ body:not(:has(.flight-page)) :is(h1, h2, h3) {
   height: 2px;
   background: currentColor;
 }
-.workspace-shell .btn-primary { min-height: 46px; padding: 13px 23px; font-size: 14px; }
+.workspace-shell .btn-primary { min-height: 44px; padding: 11px 20px; font-size: 14px; }
 .workspace-shell :is(input:not([type="checkbox"]):not([type="radio"]):not([type="file"]), textarea, select) {
-  border-radius: 3px;
+  border-radius: 6px;
   border-color: var(--line);
   background-color: var(--surface);
-  min-height: 46px;
+  min-height: 44px;
 }
-.workspace-shell :is(.rounded-lg, .rounded-xl, .rounded-2xl) { border-radius: 4px; }
+.workspace-shell :is(.rounded-lg, .rounded-xl, .rounded-2xl) { border-radius: 8px; }
 .workspace-shell :is(dialog, [role="dialog"]) { border-radius: 8px; }
 .workspace-shell :is(dialog, [role="dialog"]) h1 { font-size: 2rem !important; }
-.project-workspace { padding-inline: var(--workspace-gutter); }
+.project-workspace { max-width: 1280px; padding: 40px var(--workspace-gutter); column-gap: 40px; }
 .project-workspace main > h1 + p,
-.project-workspace main > div:first-child > div:first-child > h1 + p { margin-top: 16px; line-height: 1.8; }
-.project-navigation nav a { border-radius: 0; padding-block: 14px; }
+.project-workspace main > div:first-child > div:first-child > h1 + p { margin-top: 8px; line-height: 1.6; }
+.project-navigation nav a { border-radius: 6px; padding-block: 10px; }
 .project-navigation nav a[aria-current="page"] {
   background: var(--panel);
-  box-shadow: inset 2px 0 var(--ink);
+  color: var(--ink);
 }
 .project-navigation { font-size: 14px; }
 
@@ -110,10 +110,10 @@ body:not(:has(.flight-page)) :is(h1, h2, h3) {
 }
 .project-row {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-columns: minmax(0, 1fr) 44px;
   align-items: center;
-  gap: 18px;
-  padding-right: 20px;
+  gap: 4px;
+  padding-right: 8px;
   border-bottom: 1px solid var(--row-line);
   border-radius: 0;
 }
@@ -121,27 +121,44 @@ body:not(:has(.flight-page)) :is(h1, h2, h3) {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   align-items: center;
-  gap: 32px;
+  gap: 24px;
   min-width: 0;
-  padding: 30px 24px;
-  min-height: 132px;
+  padding: 16px 12px;
+  min-height: 76px;
   transition: background-color 160ms;
 }
-.project-row:has(.project-row-link:hover) { background: var(--panel); }
-.project-row-link h2 { font-size: 22px; letter-spacing: -.035em; }
-.project-row-url { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.project-row-status { max-width: 280px; line-height: 1.65; }
-.project-row-status > p + p { margin-top: 7px; }
+.project-row:has(.project-row-link:hover), .project-row:focus-within { background: color-mix(in srgb, var(--panel) 65%, transparent); }
+.project-row-link h2 { font-family: var(--font-sans), sans-serif; font-size: 15px; line-height: 20px; letter-spacing: -.015em; }
+.project-row-url { margin-top: 4px; line-height: 16px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.project-row-status { width: 220px; max-width: 100%; font-size: 13px; line-height: 20px; text-align: right; }
+.project-row-status time { margin-top: 2px; line-height: 16px; }
+.run-filters { display: flex; gap: 24px; margin-top: 24px; }
+.run-filters button { display: inline-flex; align-items: center; gap: 8px; min-height: 44px; border-bottom: 2px solid transparent; font-size: 13px; color: var(--muted); }
+.run-filters button[aria-pressed="true"] { border-bottom-color: var(--ink); color: var(--ink); }
 .run-row {
-  padding: 26px 24px;
-  min-height: 128px;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 16px;
+  padding: 0 8px 0 12px;
+  min-height: 76px;
   border-bottom: 1px solid var(--row-line);
   border-radius: 0;
   background: transparent;
 }
 .run-row:hover { background: color-mix(in srgb, var(--panel) 65%, transparent); }
+.run-row-link { min-width: 0; padding-block: 14px; font-size: 14px; }
+.run-row-heading { display: flex; align-items: center; flex-wrap: wrap; gap: 8px 12px; }
+.run-row-status { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; }
+.run-row-meta { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 4px; font-size: 12px; line-height: 18px; color: var(--muted); }
+.run-row-actions { min-width: 0; }
+.run-row-actions button { border-color: transparent; border-radius: 6px; padding-inline: 12px; font-size: 12px; font-weight: 400; color: var(--muted); }
+.run-row-actions button:hover { background: var(--panel); color: var(--ink); }
+.workspace-empty { border-block: 1px solid var(--line); padding-block: 28px; }
+.workspace-settings { max-width: 640px; }
+.workspace-settings-section { border-top: 1px solid var(--line); padding-top: 24px; }
 .workspace-invite {
-  margin-top: 64px;
+  margin-top: 36px;
   padding: 0;
   background: transparent;
   border-radius: 0;
@@ -152,19 +169,22 @@ body:not(:has(.flight-page)) :is(h1, h2, h3) {
 @media (max-width: 760px) {
   .public-shell:not(:has(.flight-page)) .site-nav-frame { width: calc(100% - 20px); }
   .public-shell:not(:has(.flight-page)) main > div { padding-top: 132px; padding-bottom: 64px; }
-  .workspace-content { padding-block: 38px 64px; }
-  .workspace-page-heading { margin-bottom: 32px; align-items: start; }
-  .workspace-page-heading > div > p { margin-top: 12px; }
-  .workspace-page-heading .btn-primary { margin-top: 4px; }
+  .workspace-content { padding-block: 28px 48px; }
+  .workspace-page-heading { margin-bottom: 24px; }
+  .workspace-page-heading > div > p { margin-top: 8px; }
   .workspace-navigation { gap: 24px; }
-  .project-workspace { padding-top: 24px; }
+  .project-workspace { padding-block: 20px 48px; }
   .project-row { gap: 4px; padding-right: 0; }
-  .project-row-link { grid-template-columns: minmax(0, 1fr); gap: 16px; padding: 24px 8px; }
-  .project-row-link h2 { font-size: 20px; }
-  .project-row-status { padding-left: 56px; text-align: left; font-size: 12px; }
+  .project-row-link { grid-template-columns: minmax(0, 1fr); gap: 5px; padding: 12px 4px; }
+  .project-row-status { width: auto; padding-left: 48px; text-align: left; font-size: 12px; }
+  .project-row-status time { display: none; }
   .project-row-status p { overflow-wrap: anywhere; }
-  .run-row { padding: 24px 8px; gap: 18px; }
-  .workspace-invite { margin-top: 42px; gap: 20px; }
+  .run-row { padding-inline: 4px; gap: 8px; }
+  .workspace-invite { margin-top: 28px; gap: 16px; }
+}
+@media (hover: hover) and (pointer: fine) {
+  .project-row > button { opacity: 0; }
+  .project-row:hover > button, .project-row:focus-within > button { opacity: 1; }
 }
 @media (prefers-reduced-motion: reduce) {
   .project-row-link { transition: none; }

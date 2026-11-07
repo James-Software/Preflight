@@ -8,11 +8,13 @@ export default function ProjectLogo({
   name,
   projectId,
   imageUrl,
+  size = "md",
 }: {
   appUrl: string | null;
   name: string;
   projectId: number;
   imageUrl?: string | null;
+  size?: "sm" | "md";
 }) {
   const image = useRef<HTMLImageElement>(null);
   const origin = appIconOrigin(appUrl);
@@ -70,7 +72,7 @@ export default function ProjectLogo({
   return (
     <span
       aria-hidden="true"
-      className="flex size-12 shrink-0 items-center justify-center overflow-hidden rounded-xl border border-line bg-surface text-lg font-semibold text-muted"
+      className={`flex shrink-0 items-center justify-center overflow-hidden rounded-lg border border-line bg-surface font-medium text-muted ${size === "sm" ? "size-9 text-sm" : "size-12 text-lg"}`}
     >
       {src ? (
         <img
@@ -78,9 +80,9 @@ export default function ProjectLogo({
           ref={image}
           src={src}
           alt=""
-          width={28}
-          height={28}
-          className="size-7 object-contain"
+          width={size === "sm" ? 20 : 28}
+          height={size === "sm" ? 20 : 28}
+          className={`${size === "sm" ? "size-5" : "size-7"} object-contain`}
           loading="lazy"
           referrerPolicy="no-referrer"
           onError={() => failure(src)}

@@ -95,129 +95,66 @@ export default function RunsList({
 
   if (!runs.length)
     return (
-      <div className="mt-4 rounded-2xl border border-line bg-panel px-6 py-12 text-center">
-        <p className="text-lg font-semibold">No runs yet</p>
-        <p className="mx-auto mt-2 max-w-sm text-sm leading-relaxed text-muted">
-          Launch your first swarm. Three agents will test your app and report
-          what breaks.
+      <div className="workspace-empty mt-6">
+        <h2 className="text-base font-medium">No runs yet</h2>
+        <p className="mt-2 max-w-sm text-sm leading-relaxed text-muted">
+          Start a swarm to test your app and collect findings.
         </p>
       </div>
     );
   return (
     <>
-      <div
-        className="mt-6 flex flex-wrap gap-1 border-b border-line pb-3"
-        role="group"
-        aria-label="Filter runs"
-      >
-        {(["current", "archived"] as const).map((option) => (
-          <button
-            key={option}
-            type="button"
-            aria-pressed={view === option}
-            onClick={() => setView(option)}
-            className={`min-h-11 rounded-full px-4 text-sm font-medium ${view === option ? "bg-panel text-ink dark:text-white" : "text-muted hover:text-primary"}`}
-          >
-            {option === "current" ? "Runs" : "Archived"} (
-            {
-              runs.filter((run) =>
-                option === "current" ? !run.archived_at : !!run.archived_at,
-              ).length
-            }
-            )
-          </button>
-        ))}
+      <div className="run-filters" role="group" aria-label="Filter runs">
+        {(["current", "archived"] as const).map((option) => {
+          const label = option === "current" ? "Runs" : "Archived";
+          const count = runs.filter((run) => option === "current" ? !run.archived_at : !!run.archived_at).length;
+          return (
+            <button key={option} type="button" aria-pressed={view === option}
+              aria-label={`${label} (${count})`} onClick={() => setView(option)}>
+              {label}<span aria-hidden="true" className="text-xs text-muted">{count}</span>
+            </button>
+          );
+        })}
       </div>
-      {notice && (
-        <p role="status" className="mt-4 text-sm text-muted">
-          {notice}
-        </p>
-      )}
+      {notice && <p role="status" className="mt-4 text-sm text-muted">{notice}</p>}
       {!visibleRuns.length && (
-        <div className="mt-4 rounded-xl border border-line bg-panel px-6 py-10 text-center">
-          <h3 className="font-semibold">
-            {view === "archived" ? "No archived runs" : "No unarchived runs"}
-          </h3>
+        <div className="workspace-empty">
+          <h2 className="text-base font-medium">{view === "archived" ? "No archived runs" : "No unarchived runs"}</h2>
           <p className="mt-2 text-sm text-muted">
-            {view === "archived"
-              ? "Archived runs stay available here with their reports and evidence."
-              : "Start a new swarm, or restore a run from Archived."}
+            {view === "archived" ? "Archived reports stay available here." : "Start a new swarm, or restore a run from Archived."}
           </p>
         </div>
       )}
-      {error && (
-        <p role="alert" className="mt-4 text-sm text-red-700 dark:text-red-300">
-          {error}
-        </p>
-      )}
-      {stale && (
-        <p role="status" className="mt-4 text-sm text-muted">
-          Updates are delayed. Reconnecting automatically…
-        </p>
-      )}
-      <ul className="run-list mt-6">
+      {error && <p role="alert" className="mt-4 text-sm text-red-700 dark:text-red-300">{error}</p>}
+      {stale && <p role="status" className="mt-4 text-sm text-muted">Updates are delayed. Reconnecting automatically…</p>}
+      <ul className="run-list" hidden={!visibleRuns.length}>
         {visibleRuns.map((run) => (
-          <li
-            key={run.id}
-            className="run-row flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between"
-          >
-            <div className="min-w-0 flex-1">
-              <a
-                href={`/dashboard/projects/${projectId}/runs/${run.id}`}
-                className="inline-flex min-h-11 items-center gap-2 font-medium underline-offset-4 hover:underline"
-              >
-                Run #{run.id}
-              </a>
-              <p className="text-sm text-muted">
-                {new Date(run.created_at).toLocaleDateString("en-US", {
-                  month: "short",
-                  day: "numeric",
-                  year: "numeric",
-                })}
-                {` · ${run.findingsCount} finding${run.findingsCount === 1 ? "" : "s"}`}
-              </p>
-              {run.target_url && (
-                <p
-                  title={run.target_url}
-                  className="mt-1 truncate text-sm text-muted"
-                >
-                  {run.target_url}
-                </p>
-              )}
-            </div>
-            <div className="flex flex-wrap items-center gap-4 sm:shrink-0">
-              <span className="flex items-center gap-2 text-sm capitalize text-muted">
-                {ACTIVE.has(run.status) && (
-                  <span
-                    className="h-2 w-2 rounded-full bg-primary motion-safe:animate-pulse"
-                    aria-hidden="true"
-                  />
-                )}
-                {runStatusLabel(run.status)}
+          <li key={run.id} className="run-row">
+            <a href={`/dashboard/projects/${projectId}/runs/${run.id}`} className="run-row-link group" title={run.target_url || undefined}>
+              <span className="run-row-heading">
+                <span className="font-medium group-hover:underline underline-offset-4">Run #{run.id}</span>
+                <span className={`run-row-status ${["failed", "partial"].includes(run.status) ? "text-red-700 dark:text-red-300" : "text-muted"}`}>
+                  {ACTIVE.has(run.status) && <span className="size-1.5 shrink-0 rounded-full bg-primary motion-safe:animate-pulse" aria-hidden="true" />}
+                  {runStatusLabel(run.status)}
+                </span>
               </span>
-              {ACTIVE.has(run.status) && (
-                <button
-                  type="button"
-                  onClick={() => void cancelRun(run.id)}
-                  disabled={cancelling !== null}
-                  className="pressable min-h-11 rounded-full border border-line px-4 text-sm font-medium disabled:cursor-wait disabled:opacity-60"
-                >
+              <span className="run-row-meta">
+                <time dateTime={run.created_at}>{new Date(run.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })}</time>
+                <span aria-hidden="true">·</span>
+                <span>{run.findingsCount} finding{run.findingsCount === 1 ? "" : "s"}</span>
+              </span>
+              {run.target_url && <span className="sr-only">Tested {run.target_url}</span>}
+            </a>
+            <div className="run-row-actions">
+              {ACTIVE.has(run.status) ? (
+                <button type="button" onClick={() => void cancelRun(run.id)} disabled={cancelling !== null}
+                  className="min-h-11 rounded-lg px-3 text-sm text-muted hover:bg-panel hover:text-primary disabled:cursor-wait disabled:opacity-60">
                   {cancelling === run.id ? "Stopping…" : "Stop"}
                 </button>
+              ) : (
+                <RunArchiveButton projectId={projectId} runId={run.id} archived={!!run.archived_at}
+                  onChange={(archived) => updateArchive(run.id, archived)} />
               )}
-              <RunArchiveButton
-                projectId={projectId}
-                runId={run.id}
-                archived={!!run.archived_at}
-                active={ACTIVE.has(run.status)}
-                onChange={(archived) => updateArchive(run.id, archived)}
-              />
-              <a
-                href={`/dashboard/projects/${projectId}/runs/${run.id}`}
-                className="inline-flex min-h-11 items-center text-sm font-medium text-primary underline-offset-4 hover:underline"
-              >
-                View report
-              </a>
             </div>
           </li>
         ))}

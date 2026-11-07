@@ -83,7 +83,7 @@ export default async function RunReportPage({
           </p>
         )}
         <p className="mt-2 flex flex-wrap items-center gap-2 text-sm text-muted">
-          <span className="capitalize">{runStatusLabel(details.status)}</span>
+          <span>{runStatusLabel(details.status)}</span>
           <span aria-hidden="true">·</span>
           <time dateTime={run.created_at} title={new Date(run.created_at).toLocaleString("en-US")}>
             {new Date(run.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric" })}

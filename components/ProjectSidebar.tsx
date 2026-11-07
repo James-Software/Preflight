@@ -2,52 +2,17 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import ProjectLogo from "@/components/ProjectLogo";
+import { ArrowLeft, CirclePlay, Database, KeyRound, Settings2, UsersRound } from "lucide-react";
+
+const SECTION_ICONS = { runs: CirclePlay, general: Settings2, database: Database, profiles: KeyRound, collaboration: UsersRound };
 
 export function ProjectSectionIcon({
   section,
 }: {
   section: "runs" | "general" | "database" | "profiles" | "collaboration";
 }) {
-  return (
-    <svg
-      aria-hidden="true"
-      width="18"
-      height="18"
-      viewBox="0 0 24 24"
-      fill="none"
-      stroke="currentColor"
-      strokeWidth="1.6"
-      strokeLinecap="round"
-      strokeLinejoin="round"
-      className="shrink-0"
-    >
-      {section === "runs" ? (
-        <>
-          <path d="m10 8 6 4-6 4V8Z" />
-          <circle cx="12" cy="12" r="9" />
-        </>
-      ) : section === "collaboration" ? (
-        <><circle cx="8" cy="8" r="3" /><circle cx="17" cy="9" r="2.5" /><path d="M2 21v-3a6 6 0 0 1 12 0v3M16 15a5 5 0 0 1 6 5" /></>
-      ) : section === "profiles" ? (
-        <>
-          <circle cx="9" cy="8" r="3" />
-          <path d="M3 20v-2a6 6 0 0 1 12 0v2M17 4a3 3 0 0 1 0 6M18 14a5 5 0 0 1 3 4v2" />
-        </>
-      ) : section === "general" ? (
-        <>
-          <path d="M4 6h16M4 12h16M4 18h16" />
-          <circle cx="9" cy="6" r="2" fill="var(--page)" />
-          <circle cx="15" cy="12" r="2" fill="var(--page)" />
-          <circle cx="9" cy="18" r="2" fill="var(--page)" />
-        </>
-      ) : (
-        <>
-          <ellipse cx="12" cy="5" rx="8" ry="3" />
-          <path d="M4 5v14c0 1.66 3.58 3 8 3s8-1.34 8-3V5M4 12c0 1.66 3.58 3 8 3s8-1.34 8-3" />
-        </>
-      )}
-    </svg>
-  );
+  const Icon = SECTION_ICONS[section];
+  return <Icon size={16} strokeWidth={1.75} aria-hidden="true" className="shrink-0" />;
 }
 export default function ProjectSidebar({
   project,
@@ -91,17 +56,7 @@ export default function ProjectSidebar({
           aria-label="Back to projects"
           className="pressable -ml-2 inline-flex min-h-11 min-w-11 items-center justify-center gap-2 rounded-lg px-2 text-sm text-muted transition-colors hover:bg-panel hover:text-primary"
         >
-          <svg
-            aria-hidden="true"
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="1.7"
-          >
-            <path d="m12 5-7 7 7 7M5 12h15" />
-          </svg>
+          <ArrowLeft size={16} strokeWidth={1.75} aria-hidden="true" />
           <span className="hidden lg:inline">Back to projects</span>
         </Link>
         <p className="min-w-0 flex-1 truncate text-sm font-semibold lg:hidden" title={project.repo}>
@@ -122,6 +77,7 @@ export default function ProjectSidebar({
           name={project.name}
           appUrl={project.appUrl}
           imageUrl={project.imageUrl}
+          size="sm"
         />
         <div className="min-w-0">
           <p className="break-words text-sm font-semibold">{project.name}</p>
@@ -132,7 +88,7 @@ export default function ProjectSidebar({
       </div>
       <nav
         aria-label="Project sections"
-        className="mt-6 hidden flex-col gap-2 lg:flex"
+        className="mt-5 hidden flex-col gap-1 lg:flex"
       >
         {visibleTabs.map((tab) => {
           const selected =

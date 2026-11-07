@@ -13,15 +13,10 @@ export default async function ProjectPage({
   return (
     <main className="py-2">
       <div className="flex flex-wrap items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-semibold tracking-tight">Runs</h1>
-          <p className="mt-2 text-sm text-muted">
-            Start a swarm or review a previous run.
-          </p>
-        </div>
+        <h1 className="text-3xl font-semibold tracking-tight">Runs</h1>
         <RunSwarmButton projectId={project.id} />
       </div>
-      <p className="mt-5 break-all text-sm text-muted">
+      <p className="mt-2 break-all text-sm text-muted">
         {project.app_url ||
           "Using the default branch’s latest preview deployment."}
       </p>

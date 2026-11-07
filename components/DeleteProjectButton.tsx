@@ -1,6 +1,7 @@
 "use client";
 import { useId, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
+import { Trash2 } from "lucide-react";
 
 export default function DeleteProjectButton({
   projectId,
@@ -56,18 +57,7 @@ export default function DeleteProjectButton({
           cancel.current?.focus();
         }}
       >
-        <svg
-          aria-hidden="true"
-          width="16"
-          height="16"
-          viewBox="0 0 24 24"
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.75"
-          strokeLinecap="round"
-        >
-          <path d="m6 6 12 12M18 6 6 18" />
-        </svg>
+        <Trash2 size={16} strokeWidth={1.75} aria-hidden="true" />
       </button>
       <dialog
         ref={dialog}

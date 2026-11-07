@@ -11,7 +11,7 @@ export function displayRunStatus(status: string, hasResults = false) {
 export function runStatusLabel(status: string) {
   if (status === "partial") return "Partially completed";
   if (["done", "completed"].includes(status)) return "Completed";
-  return status;
+  return status.charAt(0).toUpperCase() + status.slice(1);
 }
 export function safeRunFailure(error: unknown) {
   if (error && typeof error === "object" && "name" in error && error.name === "TargetAccessError" && "message" in error)
